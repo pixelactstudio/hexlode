@@ -1,0 +1,6 @@
+allowBuilds:
+  '@astryxdesign/cli': true
+  '@astryxdesign/core': true
+  '@sentry/cli': true
+  core-js: true
+  esbuild: true

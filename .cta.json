@@ -1,0 +1,34 @@
+{
+  "projectName": "hexlode",
+  "mode": "file-router",
+  "typescript": true,
+  "packageManager": "npm",
+  "includeExamples": false,
+  "tailwind": true,
+  "projectPreset": "default",
+  "addOnOptions": {
+    "drizzle": {
+      "database": "postgresql"
+    }
+  },
+  "git": true,
+  "install": true,
+  "intent": true,
+  "routerOnly": false,
+  "version": 1,
+  "framework": "react",
+  "chosenAddOns": [
+    "biome",
+    "nitro",
+    "tanstack-query",
+    "posthog",
+    "store",
+    "better-auth",
+    "t3env",
+    "mcp",
+    "form",
+    "drizzle",
+    "compiler",
+    "sentry"
+  ]
+}

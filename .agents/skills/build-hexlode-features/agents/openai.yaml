@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build Hexlode Features"
+  short_description: "Build Hexlode with its minimal feature architecture"
+  default_prompt: "Use $build-hexlode-features to implement the next Hexlode feature as a minimal vertical slice."
