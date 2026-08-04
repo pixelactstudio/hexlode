@@ -34,7 +34,7 @@
 - Follow `biome.json`; use two spaces, single quotes, and no unnecessary semicolons.
 - Prefer `#/` for imports rooted at `src/`.
 - Keep server-only secrets and database access out of browser bundles.
-- Keep tests under the root `tests/` directory and mirror the relevant `src/` feature path.
+- Colocate tests in a `__tests__/` directory beside the feature or submodule they verify.
 - Add the smallest focused test for non-trivial new behavior.
 - Keep feature-owned limits and defaults in `constants.ts`, domain contracts in `types.ts`, and
   validation schemas or parsing logic in `validators.ts` when separating them makes the module

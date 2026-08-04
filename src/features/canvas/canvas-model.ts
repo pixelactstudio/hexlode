@@ -7,8 +7,9 @@ import type {
   WorkflowCanvasNode,
 } from '#/features/canvas/types'
 import { WORKFLOW_DEFINITIONS } from '#/features/canvas/workflow/constants'
-import { createStarterGraph } from '#/features/canvas/workflow/graph'
+import { createStarterGraph, getConnectionIssue } from '#/features/canvas/workflow/graph'
 import type {
+  WorkflowConnection,
   WorkflowEdgeModel,
   WorkflowKind,
   WorkflowNodeModel,
@@ -38,6 +39,15 @@ export function toNodeModels(nodes: WorkflowCanvasNode[]): WorkflowNodeModel[] {
 
 export function toEdgeModels(edges: WorkflowCanvasEdge[]): WorkflowEdgeModel[] {
   return edges.map(({ id, source, target }) => ({ id, source, target }))
+}
+
+export function getCanvasConnectionIssue(
+  connection: WorkflowConnection,
+  nodes: WorkflowCanvasNode[],
+  edges: WorkflowCanvasEdge[],
+  excludedEdgeId?: string,
+) {
+  return getConnectionIssue(connection, toNodeModels(nodes), toEdgeModels(edges), excludedEdgeId)
 }
 
 export function createCanvasNode(model: WorkflowNodeModel, selected = false): WorkflowCanvasNode {

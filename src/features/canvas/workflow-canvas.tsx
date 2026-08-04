@@ -24,6 +24,8 @@ interface WorkflowCanvasProps {
   onNodeDragStart: () => void
   onNodesChange: (changes: NodeChange<WorkflowCanvasNode>[]) => void
   onReconnect: (edge: WorkflowCanvasEdge, connection: Connection) => void
+  onReconnectEnd: () => void
+  onReconnectStart: (edge: WorkflowCanvasEdge) => void
 }
 
 export function WorkflowCanvas({
@@ -36,6 +38,8 @@ export function WorkflowCanvas({
   onNodeDragStart,
   onNodesChange,
   onReconnect,
+  onReconnectEnd,
+  onReconnectStart,
 }: WorkflowCanvasProps) {
   return (
     <ReactFlow<WorkflowCanvasNode, WorkflowCanvasEdge>
@@ -47,6 +51,8 @@ export function WorkflowCanvas({
       onEdgesChange={onEdgesChange}
       onConnect={onConnect}
       onReconnect={onReconnect}
+      onReconnectStart={(_, edge) => onReconnectStart(edge)}
+      onReconnectEnd={onReconnectEnd}
       isValidConnection={isValidConnection}
       onNodeDragStart={onNodeDragStart}
       deleteKeyCode={null}

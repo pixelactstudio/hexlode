@@ -5,6 +5,7 @@ import type {
   ProcessingWorkerFactory,
 } from '#/features/processing/types'
 import {
+  processImageRequestSchema,
   type WorkerProgress,
   type WorkerResult,
   workerResponseSchema,
@@ -50,13 +51,32 @@ export class ImageProcessor {
       )
     }
 
-    const worker = this.getWorker()
     const id = createId()
+    const request = processImageRequestSchema.safeParse({
+      type: 'process',
+      id,
+      input: { buffer, mimeType },
+      options,
+    })
+    if (!request.success) {
+      return Promise.reject(
+        new ProcessingError('invalid_message', 'The processing request is invalid.'),
+      )
+    }
+
+    const worker = this.getWorker()
     const result = new Promise<WorkerResult>((resolve, reject) => {
       this.activeJob = { id, onProgress, reject, resolve }
     })
 
-    worker.postMessage({ type: 'process', id, input: { buffer, mimeType }, options }, [buffer])
+    try {
+      worker.postMessage(request.data, [buffer])
+    } catch (reason) {
+      const message =
+        reason instanceof Error ? reason.message : 'The image could not reach the worker.'
+      this.failActiveJob(new ProcessingError('worker_failed', message))
+    }
+
     return result
   }
 

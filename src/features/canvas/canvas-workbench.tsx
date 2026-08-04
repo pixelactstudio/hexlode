@@ -24,6 +24,7 @@ import {
   createDisplayEdges,
   createDisplayNodes,
   createInitialCanvas,
+  getCanvasConnectionIssue,
   getNodeStatus,
   outputFileName,
   toEdgeModels,
@@ -41,7 +42,6 @@ import { WORKFLOW_DEFINITIONS, WORKFLOW_KINDS } from '#/features/canvas/workflow
 import {
   compileWorkflow,
   createNodePosition,
-  getConnectionIssue,
   WorkflowGraphError,
 } from '#/features/canvas/workflow/graph'
 import type { WorkflowNodeModel } from '#/features/canvas/workflow/types'
@@ -76,6 +76,7 @@ export function CanvasWorkbench() {
   const outputBlobRef = useRef<Blob | null>(null)
   const sourceUrlRef = useRef<string | null>(null)
   const resultUrlRef = useRef<string | null>(null)
+  const reconnectingEdgeIdRef = useRef<string | null>(null)
   const selectionIdRef = useRef(0)
   const runIdRef = useRef(0)
 
@@ -438,7 +439,7 @@ export function CanvasWorkbench() {
   }
 
   function onConnect(connection: Connection) {
-    const issue = getConnectionIssue(connection, toNodeModels(nodes), toEdgeModels(edges))
+    const issue = getCanvasConnectionIssue(connection, nodes, edges)
     if (issue) {
       setGraphIssue(issue)
       return
@@ -459,12 +460,7 @@ export function CanvasWorkbench() {
   }
 
   function onReconnect(oldEdge: WorkflowCanvasEdge, connection: Connection) {
-    const issue = getConnectionIssue(
-      connection,
-      toNodeModels(nodes),
-      toEdgeModels(edges),
-      oldEdge.id,
-    )
+    const issue = getCanvasConnectionIssue(connection, nodes, edges, oldEdge.id)
     if (issue) {
       setGraphIssue(issue)
       return
@@ -476,9 +472,22 @@ export function CanvasWorkbench() {
   }
 
   function isValidConnection(connection: Edge | Connection) {
-    const issue = getConnectionIssue(connection, toNodeModels(nodes), [])
+    const issue = getCanvasConnectionIssue(
+      connection,
+      nodes,
+      edges,
+      reconnectingEdgeIdRef.current ?? undefined,
+    )
     if (issue) setGraphIssue(issue)
     return !issue
+  }
+
+  function startReconnect(edge: WorkflowCanvasEdge) {
+    reconnectingEdgeIdRef.current = edge.id
+  }
+
+  function endReconnect() {
+    reconnectingEdgeIdRef.current = null
   }
 
   const actions = {
@@ -547,6 +556,8 @@ export function CanvasWorkbench() {
       onNodeDragStart={() => recordHistory()}
       onNodesChange={onNodesChange}
       onReconnect={onReconnect}
+      onReconnectEnd={endReconnect}
+      onReconnectStart={startReconnect}
     />
   )
 
