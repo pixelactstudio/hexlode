@@ -34,7 +34,18 @@
 - Follow `biome.json`; use two spaces, single quotes, and no unnecessary semicolons.
 - Prefer `#/` for imports rooted at `src/`.
 - Keep server-only secrets and database access out of browser bundles.
-- Add the smallest focused test for non-trivial new behavior. No test runner is configured yet.
+- Colocate tests in a `__tests__/` directory beside the feature or submodule they verify.
+- Add the smallest focused test for non-trivial new behavior.
+- Keep feature-owned limits and defaults in `constants.ts`, domain contracts in `types.ts`, and
+  validation schemas or parsing logic in `validators.ts` when separating them makes the module
+  easier to navigate. Keep schema-derived types beside their schema.
+- Keep JSX declarative: compute formatted display values before the return and extract repeated or
+  branch-heavy sections into named components in the same feature.
+- Split files by responsibility when UI, domain policy, and side effects become mixed. Do not split
+  cohesive code only to satisfy a line-count target or create generic junk-drawer folders.
+- Move a helper to `src/lib` only after at least two features use it.
+- Use dedicated browser Web Workers for CPU-heavy local processing. Do not add server queues,
+  Redis, uploads, or cloud workers to a local-only workflow.
 - Use Conventional Commits; Husky enforces staged checks and commit-message linting.
 
 <!-- ASTRYX:START -->

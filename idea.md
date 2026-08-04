@@ -1,20 +1,22 @@
 # Hexlode — Product Brief
 
 > Status: Working product direction
-> Updated: 2026-08-04
+> Updated: 2026-08-05
 > Companion plan: [implementation.md](./implementation.md)
 
 ## 1. Product Summary
 
-Hexlode is a browser-first visual image-processing application. Users connect nodes to build a
-reusable workflow, run images through it, compare the results, and save the workflow for later.
+Hexlode is a visual image-processing application with local and optional server execution. Users
+connect nodes to build a reusable workflow, run images through it, compare the results, and save the
+workflow for later.
 
 The central promise is:
 
 > Build an image-processing recipe once. Drop new images into it whenever you need it.
 
-Hexlode should begin as a focused side project and open-source community tool. It should be useful
-without an account, work locally by default, and remain manageable in a single application.
+Hexlode begins as a focused side project and open-source community tool. It should remain useful
+without an account and work locally by default, while the full product may offer signed-in server
+processing for larger or longer jobs.
 
 ## 2. Why It Should Exist
 
@@ -37,7 +39,7 @@ Hexlode combines local processing with reusable visual workflows. Its retention 
 
 Primary positioning:
 
-> A private visual workspace for converting, inspecting, optimizing, and comparing images.
+> A local-first visual workspace for converting, inspecting, optimizing, and comparing images.
 
 Supporting promise:
 
@@ -71,9 +73,10 @@ file-linked hashes must not enter analytics or backend services during local pro
 
 ### 4.4 Cloud processing is explicit
 
-Cloud processing may later help with very large batches or expensive operations, but it is never a
-silent fallback. Before a remote job begins, the user must see what will be uploaded, why, expected
-cost or quota use, retention, and deletion behavior.
+Cloud processing may provide the full product with more power for very large batches, long-running
+jobs, or expensive operations, but it is never a silent fallback. Before a remote job begins, the
+user must see what will be uploaded, why, expected cost or quota use, retention, and deletion
+behavior. A server job may continue after the browser closes.
 
 ### 4.5 Simple by default, deep by choice
 
@@ -125,14 +128,16 @@ than relying on marketing copy.
 An optional account may eventually synchronize recipes, macros, settings, and versions. Images and
 their metadata stay local by default. Signing in must never become permission to use the core app.
 
-### 5.5 Cloud Assist — later and opt-in
+### 5.5 Cloud Assist — opt-in full-product capability
 
 Cloud processing is intended for workloads such as hundreds of images, slow experimental codecs,
-or operations that would exhaust a device. If introduced:
+or operations that would exhaust a device. It requires a signed-in workspace and supports durable
+background jobs that continue after the browser closes.
 
 - Each job requires an explicit remote-processing choice.
 - A generous free allowance should cover ordinary community use.
-- Any charges should recover real compute cost, not create artificial product limits.
+- Any usage-based charges should remain inexpensive and recover real compute cost rather than create
+  artificial product limits.
 - Local processing must not be weakened to promote cloud usage.
 - Failed retries must not silently extend retention or duplicate charges.
 
