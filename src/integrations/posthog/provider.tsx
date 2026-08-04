@@ -5,8 +5,10 @@ import type { ReactNode } from 'react'
 if (typeof window !== 'undefined' && import.meta.env.VITE_POSTHOG_KEY) {
   posthog.init(import.meta.env.VITE_POSTHOG_KEY, {
     api_host: import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com',
+    autocapture: false,
     person_profiles: 'identified_only',
     capture_pageview: false,
+    disable_session_recording: true,
     defaults: '2025-11-30',
   })
 }

@@ -24,7 +24,11 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'TanStack Start Starter',
+        title: 'Hexlode — Local image processing',
+      },
+      {
+        name: 'description',
+        content: 'Resize and convert JPEG or PNG images to WebP privately in your browser.',
       },
     ],
     links: [

@@ -108,7 +108,7 @@ flowchart LR
   E --> F["Optional sync and cloud"]
 ```
 
-Only the first milestone is the immediate implementation target.
+Milestones 1 and 2 establish the working local canvas. Milestone 3 is the next implementation target.
 
 ## 7. Milestone 1 — Local Processing Vertical Slice
 
@@ -154,6 +154,18 @@ JPEG or PNG input -> inspect -> resize -> WebP encode -> compare -> download
 - The output downloads and opens correctly.
 - `pnpm validate` passes.
 
+### Initial baseline
+
+Measured in headless Chromium on 2026-08-04:
+
+- PNG: 1597 × 1198, 1.8 MB -> 284.9 KB WebP in 334 ms.
+- JPEG: 400 × 400, 12.5 KB -> 5.2 KB WebP in 17 ms.
+- Safety limits: 30 MB input, 16,384 px per edge, 256 MiB decoded pixels, and a 320 MiB
+  estimated peak allocation.
+
+These smoke-test measurements establish the first regression baseline; they are not performance
+guarantees across devices.
+
 ## 8. Milestone 2 — Editable Canvas
 
 ### Outcome
@@ -185,6 +197,13 @@ Files -> Inspect -> Resize -> WebP -> Compare -> Download
 - Invalid connections cannot enter a saved graph.
 - Canvas state and worker execution state remain separate.
 - Progress and errors shown by the UI come from the worker.
+
+### Implemented slice
+
+- The starter graph compiles into the proven local worker pipeline.
+- Node settings, graph edits, connection validation, runtime state, retry, cancellation, undo, and
+  redo are connected to real behavior.
+- The canvas has a full inspector on desktop and a compact stacked layout on narrow screens.
 
 ## 9. Milestone 3 — Recipes, Local Persistence, and Privacy
 
@@ -384,19 +403,8 @@ These guardrails are part of the feature definition, not optional hardening work
 
 ## 18. Immediate Next Target
 
-Implement Milestone 1 only:
-
-```text
-Choose JPEG or PNG
-  -> validate
-  -> decode in a worker
-  -> resize
-  -> encode WebP
-  -> preview and compare
-  -> download
-```
-
-Do not scaffold later feature folders or build a polished node catalogue around fake execution.
+Implement Milestone 3 only: versioned local recipes, IndexedDB persistence, and the approved privacy
+modes. Do not begin batch, account, or cloud infrastructure.
 
 ## 19. Definition of Success
 
