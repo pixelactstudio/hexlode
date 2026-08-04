@@ -1,18 +1,15 @@
-import type { ProcessingOptions } from '#/features/processing/processing-plan'
+import type {
+  ProcessingErrorCode,
+  ProcessingOptions,
+  ProcessingWorker,
+  ProcessingWorkerFactory,
+} from '#/features/processing/types'
 import {
   type WorkerProgress,
   type WorkerResult,
   workerResponseSchema,
 } from '#/features/processing/worker/protocol'
-
-export interface ProcessingWorker {
-  onerror: ((event: ErrorEvent) => void) | null
-  onmessage: ((event: MessageEvent<unknown>) => void) | null
-  postMessage(message: unknown, transfer: Transferable[]): void
-  terminate(): void
-}
-
-type WorkerFactory = () => ProcessingWorker
+import { createId } from '#/lib/create-id'
 
 interface ActiveJob {
   id: string
@@ -20,14 +17,6 @@ interface ActiveJob {
   reject: (error: ProcessingError) => void
   resolve: (result: WorkerResult) => void
 }
-
-export type ProcessingErrorCode =
-  | 'cancelled'
-  | 'decode_failed'
-  | 'encode_failed'
-  | 'invalid_message'
-  | 'unsupported_browser'
-  | 'worker_failed'
 
 export class ProcessingError extends Error {
   constructor(
@@ -47,7 +36,7 @@ export class ImageProcessor {
   private worker: ProcessingWorker | null = null
   private activeJob: ActiveJob | null = null
 
-  constructor(private readonly createWorker: WorkerFactory = defaultWorkerFactory) {}
+  constructor(private readonly createWorker: ProcessingWorkerFactory = defaultWorkerFactory) {}
 
   process(
     buffer: ArrayBuffer,
@@ -62,7 +51,7 @@ export class ImageProcessor {
     }
 
     const worker = this.getWorker()
-    const id = crypto.randomUUID()
+    const id = createId()
     const result = new Promise<WorkerResult>((resolve, reject) => {
       this.activeJob = { id, onProgress, reject, resolve }
     })

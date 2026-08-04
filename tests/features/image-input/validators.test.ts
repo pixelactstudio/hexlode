@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { ImageValidationError, inspectImageHeader } from '#/features/image-input/image-validation'
+import { ImageValidationError, inspectImageHeader } from '#/features/image-input/validators'
 
 function pngHeader(width: number, height: number) {
-  const bytes = new Uint8Array(24)
+  const bytes = new Uint8Array(33)
   bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
-  bytes.set([0x49, 0x48, 0x44, 0x52], 12)
   const view = new DataView(bytes.buffer)
+  view.setUint32(8, 13)
+  bytes.set([0x49, 0x48, 0x44, 0x52], 12)
   view.setUint32(16, width)
   view.setUint32(20, height)
   return bytes.buffer
@@ -57,6 +58,14 @@ describe('inspectImageHeader', () => {
     assert.throws(
       () => inspectImageHeader(pngHeader(100, 100), 'image/jpeg'),
       (error) => error instanceof ImageValidationError && error.code === 'mime_mismatch',
+    )
+  })
+
+  it('rejects truncated PNG headers', () => {
+    const truncatedHeader = pngHeader(100, 100).slice(0, 24)
+    assert.throws(
+      () => inspectImageHeader(truncatedHeader, 'image/png'),
+      (error) => error instanceof ImageValidationError && error.code === 'unsupported_format',
     )
   })
 

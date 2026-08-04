@@ -1,0 +1,5 @@
+export const DEFAULT_MAX_DIMENSION = 1_920
+export const DEFAULT_WEBP_QUALITY = 82
+export const MIN_OUTPUT_DIMENSION = 32
+export const MAX_OUTPUT_DIMENSION = 8_192
+export const MAX_ESTIMATED_PEAK_BYTES = 320 * 1024 * 1024

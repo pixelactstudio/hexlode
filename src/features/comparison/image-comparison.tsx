@@ -16,53 +16,50 @@ interface ImageComparisonProps {
   result: Preview | null
 }
 
-function formatBytes(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+import { formatBytes } from '#/lib/format-bytes'
+
+function previewDetails(preview: Preview) {
+  return `${preview.width} × ${preview.height} · ${formatBytes(preview.size)}`
+}
+
+function ComparisonPreview({ preview }: { preview: Preview | null }) {
+  if (!preview) {
+    return (
+      <VStack gap={1}>
+        <Thumbnail label="WebP output not ready" className="size-24" />
+        <Text type="supporting" color="secondary">
+          WebP pending
+        </Text>
+      </VStack>
+    )
+  }
+
+  return (
+    <VStack gap={1}>
+      <Thumbnail
+        src={preview.url}
+        label={`${preview.label} image`}
+        alt={`${preview.label} image preview`}
+        className="size-24"
+      />
+      <Text type="supporting">{preview.label}</Text>
+    </VStack>
+  )
 }
 
 export function ImageComparison({ source, result }: ImageComparisonProps) {
+  const sourceDetails = previewDetails(source)
+  const resultDetails = result ? previewDetails(result) : 'Run the pipeline to create an output.'
+
   return (
     <VStack gap={3}>
       <HStack gap={3}>
-        <VStack gap={1}>
-          <Thumbnail
-            src={source.url}
-            label="Source image"
-            alt="Source image preview"
-            className="size-24"
-          />
-          <Text type="supporting">Source</Text>
-        </VStack>
-        {result ? (
-          <VStack gap={1}>
-            <Thumbnail
-              src={result.url}
-              label="WebP output"
-              alt="WebP output preview"
-              className="size-24"
-            />
-            <Text type="supporting">WebP</Text>
-          </VStack>
-        ) : (
-          <VStack gap={1}>
-            <Thumbnail label="WebP output not ready" className="size-24" />
-            <Text type="supporting" color="secondary">
-              WebP pending
-            </Text>
-          </VStack>
-        )}
+        <ComparisonPreview preview={source} />
+        <ComparisonPreview preview={result} />
       </HStack>
       <MetadataList columns="single" label={{ position: 'start', width: 96 }}>
-        <MetadataListItem label="Source">
-          {source.width} × {source.height} · {formatBytes(source.size)}
-        </MetadataListItem>
-        <MetadataListItem label="WebP">
-          {result
-            ? `${result.width} × ${result.height} · ${formatBytes(result.size)}`
-            : 'Run the pipeline to create an output.'}
-        </MetadataListItem>
+        <MetadataListItem label="Source">{sourceDetails}</MetadataListItem>
+        <MetadataListItem label="WebP">{resultDetails}</MetadataListItem>
       </MetadataList>
     </VStack>
   )

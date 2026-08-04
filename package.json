@@ -20,7 +20,7 @@
     "lint:fix": "biome lint --write .",
     "check": "biome check .",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "test": "node --import tsx --test \"tests/**/*.test.ts\"",
     "validate": "pnpm check && pnpm typecheck && pnpm test && pnpm build",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

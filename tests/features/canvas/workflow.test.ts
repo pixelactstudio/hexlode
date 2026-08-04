@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { compileWorkflow, createStarterGraph, getConnectionIssue } from '#/features/canvas/workflow'
+import {
+  compileWorkflow,
+  createStarterGraph,
+  getConnectionIssue,
+} from '#/features/canvas/workflow/graph'
 
 describe('workflow graph', () => {
   it('compiles the starter graph in execution order', () => {

@@ -1,11 +1,8 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import {
-  ImageProcessor,
-  ProcessingError,
-  type ProcessingWorker,
-} from '#/features/processing/image-processor'
+import { ImageProcessor, ProcessingError } from '#/features/processing/image-processor'
+import type { ProcessingWorker } from '#/features/processing/types'
 
 class WaitingWorker implements ProcessingWorker {
   onerror: ((event: ErrorEvent) => void) | null = null

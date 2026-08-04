@@ -1,24 +1,7 @@
-import { z } from 'zod'
-
-import type { ImageInfo } from '#/features/image-input/image-validation'
-
-export const DEFAULT_MAX_DIMENSION = 1_920
-export const DEFAULT_WEBP_QUALITY = 82
-export const MAX_OUTPUT_DIMENSION = 8_192
-export const MAX_ESTIMATED_PEAK_BYTES = 320 * 1024 * 1024
-
-export const processingOptionsSchema = z.object({
-  maxDimension: z.number().int().min(32).max(MAX_OUTPUT_DIMENSION),
-  quality: z.number().int().min(1).max(100),
-})
-
-export type ProcessingOptions = z.infer<typeof processingOptionsSchema>
-
-export interface ProcessingPlan {
-  width: number
-  height: number
-  estimatedPeakBytes: number
-}
+import type { ImageInfo } from '#/features/image-input/types'
+import { MAX_ESTIMATED_PEAK_BYTES } from '#/features/processing/constants'
+import type { ProcessingOptions, ProcessingPlan } from '#/features/processing/types'
+import { processingOptionsSchema } from '#/features/processing/validators'
 
 export function calculateTargetSize(width: number, height: number, maxDimension: number) {
   const scale = Math.min(1, maxDimension / Math.max(width, height))

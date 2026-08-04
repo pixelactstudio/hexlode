@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import type { ImageInfo } from '#/features/image-input/image-validation'
+import type { ImageInfo } from '#/features/image-input/types'
 import { calculateTargetSize, createProcessingPlan } from '#/features/processing/processing-plan'
 
 describe('processing plan', () => {

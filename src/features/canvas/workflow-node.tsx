@@ -3,22 +3,10 @@ import { Heading } from '@astryxdesign/core/Heading'
 import { HStack, VStack } from '@astryxdesign/core/Stack'
 import { StatusDot } from '@astryxdesign/core/StatusDot'
 import { Text } from '@astryxdesign/core/Text'
-import { Handle, type Node, type NodeProps, Position } from '@xyflow/react'
+import { Handle, type NodeProps, Position } from '@xyflow/react'
 
-import {
-  type WorkflowKind,
-  type WorkflowStatus,
-  workflowDefinitions,
-  workflowKinds,
-} from '#/features/canvas/workflow'
-
-export interface WorkflowNodeData extends Record<string, unknown> {
-  kind: WorkflowKind
-  status: WorkflowStatus
-  summary: string
-}
-
-export type WorkflowCanvasNode = Node<WorkflowNodeData, 'workflow'>
+import type { WorkflowCanvasNode } from '#/features/canvas/types'
+import { WORKFLOW_DEFINITIONS, WORKFLOW_KINDS } from '#/features/canvas/workflow/constants'
 
 const statusVariants = {
   cancelled: 'neutral',
@@ -30,8 +18,8 @@ const statusVariants = {
 } as const
 
 export function WorkflowNode({ data, selected, isConnectable }: NodeProps<WorkflowCanvasNode>) {
-  const definition = workflowDefinitions[data.kind]
-  const index = workflowKinds.indexOf(data.kind) + 1
+  const definition = WORKFLOW_DEFINITIONS[data.kind]
+  const index = WORKFLOW_KINDS.indexOf(data.kind) + 1
 
   return (
     <Card

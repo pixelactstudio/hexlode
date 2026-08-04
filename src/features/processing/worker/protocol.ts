@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { processingOptionsSchema } from '#/features/processing/processing-plan'
+import { processingOptionsSchema } from '#/features/processing/validators'
 
 const arrayBufferSchema = z.custom<ArrayBuffer>((value) => value instanceof ArrayBuffer)
 
