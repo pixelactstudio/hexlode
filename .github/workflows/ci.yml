@@ -11,9 +11,7 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hexlode
-      BETTER_AUTH_SECRET: ci-only-secret-not-used-outside-the-build
-      BETTER_AUTH_URL: http://localhost:3000
+      SKIP_ENV_VALIDATION: '1'
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6

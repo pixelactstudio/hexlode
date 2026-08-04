@@ -59,6 +59,13 @@ user and replace the Better Auth placeholder. Generate a secret with:
 pnpm dlx @better-auth/cli secret
 ```
 
+Google sign-in uses `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. For local development, configure
+Google's authorized redirect URI as `http://localhost:3000/api/auth/callback/google`.
+
+A standard PostgreSQL URL uses `postgresql://user:password@localhost:5432/hexlode`. Linux systems
+using PostgreSQL peer authentication can instead use the local socket URL
+`postgresql:///hexlode?host=/run/postgresql`, which needs no username or password in the URL.
+
 The development server runs at [http://localhost:3000](http://localhost:3000). PostHog and Sentry
 remain disabled when their keys are empty.
 
@@ -69,9 +76,11 @@ remain disabled when their keys are empty.
 | `pnpm dev`         | Start the local development server.                 |
 | `pnpm build`       | Create a production build.                          |
 | `pnpm preview`     | Preview the production build.                       |
+| `pnpm start`       | Run the built Nitro Node server.                    |
 | `pnpm validate`    | Run Biome checks, TypeScript, and a production build. |
 | `pnpm format`      | Format the repository with Biome.                   |
 | `pnpm lint`        | Run Biome lint rules.                               |
+| `pnpm lint:fix`    | Fix safe Biome lint violations.                     |
 | `pnpm typecheck`   | Check TypeScript without emitting files.            |
 | `pnpm db:generate` | Generate Drizzle migrations from the schema.        |
 | `pnpm db:migrate`  | Apply generated database migrations.                |

@@ -17,6 +17,7 @@
     "preview": "vite preview",
     "format": "biome format --write .",
     "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
     "check": "biome check .",
     "typecheck": "tsc --noEmit",
     "validate": "pnpm check && pnpm typecheck && pnpm build",
