@@ -1,7 +1,7 @@
 # Hexlode — Implementation Plan
 
 > Status: Working execution plan
-> Updated: 2026-08-04
+> Updated: 2026-08-05
 > Product direction: [idea.md](./idea.md)
 
 ## 1. Objective
@@ -232,6 +232,14 @@ Make the application useful across sessions without requiring an account.
 - Airgap Mode prevents application-controlled remote operations and analytics.
 - A recipe migration has a focused test when the first migration exists.
 
+### Implemented slice
+
+- Versioned recipe and macro-preset JSON round-trips through strict validation.
+- IndexedDB stores recipes, preferences, and file-free run summaries; Private Session skips those
+  writes.
+- Local Workspace and Airgap Mode are visible in the workspace dialog, and Airgap disables PostHog.
+- Offline asset caching remains deferred until the required asset set is stable.
+
 ## 10. Milestone 4 — Batch and Production Workflows
 
 ### Outcome
@@ -260,6 +268,17 @@ Process useful folders without uncontrolled memory growth.
 - Naming collisions are deterministic and recoverable.
 - Metadata and transparency changes cannot occur silently.
 
+### Implemented slice
+
+- One serial worker queue bounds memory, continues after per-file failures, keeps successful outputs,
+  and supports retry and queued cancellation.
+- Multi-file and native folder input, deterministic relative output paths, ZIP delivery, and selected
+  folder delivery are connected to the real worker path.
+- WebP, JPEG, and PNG output are supported; JPEG transparency flattening and metadata removal are
+  explicitly disclosed.
+- AVIF, selective metadata preservation, and the full orientation/format fixture matrix remain gated
+  on adapter validation.
+
 ## 11. Milestone 5 — Signature Features
 
 Implement these one at a time after the underlying measurements and adapters are reliable.
@@ -287,9 +306,19 @@ Implement these one at a time after the underlying measurements and adapters are
 - Support a local reusable subgraph before nested or shared macro versions.
 - Show runtime data emitted by the engine rather than UI-derived guesses.
 
+### Implemented slice
+
+- Codec Tournament measures WebP, JPEG, and PNG through the existing worker adapter.
+- Constraint Solver applies memory preflight, cancellation, seven search attempts, and a 30-second
+  deadline.
+- Visual Difference Lab starts with the approved comparison slider.
+- Local workflow macro presets and the debugger reuse the recipe schema and real worker events;
+  nested/shared macros, heatmaps, and perceptual metrics remain deferred.
+
 ## 12. Milestone 6 — Optional Accounts and Cloud Processing
 
-This milestone begins only after anonymous local usage demonstrates the need.
+This milestone begins after the local product is dependable. It adds the optional server execution
+intended for the full product without making an account necessary for local use.
 
 ### Recipe synchronization
 
@@ -306,9 +335,12 @@ This milestone begins only after anonymous local usage demonstrates the need.
 3. Show exactly what leaves the device before each remote job.
 4. Require explicit consent and make local versus remote execution visible.
 5. Add idempotency, cancellation, timeouts, and cleanup before charging or broad access.
-6. Offer a generous free allowance and recover costs gradually only when required.
+6. Keep jobs running after the browser closes and make their durable status recoverable on return.
+7. Offer a generous free allowance and keep any usage-based charges inexpensive and tied to real
+   processing cost.
 
-Do not build billing, queues, object storage, or worker infrastructure in anticipation of demand.
+Do not build billing, queues, object storage, or worker infrastructure before this milestone needs
+them.
 
 ## 13. Experimental Backlog
 
@@ -403,8 +435,8 @@ These guardrails are part of the feature definition, not optional hardening work
 
 ## 18. Immediate Next Target
 
-Implement Milestone 3 only: versioned local recipes, IndexedDB persistence, and the approved privacy
-modes. Do not begin batch, account, or cloud infrastructure.
+Stabilize and measure the integrated Milestones 3–5 local release. Do not begin account, billing,
+queue, storage, or cloud-worker infrastructure until Milestone 6 is explicitly approved.
 
 ## 19. Definition of Success
 
