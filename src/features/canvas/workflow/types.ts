@@ -1,4 +1,4 @@
-export type WorkflowKind = 'files' | 'inspect' | 'resize' | 'webp' | 'compare' | 'download'
+export type WorkflowKind = 'files' | 'inspect' | 'resize' | 'encode' | 'compare' | 'download'
 export type WorkflowStatus = 'cancelled' | 'complete' | 'failed' | 'idle' | 'processing' | 'ready'
 
 export interface WorkflowDefinition {

@@ -6,6 +6,7 @@ import { Heading } from '@astryxdesign/core/Heading'
 import { MetadataList, MetadataListItem } from '@astryxdesign/core/MetadataList'
 import { NumberInput } from '@astryxdesign/core/NumberInput'
 import { ProgressBar } from '@astryxdesign/core/ProgressBar'
+import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl'
 import { Slider } from '@astryxdesign/core/Slider'
 import { HStack, VStack } from '@astryxdesign/core/Stack'
 import { Text } from '@astryxdesign/core/Text'
@@ -22,15 +23,19 @@ import type { WorkflowKind, WorkflowStatus } from '#/features/canvas/workflow/ty
 import { ImageComparison } from '#/features/comparison/image-comparison'
 import { MAX_INPUT_BYTES, MAX_INPUT_MEGABYTES } from '#/features/image-input/constants'
 import { MAX_OUTPUT_DIMENSION, MIN_OUTPUT_DIMENSION } from '#/features/processing/constants'
+import { getOutputDetails } from '#/features/processing/output'
+import type { BatchItem, OutputFormat } from '#/features/processing/types'
 import { formatBytes } from '#/lib/format-bytes'
 
 interface InspectorState {
+  batchItems: BatchItem[]
   downloaded: boolean
   error: string | null
   estimatedPeakBytes: number | null
   graphIssue: string | null
   isInspecting: boolean
   maxDimension: number
+  outputFormat: OutputFormat
   progress: number
   progressLabel: string
   quality: number
@@ -50,7 +55,9 @@ interface InspectorActions {
   processImage: () => void
   redo: () => void
   selectFile: (value: File | File[] | null) => void
+  selectFolder: () => void
   setMaxDimension: (value: number) => void
+  setOutputFormat: (value: OutputFormat) => void
   setQuality: (value: number) => void
   undo: () => void
 }
@@ -104,26 +111,37 @@ function InspectorHeader({
 }
 
 function FileNodePanel({ actions, state }: NodePanelProps) {
-  const { isInspecting, selectedImage } = state
+  const { batchItems, isInspecting, selectedImage } = state
   const statusMessage = selectedImage
     ? `${selectedImage.info.width} × ${selectedImage.info.height} ${selectedImage.info.format.toUpperCase()}`
     : undefined
 
   return (
-    <FileInput
-      label="Source image"
-      value={selectedImage?.file ?? null}
-      onChange={actions.selectFile}
-      accept="image/jpeg,image/png"
-      maxSize={MAX_INPUT_BYTES}
-      mode="dropzone"
-      isLoading={isInspecting}
-      description={`JPEG or PNG, up to ${MAX_INPUT_MEGABYTES} MB. The file stays on this device.`}
-      placeholder="Drop an image or choose a file"
-      status={statusMessage ? { type: 'success', message: statusMessage } : undefined}
-      statusVariant="detached"
-      width="100%"
-    />
+    <VStack gap={3}>
+      <FileInput
+        label="Source images"
+        value={batchItems.map(({ file }) => file)}
+        onChange={actions.selectFile}
+        accept="image/jpeg,image/png"
+        isMultiple
+        maxFiles={100}
+        maxSize={MAX_INPUT_BYTES}
+        mode="dropzone"
+        isLoading={isInspecting}
+        description={`Up to 100 JPEG or PNG files, ${MAX_INPUT_MEGABYTES} MB each. Files stay on this device.`}
+        placeholder="Drop images or choose files"
+        status={statusMessage ? { type: 'success', message: statusMessage } : undefined}
+        statusVariant="detached"
+        width="100%"
+      />
+      <Button
+        label="Choose folder"
+        variant="secondary"
+        width="100%"
+        isDisabled={isInspecting}
+        onClick={actions.selectFolder}
+      />
+    </VStack>
   )
 }
 
@@ -182,13 +200,24 @@ function ResizeNodePanel({ actions, state }: NodePanelProps) {
   )
 }
 
-function WebpNodePanel({ actions, state }: NodePanelProps) {
+function EncodeNodePanel({ actions, state }: NodePanelProps) {
   const outputNotes = state.result?.warnings.join(' ')
 
   return (
     <VStack gap={4}>
+      <SegmentedControl
+        label="Output format"
+        value={state.outputFormat}
+        onChange={(value) => actions.setOutputFormat(value as OutputFormat)}
+        layout="fill"
+        isDisabled={state.runState === 'processing'}
+      >
+        <SegmentedControlItem value="webp" label="WebP" />
+        <SegmentedControlItem value="jpeg" label="JPEG" />
+        <SegmentedControlItem value="png" label="PNG" />
+      </SegmentedControl>
       <Slider
-        label="WebP quality"
+        label={`${getOutputDetails(state.outputFormat).label} quality`}
         value={state.quality}
         onChange={(value: number | [number, number]) => {
           if (typeof value === 'number') actions.setQuality(value)
@@ -225,7 +254,7 @@ function CompareNodePanel({ state }: NodePanelProps) {
       result={
         result && resultUrl
           ? {
-              label: 'WebP',
+              label: getOutputDetails(result.format).label,
               url: resultUrl,
               width: result.width,
               height: result.height,
@@ -252,7 +281,9 @@ function DownloadNodePanel({ actions, state }: NodePanelProps) {
         </MetadataList>
       ) : null}
       <Button
-        label={downloaded ? 'Download again' : 'Download WebP'}
+        label={
+          downloaded ? 'Download again' : `Download ${getOutputDetails(state.outputFormat).label}`
+        }
         variant="primary"
         width="100%"
         isDisabled={!result}
@@ -271,8 +302,8 @@ function NodePanel({ kind, ...props }: NodePanelProps & { kind: WorkflowKind | n
       return <InspectNodePanel {...props} />
     case 'resize':
       return <ResizeNodePanel {...props} />
-    case 'webp':
-      return <WebpNodePanel {...props} />
+    case 'encode':
+      return <EncodeNodePanel {...props} />
     case 'compare':
       return <CompareNodePanel {...props} />
     case 'download':
@@ -287,35 +318,19 @@ function MobileActions({
   canRedo,
   canUndo,
   missingKind,
-  runState,
-  error,
-}: Pick<WorkflowInspectorProps, 'actions' | 'canRedo' | 'canUndo' | 'missingKind'> & {
-  error: string | null
-  runState: RunState
-}) {
-  const isProcessing = runState === 'processing'
-  const runLabel = isProcessing ? 'Cancel run' : error ? 'Retry pipeline' : 'Run pipeline'
-
+}: Pick<WorkflowInspectorProps, 'actions' | 'canRedo' | 'canUndo' | 'missingKind'>) {
   return (
-    <VStack gap={3}>
+    <ButtonGroup label="Edit workflow" size="sm">
+      <Button label="Undo" variant="secondary" isDisabled={!canUndo} onClick={actions.undo} />
+      <Button label="Redo" variant="secondary" isDisabled={!canRedo} onClick={actions.redo} />
       <Button
-        label={runLabel}
-        variant="primary"
-        width="100%"
-        onClick={isProcessing ? actions.cancelProcessing : actions.processImage}
+        label="Restore"
+        variant="secondary"
+        isDisabled={!missingKind}
+        onClick={actions.addMissingNode}
       />
-      <ButtonGroup label="Edit workflow" size="sm">
-        <Button label="Undo" variant="secondary" isDisabled={!canUndo} onClick={actions.undo} />
-        <Button label="Redo" variant="secondary" isDisabled={!canRedo} onClick={actions.redo} />
-        <Button
-          label="Restore"
-          variant="secondary"
-          isDisabled={!missingKind}
-          onClick={actions.addMissingNode}
-        />
-        <Button label="Delete" variant="secondary" onClick={actions.deleteSelected} />
-      </ButtonGroup>
-    </VStack>
+      <Button label="Delete" variant="secondary" onClick={actions.deleteSelected} />
+    </ButtonGroup>
   )
 }
 
@@ -353,8 +368,6 @@ export function WorkflowInspector({
           canRedo={canRedo}
           canUndo={canUndo}
           missingKind={missingKind}
-          runState={state.runState}
-          error={state.error}
         />
       ) : null}
     </VStack>

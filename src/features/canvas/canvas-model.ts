@@ -15,6 +15,8 @@ import type {
   WorkflowNodeModel,
   WorkflowStatus,
 } from '#/features/canvas/workflow/types'
+import { createOutputNames, getOutputDetails } from '#/features/processing/output'
+import type { OutputFormat } from '#/features/processing/types'
 import { formatBytes } from '#/lib/format-bytes'
 
 interface NodeRuntime {
@@ -23,6 +25,7 @@ interface NodeRuntime {
   downloaded: boolean
   failedNodeId: string | null
   maxDimension: number
+  outputFormat: OutputFormat
   quality: number
   result: ProcessedImage | null
   savings: number | null
@@ -79,9 +82,12 @@ export function createInitialCanvas() {
   }
 }
 
-export function outputFileName(sourceName: string) {
-  const baseName = sourceName.replace(/\.[^.]+$/, '') || 'hexlode-output'
-  return `${baseName}.webp`
+export function selectCanvasNode(nodes: WorkflowCanvasNode[], nodeId: string) {
+  return nodes.map((node) => ({ ...node, selected: node.id === nodeId }))
+}
+
+export function outputFileName(sourceName: string, format: OutputFormat) {
+  return createOutputNames([sourceName], format)[0] as string
 }
 
 export function getNodeStatus(node: WorkflowCanvasNode, runtime: NodeRuntime): WorkflowStatus {
@@ -94,7 +100,7 @@ export function getNodeStatus(node: WorkflowCanvasNode, runtime: NodeRuntime): W
     case 'inspect':
       return runtime.selectedImage ? 'complete' : 'idle'
     case 'resize':
-    case 'webp':
+    case 'encode':
       return runtime.result ? 'complete' : runtime.selectedImage ? 'ready' : 'idle'
     case 'compare':
       return runtime.result ? 'complete' : 'idle'
@@ -104,7 +110,7 @@ export function getNodeStatus(node: WorkflowCanvasNode, runtime: NodeRuntime): W
 }
 
 function nodeSummary(kind: WorkflowKind, runtime: NodeRuntime) {
-  const { maxDimension, quality, result, savings, selectedImage } = runtime
+  const { maxDimension, outputFormat, quality, result, savings, selectedImage } = runtime
 
   switch (kind) {
     case 'files':
@@ -115,8 +121,8 @@ function nodeSummary(kind: WorkflowKind, runtime: NodeRuntime) {
         : WORKFLOW_DEFINITIONS.inspect.summary
     case 'resize':
       return `Max ${maxDimension} px`
-    case 'webp':
-      return `Quality ${quality}%`
+    case 'encode':
+      return `${getOutputDetails(outputFormat).label} · quality ${quality}%`
     case 'compare':
       if (savings === null) return WORKFLOW_DEFINITIONS.compare.summary
       return savings >= 0
@@ -124,7 +130,7 @@ function nodeSummary(kind: WorkflowKind, runtime: NodeRuntime) {
         : `${Math.abs(savings).toFixed(1)}% larger`
     case 'download':
       return selectedImage && result
-        ? outputFileName(selectedImage.file.name)
+        ? outputFileName(selectedImage.file.name, outputFormat)
         : WORKFLOW_DEFINITIONS.download.summary
   }
 }
@@ -147,7 +153,7 @@ export function createDisplayEdges(
 ) {
   return edges.map((edge) => {
     const sourceKind = nodes.find((node) => node.id === edge.source)?.data.kind
-    const containsOutput = sourceKind === 'webp' || sourceKind === 'compare'
+    const containsOutput = sourceKind === 'encode' || sourceKind === 'compare'
     const size = containsOutput ? runtime.result?.size : runtime.selectedImage?.file.size
 
     return {

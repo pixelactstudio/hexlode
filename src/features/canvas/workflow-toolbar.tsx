@@ -12,6 +12,7 @@ interface WorkflowToolbarProps {
   canRedo: boolean
   canUndo: boolean
   error: string | null
+  isComplete: boolean
   isNarrow: boolean
   isProcessing: boolean
   missingKind: WorkflowKind | undefined
@@ -27,6 +28,7 @@ export function WorkflowToolbar({
   canRedo,
   canUndo,
   error,
+  isComplete,
   isNarrow,
   isProcessing,
   missingKind,
@@ -70,11 +72,13 @@ export function WorkflowToolbar({
               <Button label="Delete" variant="secondary" onClick={onDelete} />
             </>
           ) : null}
-          <Button
-            label={runLabel}
-            variant="primary"
-            onClick={isProcessing ? onCancel : onProcess}
-          />
+          {!isComplete ? (
+            <Button
+              label={runLabel}
+              variant="primary"
+              onClick={isProcessing ? onCancel : onProcess}
+            />
+          ) : null}
         </HStack>
       }
     />

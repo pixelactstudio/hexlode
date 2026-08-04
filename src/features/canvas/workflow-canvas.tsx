@@ -16,7 +16,6 @@ const NODE_TYPES = { workflow: WorkflowNode }
 
 interface WorkflowCanvasProps {
   edges: WorkflowCanvasEdge[]
-  isNarrow: boolean
   isValidConnection: (connection: Edge | Connection) => boolean
   nodes: WorkflowCanvasNode[]
   onConnect: (connection: Connection) => void
@@ -30,7 +29,6 @@ interface WorkflowCanvasProps {
 
 export function WorkflowCanvas({
   edges,
-  isNarrow,
   isValidConnection,
   nodes,
   onConnect,
@@ -43,7 +41,7 @@ export function WorkflowCanvas({
 }: WorkflowCanvasProps) {
   return (
     <ReactFlow<WorkflowCanvasNode, WorkflowCanvasEdge>
-      className={isNarrow ? 'h-96' : 'h-full'}
+      className="h-full"
       nodes={nodes}
       edges={edges}
       nodeTypes={NODE_TYPES}

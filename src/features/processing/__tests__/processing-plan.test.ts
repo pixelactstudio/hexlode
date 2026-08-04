@@ -18,11 +18,14 @@ describe('processing plan', () => {
       height: 3000,
       estimatedDecodeBytes: 48_000_000,
     }
-    assert.deepEqual(createProcessingPlan(image, { maxDimension: 2000, quality: 82 }), {
-      width: 2000,
-      height: 1500,
-      estimatedPeakBytes: 60_000_000,
-    })
+    assert.deepEqual(
+      createProcessingPlan(image, { format: 'webp', maxDimension: 2000, quality: 82 }),
+      {
+        width: 2000,
+        height: 1500,
+        estimatedPeakBytes: 60_000_000,
+      },
+    )
   })
 
   it('rejects plans above the working-memory limit', () => {
@@ -33,6 +36,8 @@ describe('processing plan', () => {
       height: 8192,
       estimatedDecodeBytes: 256 * 1024 * 1024,
     }
-    assert.throws(() => createProcessingPlan(image, { maxDimension: 8192, quality: 82 }))
+    assert.throws(() =>
+      createProcessingPlan(image, { format: 'webp', maxDimension: 8192, quality: 82 }),
+    )
   })
 })

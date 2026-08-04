@@ -14,7 +14,7 @@ describe('workflow graph', () => {
       'files',
       'inspect',
       'resize',
-      'webp',
+      'encode',
       'compare',
       'download',
     ])

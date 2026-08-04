@@ -32,7 +32,7 @@ describe('ImageProcessor', () => {
     const pending = processor.process(
       new ArrayBuffer(8),
       'image/png',
-      { maxDimension: 1920, quality: 82 },
+      { format: 'webp', maxDimension: 1920, quality: 82 },
       () => {},
     )
 
@@ -53,7 +53,7 @@ describe('ImageProcessor', () => {
       processor.process(
         new ArrayBuffer(8),
         'image/png',
-        { maxDimension: 16, quality: 82 },
+        { format: 'webp', maxDimension: 16, quality: 82 },
         () => {},
       ),
       (error) => error instanceof ProcessingError && error.code === 'invalid_message',
@@ -63,7 +63,7 @@ describe('ImageProcessor', () => {
     const validJob = processor.process(
       new ArrayBuffer(8),
       'image/png',
-      { maxDimension: 1920, quality: 82 },
+      { format: 'webp', maxDimension: 1920, quality: 82 },
       () => {},
     )
     assert.equal(worker.postCount, 1)
@@ -78,7 +78,7 @@ describe('ImageProcessor', () => {
       processor.process(
         new ArrayBuffer(8),
         'image/png',
-        { maxDimension: 1920, quality: 82 },
+        { format: 'webp', maxDimension: 1920, quality: 82 },
         () => {},
       )
 

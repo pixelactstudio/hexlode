@@ -12,7 +12,7 @@ describe('worker protocol', () => {
       type: 'process',
       id: 'job-1',
       input: { buffer: new ArrayBuffer(4), mimeType: 'image/png' },
-      options: { maxDimension: 1920, quality: 82 },
+      options: { format: 'webp', maxDimension: 1920, quality: 82 },
     }
     assert.equal(processImageRequestSchema.safeParse(request).success, true)
     assert.equal(

@@ -5,6 +5,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import { createRootRouteWithContext, HeadContent, Scripts } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 
+import { PrivacyProvider } from '#/features/privacy/privacy-provider'
 import PostHogProvider from '../integrations/posthog/provider'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import appCss from '../styles.css?url'
@@ -28,7 +29,8 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       },
       {
         name: 'description',
-        content: 'Resize and convert JPEG or PNG images to WebP privately in your browser.',
+        content:
+          'Build local image workflows, process batches, and compare WebP, JPEG, and PNG outputs privately in your browser.',
       },
     ],
     links: [
@@ -49,21 +51,23 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <Theme theme={neutralTheme}>
-          <PostHogProvider>
-            {children}
-            <TanStackDevtools
-              config={{
-                position: 'bottom-right',
-              }}
-              plugins={[
-                {
-                  name: 'Tanstack Router',
-                  render: <TanStackRouterDevtoolsPanel />,
-                },
-                TanStackQueryDevtools,
-              ]}
-            />
-          </PostHogProvider>
+          <PrivacyProvider>
+            <PostHogProvider>
+              {children}
+              <TanStackDevtools
+                config={{
+                  position: 'bottom-right',
+                }}
+                plugins={[
+                  {
+                    name: 'Tanstack Router',
+                    render: <TanStackRouterDevtoolsPanel />,
+                  },
+                  TanStackQueryDevtools,
+                ]}
+              />
+            </PostHogProvider>
+          </PrivacyProvider>
         </Theme>
         <Scripts />
       </body>

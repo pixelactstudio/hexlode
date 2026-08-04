@@ -25,7 +25,7 @@ export const workerResponseSchema = z.discriminatedUnion('type', [
     type: z.literal('result'),
     id: z.string(),
     output: arrayBufferSchema,
-    mimeType: z.literal('image/webp'),
+    mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
     width: z.number().int().positive(),
     height: z.number().int().positive(),
     durationMs: z.number().nonnegative(),

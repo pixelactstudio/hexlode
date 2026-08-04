@@ -5,7 +5,7 @@ export const WORKFLOW_KINDS = [
   'files',
   'inspect',
   'resize',
-  'webp',
+  'encode',
   'compare',
   'download',
 ] as const satisfies readonly WorkflowKind[]
@@ -13,7 +13,7 @@ export const WORKFLOW_KINDS = [
 export const WORKFLOW_DEFINITIONS: Record<WorkflowKind, WorkflowDefinition> = {
   files: {
     label: 'Files',
-    description: 'Choose one local JPEG or PNG.',
+    description: 'Choose local JPEG or PNG images.',
     summary: 'JPEG or PNG',
   },
   inspect: {
@@ -26,10 +26,10 @@ export const WORKFLOW_DEFINITIONS: Record<WorkflowKind, WorkflowDefinition> = {
     description: 'Fit the long edge without upscaling.',
     summary: `Max ${DEFAULT_MAX_DIMENSION} px`,
   },
-  webp: {
-    label: 'WebP',
-    description: 'Encode a local WebP output.',
-    summary: `Quality ${DEFAULT_WEBP_QUALITY}%`,
+  encode: {
+    label: 'Encode',
+    description: 'Create a local WebP, JPEG, or PNG output.',
+    summary: `WebP · quality ${DEFAULT_WEBP_QUALITY}%`,
   },
   compare: {
     label: 'Compare',
@@ -39,6 +39,6 @@ export const WORKFLOW_DEFINITIONS: Record<WorkflowKind, WorkflowDefinition> = {
   download: {
     label: 'Download',
     description: 'Save the output to this device.',
-    summary: 'WebP file',
+    summary: 'Output file',
   },
 }
