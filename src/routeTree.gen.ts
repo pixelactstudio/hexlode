@@ -16,6 +16,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResizeRouteImport } from './routes/resize'
 import { Route as StripMetadataRouteImport } from './routes/strip-metadata'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as ToolsPipelineIdRouteImport } from './routes/tools.$pipelineId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -53,6 +54,11 @@ const StudioRoute = StudioRouteImport.update({
   path: '/studio',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToolsPipelineIdRoute = ToolsPipelineIdRouteImport.update({
+  id: '/tools/$pipelineId',
+  path: '/tools/$pipelineId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/resize': typeof ResizeRoute
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
+  '/tools/$pipelineId': typeof ToolsPipelineIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +84,7 @@ export interface FileRoutesByTo {
   '/resize': typeof ResizeRoute
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
+  '/tools/$pipelineId': typeof ToolsPipelineIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   '/resize': typeof ResizeRoute
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
+  '/tools/$pipelineId': typeof ToolsPipelineIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/resize'
     | '/strip-metadata'
     | '/studio'
+    | '/tools/$pipelineId'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/resize'
     | '/strip-metadata'
     | '/studio'
+    | '/tools/$pipelineId'
     | '/api/auth/$'
   id:
     | '__root__'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/resize'
     | '/strip-metadata'
     | '/studio'
+    | '/tools/$pipelineId'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
@@ -131,6 +143,7 @@ export interface RootRouteChildren {
   ResizeRoute: typeof ResizeRoute
   StripMetadataRoute: typeof StripMetadataRoute
   StudioRoute: typeof StudioRoute
+  ToolsPipelineIdRoute: typeof ToolsPipelineIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -185,6 +198,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tools/$pipelineId': {
+      id: '/tools/$pipelineId'
+      path: '/tools/$pipelineId'
+      fullPath: '/tools/$pipelineId'
+      preLoaderRoute: typeof ToolsPipelineIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -203,6 +223,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResizeRoute: ResizeRoute,
   StripMetadataRoute: StripMetadataRoute,
   StudioRoute: StudioRoute,
+  ToolsPipelineIdRoute: ToolsPipelineIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

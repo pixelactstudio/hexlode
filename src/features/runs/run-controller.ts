@@ -231,10 +231,11 @@ export function createRunController(options: {
     cancel() {
       controller?.abort()
     },
+    /** Stops work and releases workers. The controller stays usable; a new run starts fresh. */
     dispose() {
       controller?.abort()
       host?.dispose()
-      listeners.clear()
+      host = undefined
     },
   }
 

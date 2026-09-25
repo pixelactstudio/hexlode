@@ -7,7 +7,7 @@ function line(nodes: [id: string, type: string, settings?: Record<string, unknow
       id,
       type,
       settings: settings ?? {},
-      position: { x: index * 280, y: 120 },
+      position: { x: index * 256, y: 120 },
     })),
     connections: nodes.slice(1).map(([id], index) => ({
       id: `${nodes[index][0]}-out-${id}`,
