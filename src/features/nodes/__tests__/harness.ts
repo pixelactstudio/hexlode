@@ -175,3 +175,27 @@ export function noisyPixels(size = 256) {
   }
   return { data, width: size, height: size }
 }
+
+/** Reads every entry of a ZIP (stored, as client-zip writes it) through its central directory. */
+export async function unzip(archive: Blob) {
+  const bytes = new Uint8Array(await archive.arrayBuffer())
+  const view = new DataView(bytes.buffer)
+  let end = bytes.length - 22
+  while (end >= 0 && view.getUint32(end, true) !== 0x06054b50) end -= 1
+  const count = view.getUint16(end + 10, true)
+  let at = view.getUint32(end + 16, true)
+  const entries: { name: string; bytes: Uint8Array }[] = []
+  for (let index = 0; index < count; index += 1) {
+    const size = view.getUint32(at + 20, true)
+    const nameLength = view.getUint16(at + 28, true)
+    const extraLength = view.getUint16(at + 30, true)
+    const commentLength = view.getUint16(at + 32, true)
+    const local = view.getUint32(at + 42, true)
+    const name = new TextDecoder().decode(bytes.subarray(at + 46, at + 46 + nameLength))
+    const dataStart =
+      local + 30 + view.getUint16(local + 26, true) + view.getUint16(local + 28, true)
+    entries.push({ name, bytes: bytes.slice(dataStart, dataStart + size) })
+    at += 46 + nameLength + extraLength + commentLength
+  }
+  return entries
+}
