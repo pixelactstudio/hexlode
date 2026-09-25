@@ -108,8 +108,14 @@ export function readAvifMetadata(bytes: Uint8Array): ImageMetadata {
   const metadata: ImageMetadata = {}
   for (const item of metadataItems(bytes)) {
     const data = bytes.subarray(item.offset, item.offset + item.length)
-    if (item.part === 'exif') metadata.exif = data.slice(4 + viewOf(data).getUint32(0))
-    else metadata.xmp = new TextDecoder().decode(data)
+    if (item.part === 'exif') {
+      const exif = data.slice(4 + viewOf(data).getUint32(0))
+      // Items blanked by an earlier strip hold zeros, not a TIFF block.
+      if (exif[0] === 0x49 || exif[0] === 0x4d) metadata.exif = exif
+    } else {
+      const xmp = new TextDecoder().decode(data).trim()
+      if (xmp) metadata.xmp = xmp
+    }
   }
   return metadata
 }
