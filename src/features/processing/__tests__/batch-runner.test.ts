@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import { describe, it } from 'vitest'
 
 import { runBatchQueue } from '#/features/processing/batch-runner'
 import { createOutputNames } from '#/features/processing/output'
