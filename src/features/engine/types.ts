@@ -25,6 +25,8 @@ export interface ItemMeta {
   size?: number
   width?: number
   height?: number
+  /** Camera orientation tag (1 to 8) for images. 5 to 8 display rotated a quarter turn. */
+  orientation?: number
   /** The file the item came from. Used by Compare. */
   source: { size: number; format: ItemFormat; width?: number; height?: number }
 }

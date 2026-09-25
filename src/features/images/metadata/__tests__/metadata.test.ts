@@ -81,6 +81,12 @@ describe('stripMetadata', () => {
     expect(stripMetadata(metadata, { mode: 'all', keepColourProfile: false })).toEqual({})
   })
 
+  it('keeps a camera orientation so stripped photos still display upright', async () => {
+    const metadata = await readMetadata('jpeg', fixture('oriented.jpg'))
+    const stripped = stripMetadata(metadata, { mode: 'all', keepColourProfile: true })
+    expect(parseExif(stripped.exif)).toMatchObject({ orientation: 6, make: null, artist: null })
+  })
+
   it('removes location properties from XMP', () => {
     const xmp =
       '<rdf:Description exif:GPSLatitude="51,30N" exif:GPSLongitude="0,7W" dc:format="image/jpeg"><photoshop:City>London</photoshop:City><dc:rights>(c) Ada</dc:rights></rdf:Description>'

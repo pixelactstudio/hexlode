@@ -1,4 +1,9 @@
-import { readExifBlock, TAGS, writeExifBlock } from '#/features/images/metadata/exif'
+import {
+  type ExifEntry,
+  readExifBlock,
+  TAGS,
+  writeExifBlock,
+} from '#/features/images/metadata/exif'
 import type { ImageMetadata, StripMode } from '#/features/images/metadata/types'
 
 export interface StripOptions {
@@ -32,11 +37,21 @@ function copyrightOnlyXmp(xmp: string) {
   ].join('')
 }
 
-function stripExif(exif: Uint8Array, mode: Exclude<StripMode, 'all'>) {
+/** Orientation is kept unless it is the default, so stripped photos still display upright. */
+function keepsOrientation(entry: ExifEntry, littleEndian: boolean) {
+  if (entry.tag !== TAGS.orientation) return false
+  return new DataView(entry.value.buffer, entry.value.byteOffset).getUint16(0, littleEndian) !== 1
+}
+
+function stripExif(exif: Uint8Array, mode: StripMode) {
   const block = readExifBlock(exif)
   if (!block) return undefined
   if (mode === 'location') return writeExifBlock({ ...block, gps: [] })
-  const ifd0 = block.ifd0.filter((entry) => entry.tag === TAGS.copyright)
+  const ifd0 = block.ifd0.filter(
+    (entry) =>
+      (mode === 'copyright' && entry.tag === TAGS.copyright) ||
+      keepsOrientation(entry, block.littleEndian),
+  )
   if (ifd0.length === 0) return undefined
   return writeExifBlock({ ...block, ifd0, exif: [], gps: [] })
 }
@@ -45,9 +60,9 @@ function stripExif(exif: Uint8Array, mode: Exclude<StripMode, 'all'>) {
 export function stripMetadata(metadata: ImageMetadata, options: StripOptions): ImageMetadata {
   const result: ImageMetadata = {}
   if (metadata.icc && options.keepColourProfile) result.icc = metadata.icc
-  if (options.mode === 'all') return result
   const exif = metadata.exif ? stripExif(metadata.exif, options.mode) : undefined
   if (exif) result.exif = exif
+  if (options.mode === 'all') return result
   const xmp = metadata.xmp
     ? options.mode === 'location'
       ? stripXmpLocation(metadata.xmp)
