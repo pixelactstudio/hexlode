@@ -1,8 +1,10 @@
-export type SupportedImageFormat = 'jpeg' | 'png'
+import type { ImageFormat } from '#/features/engine/types'
+
+export type SupportedImageFormat = ImageFormat
 
 export interface ImageInfo {
   format: SupportedImageFormat
-  mimeType: 'image/jpeg' | 'image/png'
+  mimeType: string
   width: number
   height: number
   estimatedDecodeBytes: number

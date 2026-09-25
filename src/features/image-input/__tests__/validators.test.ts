@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
-import { describe, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { describe, expect, it } from 'vitest'
 
 import { ImageValidationError, inspectImageHeader } from '#/features/image-input/validators'
 
@@ -42,7 +43,45 @@ function jpegHeader(width: number, height: number) {
   ]).buffer
 }
 
+function fixture(name: string) {
+  const bytes = readFileSync(new URL(`../../images/__tests__/fixtures/${name}`, import.meta.url))
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+}
+
 describe('inspectImageHeader', () => {
+  it.each([
+    ['photo.jpg', 'jpeg', 'image/jpeg'],
+    ['photo.png', 'png', 'image/png'],
+    ['photo.webp', 'webp', 'image/webp'],
+    ['alpha.webp', 'webp', 'image/webp'],
+    ['photo.avif', 'avif', 'image/avif'],
+    ['photo.jxl', 'jxl', 'image/jxl'],
+    ['photo.qoi', 'qoi', ''],
+  ])('reads the format and dimensions of %s', (name, format, declaredType) => {
+    expect(inspectImageHeader(fixture(name), declaredType)).toMatchObject({
+      format,
+      width: 48,
+      height: 32,
+    })
+  })
+
+  it('reads a JPEG XL codestream whose width follows from an aspect ratio', () => {
+    // FF 0A, then SizeHeader: div8=1, h_div8-1=3 (height 32), ratio=4 (3:2, width 48).
+    const bits = [1, 1, 1, 0, 0, 0, 0, 0, 1]
+    const bytes = new Uint8Array(4)
+    bytes.set([0xff, 0x0a])
+    bits.forEach((bit, index) => {
+      bytes[2 + (index >> 3)] |= bit << (index & 7)
+    })
+    expect(inspectImageHeader(bytes.buffer)).toMatchObject({ width: 48, height: 32 })
+  })
+
+  it('refuses a file that is no supported image', () => {
+    expect(() => inspectImageHeader(new TextEncoder().encode('%PDF-1.7 hello').buffer)).toThrow(
+      'Choose a JPEG, PNG, WebP, AVIF, JPEG XL or QOI image.',
+    )
+  })
+
   it('reads PNG and JPEG dimensions from their signatures', () => {
     assert.deepEqual(inspectImageHeader(pngHeader(1200, 800), 'image/png'), {
       format: 'png',
