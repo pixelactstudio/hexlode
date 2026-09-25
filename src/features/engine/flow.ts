@@ -66,6 +66,8 @@ export interface FlowDeps {
   kinds?: KindHandlers
   signal: AbortSignal
   emit(event: RunEvent): void
+  /** Sees every item a node produces. Live previews use it to render thumbnails. */
+  observe?(nodeId: string, port: string, item: Item, status: 'processed' | 'cached'): Promise<void>
 }
 
 interface ItemRef {
@@ -247,8 +249,10 @@ async function forwardOutputs(
   deps: FlowDeps,
   planned: PlannedNode,
   refs: { port: string; ref: ItemRef }[],
+  status: 'processed' | 'cached',
 ) {
   for (const { port, ref } of refs) {
+    if (deps.observe) await deps.observe(planned.node.id, port, await ref.get(), status)
     await forward(deps, planned, port, ref)
     ref.release()
   }
@@ -337,6 +341,7 @@ async function visit(deps: FlowDeps, nodeId: string, ref: ItemRef): Promise<void
       deps,
       planned,
       cachedRefs(deps, entry, cached, ref.order, ref, () => execute(true)),
+      'cached',
     )
     return
   }
@@ -355,6 +360,7 @@ async function visit(deps: FlowDeps, nodeId: string, ref: ItemRef): Promise<void
         async () => output.item,
       ),
     })),
+    'processed',
   )
 }
 
@@ -405,6 +411,7 @@ export async function flowGather(deps: FlowDeps, nodeId: string) {
       deps,
       planned,
       cachedRefs(deps, entry, cached, order, undefined, () => execute(true)),
+      'cached',
     )
     return
   }
@@ -422,5 +429,6 @@ export async function flowGather(deps: FlowDeps, nodeId: string) {
         async () => output.item,
       ),
     })),
+    'processed',
   )
 }

@@ -14,3 +14,9 @@ export const MEMORY_SHARE_FOR_WORKERS = 0.5
 export const WORKER_MEMORY_PER_DECODED_BYTE = 5
 /** Browsers without `navigator.deviceMemory` (Firefox, Safari) are assumed to have this much. */
 export const DEFAULT_DEVICE_MEMORY_GB = 8
+
+/** Live previews run on a copy of the sample image scaled to this longest edge. */
+export const PREVIEW_SAMPLE_EDGE = 1024
+export const PREVIEW_THUMBNAIL_EDGE = 192
+/** Compare nodes show a larger before and after pair. */
+export const PREVIEW_COMPARE_EDGE = 640
