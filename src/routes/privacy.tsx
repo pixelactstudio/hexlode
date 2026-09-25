@@ -1,4 +1,5 @@
 import { Card } from '@astryxdesign/core/Card'
+import { Link } from '@astryxdesign/core/Link'
 import { List, ListItem } from '@astryxdesign/core/List'
 import { VStack } from '@astryxdesign/core/Stack'
 import { Heading, Text } from '@astryxdesign/core/Text'
@@ -64,6 +65,18 @@ function Privacy() {
               When something breaks, an error report with the technical cause is sent. File names
               are removed from it, and it contains no personal data and no screen recording.
             </Text>
+          </VStack>
+        </Card>
+        <Card>
+          <VStack gap={3}>
+            <Heading level={2}>Licences</Heading>
+            <Text type="body" as="p">
+              Hexlode is open source under the Apache License 2.0. Images are encoded and decoded
+              with the jSquash codecs, whose licences come with the app.
+            </Text>
+            <Link href="/licenses/jsquash.txt" isExternalLink isStandalone>
+              Codec licences
+            </Link>
           </VStack>
         </Card>
       </VStack>
