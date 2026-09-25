@@ -20,7 +20,7 @@
     "lint:fix": "biome lint --write .",
     "check": "biome check .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --project unit --project browser",
     "validate": "pnpm check && pnpm typecheck && pnpm test && pnpm build",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
@@ -31,7 +31,8 @@
     "start": "node --import ./.output/server/instrument.server.mjs .output/server/index.mjs",
     "test:unit": "vitest run --project unit",
     "test:browser": "vitest run --project browser",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:scale": "vitest run --project scale"
   },
   "dependencies": {
     "@astryxdesign/core": "^0.2.0",
