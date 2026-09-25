@@ -126,6 +126,8 @@ export interface NodeDefinition<S extends Record<string, unknown> = Record<strin
    * estimate adds a decode when `needsPixels` is true and the item is not decoded yet.
    */
   cost?(settings: S, meta: ItemMeta, state: { encoded: boolean }): NodeCost
+  /** Settings that hold text the user typed. Never sent to analytics. */
+  privateSettings?: string[]
   /** Output nodes deliver the items they saved once no more items can arrive. */
   delivers?: boolean
   run(input: NodeInput, settings: S, context: NodeContext): Promise<NodeOutput[]>

@@ -128,6 +128,9 @@ removed.
   ([ADR 0005](./docs/adr/0005-cookieless-explicit-analytics.md)).
 - Sentry sends errors with `sendDefaultPii: false` and no replay. File names are removed from error
   messages before sending.
+- The PostHog project must have cookieless mode enabled and "Discard client IP data" turned on;
+  without the first, PostHog ignores cookieless events. The client also clears `$ip` on every event.
+- The event catalogue lives in `src/features/analytics/events.ts`, and the privacy page lists it.
 
 ## Deployment
 

@@ -40,6 +40,7 @@ export const renameNode = defineNode({
   category: 'output',
   description:
     'Names files from a template such as {name}-{width}w. Output numbers duplicate names.',
+  privateSettings: ['template'],
   schema,
   ports: () => OUTPUT_PORT,
   accepts: () => ALL_IMAGE_TYPES,

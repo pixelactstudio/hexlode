@@ -12,6 +12,7 @@ export const outputNode = defineNode({
   description: 'Saves items, passes them on, and delivers a ZIP or folder.',
   cacheable: false,
   delivers: true,
+  privateSettings: ['archiveName'],
   schema: z.object({
     destination: z.enum(['zip', 'folder']).default('zip'),
     autoDownload: z.boolean().default(false),
