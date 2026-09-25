@@ -1,7 +1,8 @@
 import { z } from 'zod'
-
+import type { ImageFormat } from '#/features/engine/types'
 import { asImage, codecsOf, fileBytesOf } from '#/features/images/image-item'
 import { ALL_IMAGE_TYPES, OUTPUT_PORT } from '#/features/nodes/constants'
+import { encodeCost } from '#/features/nodes/cost'
 import { defineNode } from '#/features/nodes/define-node'
 
 export const outputNode = defineNode({
@@ -20,6 +21,10 @@ export const outputNode = defineNode({
   accepts: () => ALL_IMAGE_TYPES,
   produces: (_settings, input) => input,
   simulate: (_settings, meta) => [{ port: 'out', meta }],
+  cost: (_settings, meta, state) =>
+    state.encoded
+      ? { ms: 0, encodes: 0, needsPixels: false }
+      : encodeCost(meta, meta.format as ImageFormat),
   async run(input, _settings, context) {
     if (input.mode !== 'each') throw new Error('Output runs per item.')
     const item = asImage(input.item)

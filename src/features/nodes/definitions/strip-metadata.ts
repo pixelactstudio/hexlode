@@ -21,7 +21,7 @@ export const stripMetadataNode = defineNode({
   accepts: () => ALL_IMAGE_TYPES,
   produces: (_settings, input) => input,
   simulate: (_settings, meta) => [{ port: 'out', meta }],
-  cost: () => ({ ms: 2, encodes: 0, decodes: 0 }),
+  cost: () => ({ ms: 2, encodes: 0, needsPixels: false }),
   async run(input, settings, context) {
     if (input.mode !== 'each') throw new Error('Strip metadata runs per item.')
     const item = asImage(input.item)

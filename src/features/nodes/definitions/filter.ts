@@ -150,6 +150,11 @@ export const filterNode = defineNode({
     }
     return [{ port: ELSE_PORT, meta }]
   },
+  cost: (settings) => ({
+    ms: 0,
+    encodes: 0,
+    needsPixels: settings.rules.some((rule) => rule.field === 'transparency'),
+  }),
   async run(input, settings, context) {
     if (input.mode !== 'each') throw new Error('Filter runs per item.')
     const item = asImage(input.item)

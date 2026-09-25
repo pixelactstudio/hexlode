@@ -5,7 +5,7 @@ import type { ImageFormat } from '#/features/engine/types'
 import { asImage, codecsOf, encodeImage, replaceExtension } from '#/features/images/image-item'
 import type { EncodeOptions } from '#/features/images/types'
 import { ALL_IMAGE_TYPES, OUTPUT_PORT } from '#/features/nodes/constants'
-import { encodeCost } from '#/features/nodes/cost'
+import { encodeCost, predictedSize } from '#/features/nodes/cost'
 import { defineNode } from '#/features/nodes/define-node'
 
 const quality = (value: number) => z.number().int().min(1).max(100).default(value)
@@ -80,7 +80,12 @@ export const convertNode = defineNode({
     return [
       {
         port: 'out',
-        meta: { ...meta, format, name: replaceExtension(meta.name, format as ImageFormat) },
+        meta: {
+          ...meta,
+          format,
+          name: replaceExtension(meta.name, format as ImageFormat),
+          size: predictedSize(meta, format as ImageFormat),
+        },
       },
     ]
   },

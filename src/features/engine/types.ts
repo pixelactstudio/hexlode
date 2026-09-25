@@ -121,11 +121,20 @@ export interface NodeDefinition<S extends Record<string, unknown> = Record<strin
   produces(settings: S, input: ItemTypeSet, port: string): ItemTypeSet
   /** Predicts outputs from meta alone, for estimates. Returns null when the route needs pixels. */
   simulate?(settings: S, meta: ItemMeta): { port: string; meta: ItemMeta }[] | null
-  /** Rough cost of processing one item, in milliseconds on one core. */
-  cost?(settings: S, meta: ItemMeta): { ms: number; encodes: number; decodes: number }
+  /**
+   * Rough cost of processing one item, in milliseconds on one core, excluding decoding. The
+   * estimate adds a decode when `needsPixels` is true and the item is not decoded yet.
+   */
+  cost?(settings: S, meta: ItemMeta, state: { encoded: boolean }): NodeCost
   /** Output nodes deliver the items they saved once no more items can arrive. */
   delivers?: boolean
   run(input: NodeInput, settings: S, context: NodeContext): Promise<NodeOutput[]>
+}
+
+export interface NodeCost {
+  ms: number
+  encodes: number
+  needsPixels: boolean
 }
 
 export type NodeInput =

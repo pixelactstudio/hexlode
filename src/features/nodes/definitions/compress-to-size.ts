@@ -19,7 +19,7 @@ import {
   LOSSY_IMAGE_TYPES,
   OUTPUT_PORT,
 } from '#/features/nodes/constants'
-import { encodeCost } from '#/features/nodes/cost'
+import { encodeCost, predictedSize } from '#/features/nodes/cost'
 import { defineNode } from '#/features/nodes/define-node'
 
 const schema = z.object({
@@ -49,7 +49,12 @@ export const compressToSizeNode = defineNode({
     return [
       {
         port: 'out',
-        meta: { ...meta, format, name: replaceExtension(meta.name, format as ImageFormat) },
+        meta: {
+          ...meta,
+          format,
+          name: replaceExtension(meta.name, format as ImageFormat),
+          size: predictedSize(meta, format as ImageFormat),
+        },
       },
     ]
   },
@@ -58,7 +63,11 @@ export const compressToSizeNode = defineNode({
       meta,
       settings.format === 'original' ? (meta.format as ImageFormat) : settings.format,
     )
-    return { ...single, ms: single.ms * COMPRESS_SEARCH_STEPS, encodes: COMPRESS_SEARCH_STEPS }
+    return {
+      ...single,
+      ms: single.ms * (COMPRESS_SEARCH_STEPS + 1),
+      encodes: COMPRESS_SEARCH_STEPS + 1,
+    }
   },
   async run(input, settings, context) {
     if (input.mode !== 'each') throw new Error('Compress to size runs per item.')

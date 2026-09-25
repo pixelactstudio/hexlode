@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import { estimateRun } from '#/features/engine/estimate'
 import { fileKey } from '#/features/engine/keys'
 import { appDirectory, listNames } from '#/features/engine/opfs/files'
 import { createStepCacheIndex } from '#/features/engine/opfs/step-cache'
@@ -96,6 +97,14 @@ describe('worker pool', () => {
       )
     const first = await run(pipeline(80), host, ['photo.jpg', 'oriented.jpg'])
     expect(first.statuses('resize-2')).toEqual(['processed', 'processed'])
+    const estimate = estimateRun({
+      pipeline: pipeline(40),
+      registry: productRegistry,
+      sources: await sources(['photo.jpg', 'oriented.jpg']),
+      workers: 2,
+      lookup: index.entry,
+    })
+    expect(estimate).toMatchObject({ cached: 6, encodes: 2 })
     const second = await run(pipeline(40), host, ['photo.jpg', 'oriented.jpg'])
     host.dispose()
     expect(second.statuses('rotate-1')).toEqual(['cached', 'cached'])
