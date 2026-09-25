@@ -16,7 +16,7 @@ export interface RunHost {
   concurrency: number
   begin(run: { runId: string; pipeline: Pipeline; plan: FlowPlan }): Promise<void>
   runSource(source: SourceItem, emit: (event: RunEvent) => void, signal: AbortSignal): Promise<void>
-  runGather(nodeId: string, emit: (event: RunEvent) => void, signal: AbortSignal): Promise<void>
+  runCombining(nodeId: string, emit: (event: RunEvent) => void, signal: AbortSignal): Promise<void>
   deliver(nodeId: string): Promise<Delivery>
   end(status: RunStatus): Promise<void>
 }
@@ -51,14 +51,14 @@ export async function runPipeline(options: RunOptions): Promise<RunResult> {
   const plan = createFlowPlan(options.pipeline, options.registry)
   const deliveries: Delivery[] = []
   const delivered = new Set<string>()
-  const finishedGathers = new Set<string>()
+  const finishedCombining = new Set<string>()
   let status: RunStatus = 'complete'
   let error: string | undefined
 
   const deliverReady = async (force: boolean) => {
     for (const [nodeId, waitsFor] of plan.deliveries) {
       if (delivered.has(nodeId)) continue
-      if (!force && !waitsFor.every((gather) => finishedGathers.has(gather))) continue
+      if (!force && !waitsFor.every((id) => finishedCombining.has(id))) continue
       delivered.add(nodeId)
       const delivery = await host.deliver(nodeId)
       deliveries.push(delivery)
@@ -80,10 +80,10 @@ export async function runPipeline(options: RunOptions): Promise<RunResult> {
     )
     if (errors.length > 0 && !controller.signal.aborted) throw errors[0]
     if (!controller.signal.aborted) await deliverReady(false)
-    for (const gather of plan.gathers) {
+    for (const nodeId of plan.combining) {
       if (controller.signal.aborted) break
-      await host.runGather(gather, emit, controller.signal)
-      finishedGathers.add(gather)
+      await host.runCombining(nodeId, emit, controller.signal)
+      finishedCombining.add(nodeId)
       await deliverReady(false)
     }
     if (controller.signal.aborted) status = 'cancelled'

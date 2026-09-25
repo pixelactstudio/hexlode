@@ -3,7 +3,7 @@
  * An engine worker. Carries source items through the pipeline, one at a time, reading and writing
  * the step cache, output files and waiting items in OPFS.
  */
-import { createFlowPlan, type FlowDeps, flowGather, flowSource } from '#/features/engine/flow'
+import { createFlowPlan, type FlowDeps, flowCombining, flowSource } from '#/features/engine/flow'
 import { appDirectory } from '#/features/engine/opfs/files'
 import { createOpfsOutputSink, createOpfsSpillStore } from '#/features/engine/opfs/run-stores'
 import { createOpfsStepCache } from '#/features/engine/opfs/step-cache'
@@ -68,7 +68,7 @@ async function handle(request: WorkerRequest) {
       }
       await flowSource(depsFor(request.taskId), { ...source, meta: source.meta as never }, load)
     } else {
-      await flowGather(depsFor(request.taskId), request.nodeId)
+      await flowCombining(depsFor(request.taskId), request.nodeId)
     }
     post({ type: 'done', taskId: request.taskId })
   } catch (reason) {

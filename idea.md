@@ -1,6 +1,6 @@
 # Hexlode product
 
-> Updated: 2026-09-26
+> Updated: 2026-09-26 (Phase 1 build)
 > Delivery plan: [implementation.md](./implementation.md). Vocabulary: [CONTEXT.md](./CONTEXT.md).
 > Decisions and their reasons: [docs/adr/](./docs/adr/).
 
@@ -38,7 +38,8 @@ the five links once the user has some.
 
 Each quick tool is a fixed pipeline that runs on the same engine as the Studio. A quick tool page
 has a drop area, the settings for that job, a results list with before and after sizes, and a
-download button.
+download button. A single result downloads as the file itself; several download as a ZIP.
+Compress by quality never returns a file larger than the original.
 
 A pipeline tool is a saved Studio pipeline opened as a quick tool page. The user builds the
 pipeline once, then drops new images into the simple page whenever they need it.
@@ -62,8 +63,10 @@ quick tools.
 
 The canvas shows real engine data so the user can see the work happening:
 
-- Each node shows a live preview thumbnail of its output for a sample image the user picks. The
-  preview updates when a setting changes. The full batch runs only when the user presses Run.
+- Each node shows a live preview thumbnail of its output for a sample image the user picks; the
+  first image added is the sample until the user picks another. Previews run on a copy scaled to
+  1024 pixels. The preview updates when a setting changes. The full batch runs only when the user
+  presses Run.
 - During a run, each node shows counts (processed, skipped, failed), bytes in and out, and time.
 - Connections animate while items flow and carry small labels: item count, formats such as
   "PNG only", and size saved.
@@ -114,7 +117,7 @@ Items are images, data (JSON or text) or documents (PDF). Batch numbers match th
 | Node | What it does | Batch |
 |---|---|---|
 | Files | Takes dropped files or a folder. Starts every pipeline. | 1 |
-| Filter | Routes items by rules on format, file size, dimensions, orientation or transparency. Each rule has its own output, plus an output for everything else. | 1 |
+| Filter | Routes items by rules on format, file size, dimensions, orientation or transparency. Each rule has its own output, plus an output for everything else. An item leaves by the first rule it matches. | 1 |
 | Inspect | Shows format, dimensions, size and metadata per item. Passes items through unchanged. | 1 |
 | Deduplicate | Drops exact duplicates, or near duplicates by image fingerprint. | 2 |
 
@@ -123,7 +126,7 @@ Items are images, data (JSON or text) or documents (PDF). Batch numbers match th
 | Node | What it does | Batch |
 |---|---|---|
 | Resize | Resizes by width, height, percent or longest edge, with fit, fill or exact modes and a choice of resampling method. | 1 |
-| Crop | Crops to an aspect preset (1:1, 4:5, 16:9 and others), from the centre or a chosen position. | 1 |
+| Crop | Crops to an aspect preset (1:1, 4:5, 16:9 and others), from the centre or a chosen position. Turns the image upright first. | 1 |
 | Rotate / Flip | Rotates and flips, including automatic rotation from the camera orientation tag. | 1 |
 | Auto-trim | Removes plain-colour or transparent borders. | 2 |
 | Pad / Extend | Adds space to reach an aspect ratio, filled with a colour or a blurred copy of the image. | 2 |
@@ -151,17 +154,17 @@ Items are images, data (JSON or text) or documents (PDF). Batch numbers match th
 
 | Node | What it does | Batch |
 |---|---|---|
-| Strip metadata | Removes all metadata, only location data, or everything except copyright. | 1 |
+| Strip metadata | Removes all metadata, only location data, or everything except copyright, without re-encoding. Keeps the colour profile unless told otherwise, and keeps a camera orientation tag so photos stay upright. | 1 |
 | Set copyright / author | Writes author and copyright fields. | 3 |
 
 ### Output and encoding
 
 | Node | What it does | Batch |
 |---|---|---|
-| Convert | Encodes to WebP, AVIF, JPEG, JPEG XL, PNG or QOI with the encoder's real settings. | 1 |
+| Convert | Encodes to WebP, AVIF, JPEG, JPEG XL, PNG or QOI with the encoder's real settings, or keeps each item's format. | 1 |
 | Compress to size | Finds the highest quality that fits a target size such as 200 KB. | 1 |
 | Optimize PNG | Makes PNG files smaller without changing pixels. | 1 |
-| Rename | Names files from a template such as `{name}-{width}w.{ext}` and resolves duplicate names. | 1 |
+| Rename | Names files from a template such as `{name}-{width}w`. The extension follows the format. Output numbers duplicate names. | 1 |
 | Output | Saves items, passes them on, and delivers a ZIP or folder. | 1 |
 | Compare | Shows a before and after slider and the size difference. Passes items through. | 1 |
 | Best format | Encodes several formats and keeps the smallest. | 3 |

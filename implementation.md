@@ -30,7 +30,8 @@ Active phase: **Phase 1**.
 5. Replace `node:test` with Vitest, with browser mode on Playwright Chromium for worker, OPFS and
    codec tests.
 6. Set up PostHog and Sentry as described in Analytics below, and add the privacy page.
-7. Add a Dockerfile and deploy on Dokploy.
+7. Add a Dockerfile and deploy on Dokploy. The image builds with the public `VITE_POSTHOG_KEY`,
+   `VITE_POSTHOG_HOST` and `VITE_SENTRY_DSN` as build arguments.
 
 ### Engine
 
@@ -89,9 +90,17 @@ many images to one) and nodes that produce data or documents.
   reach the last node while later items are still at the first node.
 - Nodes that combine items (Contact sheet, Images to PDF, near-duplicate Deduplicate) wait until
   every upstream item has arrived.
-- Decoding happens once, when an item enters. Nodes pass pixels between them. Encoding happens at
-  Convert, Compress to size and Optimize PNG. An image that reaches Output without an encoding node
-  keeps its source format.
+- Decoding happens at most once per item, the first time a node needs pixels; nodes that only read
+  headers or metadata (Filter by format, Inspect, Rename, Strip metadata) never decode. Nodes pass
+  pixels between them. Encoding happens at Convert, Compress to size and Optimize PNG. An image
+  that reaches Output without an encoding node keeps its source format, and its original bytes
+  when nothing changed its pixels.
+- Metadata is rewritten in the container without re-encoding for JPEG, PNG, WebP and JPEG XL.
+  AVIF metadata is read and can be removed in place but not added; QOI holds none. The run reports
+  a warning when a format cannot keep metadata.
+- Each source item travels through the whole pipeline inside one worker, so pixels never cross
+  threads. The pool admits as many items as it has workers, which bounds memory by pool size, not
+  batch size. Combining nodes spill their inputs to OPFS and run after everything upstream is done.
 - Items carry their metadata. Encoders write it back where the format supports it. Strip metadata is
   the only node that removes metadata; when an encoder cannot keep metadata, the run reports a
   warning.
@@ -99,7 +108,9 @@ many images to one) and nodes that produce data or documents.
   largest item in flight.
 - An item a node cannot accept skips that branch
   ([ADR 0003](./docs/adr/0003-items-skip-branches-they-cannot-enter.md)).
-- The step cache stores each node's last results in OPFS. The cache key combines the node's settings
+- The step cache stores each node's last results in OPFS, keeping the encoded form of an item
+  instead of its pixels when both exist. Nodes that only change metadata or names store a reference
+  to their input instead of a copy. The cache key combines the node's settings
   and the cache keys of its inputs, so a settings change invalidates that node and every node after
   it ([ADR 0004](./docs/adr/0004-opfs-for-outputs-and-step-cache.md)).
 - The step cache has a 5 GB budget by default, which the user can change in settings. When it is
@@ -118,7 +129,12 @@ removed.
   every input format, transparency, EXIF orientation, location metadata and a malformed file.
 - The node pair matrix connects every pair of node types and checks that the Studio's accept or
   refuse decision matches what the engine does when it runs that pair.
-- Worker, OPFS, codec and ZIP tests run in real Chromium through Vitest browser mode.
+- Worker, OPFS, codec and ZIP tests run in real Chromium through Vitest browser mode. Locally they
+  use `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`; CI installs Chromium with Playwright.
+- Test-only node types with data and document items, one-to-many and many-to-one behaviour prove
+  what batches 2 and 3 need. They join the node pair matrix but never the product registry.
+- The batch of 500 images of 12 megapixels runs with `pnpm test:scale`. It takes minutes, so it is
+  outside `pnpm validate`; run it before closing a phase.
 - `pnpm validate` passes before every commit.
 
 ## Analytics

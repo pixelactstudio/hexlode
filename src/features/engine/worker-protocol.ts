@@ -50,7 +50,7 @@ export const workerRequestSchema = z.discriminatedUnion('type', [
       file: z.custom<Blob>((value) => value instanceof Blob),
     }),
   }),
-  z.object({ type: z.literal('gather'), taskId: z.string().min(1), nodeId: z.string().min(1) }),
+  z.object({ type: z.literal('combining'), taskId: z.string().min(1), nodeId: z.string().min(1) }),
 ])
 
 const stepCacheEntry = z.object({

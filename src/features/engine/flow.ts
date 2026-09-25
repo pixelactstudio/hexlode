@@ -51,7 +51,7 @@ export interface FlowPlan {
   order: string[]
   filesId: string
   /** Combining nodes, in pipeline order. */
-  gathers: string[]
+  combining: string[]
   /** For each delivering node, the combining nodes that must finish before it can deliver. */
   deliveries: Map<string, string[]>
 }
@@ -78,7 +78,7 @@ interface ItemRef {
   release(): void
 }
 
-const GATHER_ORDER = 1e15
+const COMBINING_ORDER = 1e15
 
 function ancestors(pipeline: Pipeline, nodeId: string) {
   const found = new Set<string>()
@@ -120,17 +120,17 @@ export function createFlowPlan(pipeline: Pipeline, registry: NodeRegistry): Flow
   }
   const starts = pipeline.nodes.filter((node) => !nodes.get(node.id)?.definition.hasInput)
   if (starts.length !== 1) throw new Error('A pipeline needs exactly one Files node.')
-  const gathers = order.filter((id) => nodes.get(id)?.definition.mode === 'all')
+  const combining = order.filter((id) => nodes.get(id)?.definition.mode === 'all')
   const deliveries = new Map<string, string[]>()
   for (const id of order) {
     if (!nodes.get(id)?.definition.delivers) continue
     const before = ancestors(pipeline, id)
     deliveries.set(
       id,
-      gathers.filter((gather) => before.has(gather)),
+      combining.filter((id) => before.has(id)),
     )
   }
-  return { nodes, order, filesId: starts[0].id, gathers, deliveries }
+  return { nodes, order, filesId: starts[0].id, combining, deliveries }
 }
 
 function createRef(
@@ -179,7 +179,7 @@ function contextFor(deps: FlowDeps, nodeId: string, source: number | undefined):
 
 /** The source index of an item, from its order. Items after combining nodes have none. */
 function sourceOf(order: number[]) {
-  return order[0] !== undefined && order[0] < GATHER_ORDER ? order[0] : undefined
+  return order[0] !== undefined && order[0] < COMBINING_ORDER ? order[0] : undefined
 }
 
 async function runNode(
@@ -395,7 +395,7 @@ export async function flowSource(deps: FlowDeps, source: SourceItem, load: () =>
   ref.release()
 }
 
-export async function flowGather(deps: FlowDeps, nodeId: string) {
+export async function flowCombining(deps: FlowDeps, nodeId: string) {
   const planned = deps.plan.nodes.get(nodeId)
   if (!planned || deps.signal.aborted) return
   const entries = await deps.spill.list(nodeId)
@@ -404,7 +404,7 @@ export async function flowGather(deps: FlowDeps, nodeId: string) {
     planned.key,
     entries.map(({ key }) => key),
   )
-  const order = [GATHER_ORDER + deps.plan.gathers.indexOf(nodeId)]
+  const order = [COMBINING_ORDER + deps.plan.combining.indexOf(nodeId)]
   const execute = (recomputed: boolean) => {
     async function* items() {
       for (const { key } of entries) yield await deps.spill.load(nodeId, key)

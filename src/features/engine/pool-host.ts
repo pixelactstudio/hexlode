@@ -175,8 +175,8 @@ export function createWorkerPoolHost(options: PoolHostOptions): RunHost & { disp
         signal,
       )
     },
-    runGather(nodeId, emit, signal) {
-      return dispatch((taskId) => ({ type: 'gather', taskId, nodeId }), emit, signal)
+    runCombining(nodeId, emit, signal) {
+      return dispatch((taskId) => ({ type: 'combining', taskId, nodeId }), emit, signal)
     },
     deliver(nodeId) {
       if (!output) throw new Error('The run has not started.')

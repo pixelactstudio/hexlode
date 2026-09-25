@@ -71,6 +71,10 @@ _Avoid_: ignored, dropped, filtered
 An item a node accepted but could not process.
 _Avoid_: errored, broken
 
+**Combining node**:
+A node that waits for every upstream item and then runs once over all of them, such as Contact sheet.
+_Avoid_: gather node, aggregate node, merge node
+
 **Step cache**:
 A node's stored results from its last run, reused when nothing upstream changed.
 _Avoid_: intermediate, snapshot

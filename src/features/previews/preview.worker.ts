@@ -9,7 +9,7 @@ import {
   PREVIEW_SAMPLE_EDGE,
   PREVIEW_THUMBNAIL_EDGE,
 } from '#/features/engine/constants'
-import { createFlowPlan, flowGather, flowSource } from '#/features/engine/flow'
+import { createFlowPlan, flowCombining, flowSource } from '#/features/engine/flow'
 import { createMemoryStepCache } from '#/features/engine/memory-step-cache'
 import { createMemorySpillStore } from '#/features/engine/stores'
 import type { Item, Pipeline } from '#/features/engine/types'
@@ -127,7 +127,7 @@ async function render(pipeline: Pipeline): Promise<NodePreview[]> {
   filesPreview.size = current.item.meta.size
   filesPreview.thumbnail = await renderPixels(current.item, PREVIEW_THUMBNAIL_EDGE)
   await flowSource(deps, source, async () => item)
-  for (const gather of plan.gathers) await flowGather(deps, gather)
+  for (const combining of plan.combining) await flowCombining(deps, combining)
   return [...previews.values()]
 }
 

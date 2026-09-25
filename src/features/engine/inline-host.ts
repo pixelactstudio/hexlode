@@ -2,7 +2,7 @@ import {
   createFlowPlan,
   type FlowDeps,
   type FlowPlan,
-  flowGather,
+  flowCombining,
   flowSource,
   type KindHandlers,
 } from '#/features/engine/flow'
@@ -52,8 +52,8 @@ export function createInlineHost(options: InlineHostOptions): RunHost & { output
       if (!load) throw new Error('Inline runs need a loader for each source item.')
       await flowSource(deps(emit, signal), source, load)
     },
-    async runGather(nodeId, emit, signal) {
-      await flowGather(deps(emit, signal), nodeId)
+    async runCombining(nodeId, emit, signal) {
+      await flowCombining(deps(emit, signal), nodeId)
     },
     deliver: (nodeId) => output.deliver(nodeId),
     async end() {},
