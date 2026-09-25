@@ -1,0 +1,77 @@
+import { Button } from '@astryxdesign/core/Button'
+import { FileInput } from '@astryxdesign/core/FileInput'
+import { HStack, VStack } from '@astryxdesign/core/Stack'
+import { useRef } from 'react'
+
+import {
+  canPickFolder,
+  filesFromInput,
+  type LocalInputFile,
+  pickFolderFiles,
+} from '#/features/image-input/folder'
+
+export const IMAGE_ACCEPT = 'image/*,.jpg,.jpeg,.png,.webp,.avif,.jxl,.qoi'
+
+/** A drop area for images plus a folder picker. Files are handed on, never kept here. */
+export function FileDrop({
+  onFiles,
+  isDisabled,
+  description = 'JPEG, PNG, WebP, AVIF, JPEG XL or QOI. Nothing leaves this device.',
+}: {
+  onFiles: (files: LocalInputFile[]) => void
+  isDisabled?: boolean
+  description?: string
+}) {
+  const folderInput = useRef<HTMLInputElement>(null)
+  const addFolder = async () => {
+    if (!canPickFolder()) {
+      folderInput.current?.click()
+      return
+    }
+    try {
+      onFiles(await pickFolderFiles())
+    } catch (reason) {
+      if (reason instanceof DOMException && reason.name === 'AbortError') return
+      throw reason
+    }
+  }
+  return (
+    <VStack gap={2}>
+      <FileInput
+        label="Images"
+        isLabelHidden
+        mode="dropzone"
+        isMultiple
+        accept={IMAGE_ACCEPT}
+        value={[]}
+        isDisabled={isDisabled}
+        placeholder="Drop images here or choose files"
+        description={description}
+        onChange={(files) => {
+          const list = Array.isArray(files) ? files : files ? [files] : []
+          onFiles(list.map((file) => ({ file, relativePath: file.name })))
+        }}
+      />
+      <HStack gap={2}>
+        <Button
+          label="Add a folder"
+          size="sm"
+          variant="ghost"
+          onClick={addFolder}
+          isDisabled={isDisabled}
+        />
+      </HStack>
+      <input
+        ref={folderInput}
+        type="file"
+        hidden
+        multiple
+        {...{ webkitdirectory: '' }}
+        onChange={(event) => {
+          if (event.target.files) onFiles(filesFromInput(event.target.files))
+          event.target.value = ''
+        }}
+      />
+    </VStack>
+  )
+}

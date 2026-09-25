@@ -167,14 +167,19 @@ function sumSizes(outputs: NodeOutput[]) {
   return total
 }
 
-function contextFor(deps: FlowDeps, nodeId: string): NodeContext {
+function contextFor(deps: FlowDeps, nodeId: string, source: number | undefined): NodeContext {
   return {
     nodeId,
     signal: deps.signal,
     services: deps.services,
-    warn: (warning) => deps.emit({ type: 'node-warning', nodeId, warning }),
-    record: (record) => deps.emit({ type: 'node-record', nodeId, record }),
+    warn: (warning) => deps.emit({ type: 'node-warning', nodeId, source, warning }),
+    record: (record) => deps.emit({ type: 'node-record', nodeId, source, record }),
   }
+}
+
+/** The source index of an item, from its order. Items after combining nodes have none. */
+function sourceOf(order: number[]) {
+  return order[0] !== undefined && order[0] < GATHER_ORDER ? order[0] : undefined
 }
 
 async function runNode(
@@ -185,16 +190,22 @@ async function runNode(
   bytesIn: number | undefined,
   reusable: unknown,
   recomputed: boolean,
+  source: number | undefined,
 ) {
   const started = performance.now()
   const nodeId = planned.node.id
   let outputs: NodeOutput[]
   try {
-    outputs = await planned.definition.run(input, planned.settings, contextFor(deps, nodeId))
+    outputs = await planned.definition.run(
+      input,
+      planned.settings,
+      contextFor(deps, nodeId, source),
+    )
   } catch (reason) {
     deps.emit({
       type: 'node-item',
       nodeId,
+      source,
       status: 'failed',
       bytesIn,
       ms: performance.now() - started,
@@ -205,6 +216,7 @@ async function runNode(
   deps.emit({
     type: 'node-item',
     nodeId,
+    source,
     status: 'processed',
     bytesIn,
     bytesOut: sumSizes(outputs),
@@ -289,8 +301,9 @@ async function visit(deps: FlowDeps, nodeId: string, ref: ItemRef): Promise<void
   if (deps.signal.aborted) return
   const planned = deps.plan.nodes.get(nodeId)
   if (!planned) return
+  const source = sourceOf(ref.order)
   if (!planned.accepts.has(itemType(ref.meta.kind, ref.meta.format))) {
-    deps.emit({ type: 'node-item', nodeId, status: 'skipped', ms: 0 })
+    deps.emit({ type: 'node-item', nodeId, source, status: 'skipped', ms: 0 })
     return
   }
   if (planned.definition.mode === 'all') {
@@ -307,6 +320,7 @@ async function visit(deps: FlowDeps, nodeId: string, ref: ItemRef): Promise<void
       deps.emit({
         type: 'node-item',
         nodeId,
+        source,
         status: 'failed',
         ms: 0,
         error: errorMessage(reason),
@@ -321,6 +335,7 @@ async function visit(deps: FlowDeps, nodeId: string, ref: ItemRef): Promise<void
       item.meta.size,
       item.payload,
       recomputed,
+      source,
     )
   }
 
@@ -330,6 +345,7 @@ async function visit(deps: FlowDeps, nodeId: string, ref: ItemRef): Promise<void
     deps.emit({
       type: 'node-item',
       nodeId,
+      source,
       status: 'cached',
       bytesIn: ref.meta.size,
       bytesOut: cached.outputs.every((output) => output.meta.size !== undefined)
@@ -369,6 +385,7 @@ export async function flowSource(deps: FlowDeps, source: SourceItem, load: () =>
   deps.emit({
     type: 'node-item',
     nodeId: files.node.id,
+    source: source.index,
     status: 'processed',
     bytesOut: source.meta.size,
     ms: 0,
@@ -400,6 +417,7 @@ export async function flowGather(deps: FlowDeps, nodeId: string) {
       undefined,
       undefined,
       recomputed,
+      undefined,
     )
   }
 

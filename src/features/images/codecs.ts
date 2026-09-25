@@ -22,7 +22,22 @@ const buffer = (data: Uint8Array) =>
     ? (data.buffer as ArrayBuffer)
     : (data.slice().buffer as ArrayBuffer)
 
+export class DecodeError extends Error {
+  constructor() {
+    super('This image could not be decoded. The file may be damaged or incomplete.')
+    this.name = 'DecodeError'
+  }
+}
+
 async function decode(format: ImageFormat, data: Uint8Array): Promise<Pixels> {
+  try {
+    return await decodeWith(format, data)
+  } catch {
+    throw new DecodeError()
+  }
+}
+
+async function decodeWith(format: ImageFormat, data: Uint8Array): Promise<Pixels> {
   const input = buffer(data)
   let image: ImageData | null
   switch (format) {

@@ -165,6 +165,8 @@ export type RunEvent =
   | {
       type: 'node-item'
       nodeId: string
+      /** Index of the source item this item came from. Absent after combining nodes. */
+      source?: number
       status: ItemStatus
       bytesIn?: number
       bytesOut?: number
@@ -180,8 +182,8 @@ export type RunEvent =
       bytes?: number
       sourceBytes?: number
     }
-  | { type: 'node-record'; nodeId: string; record: NodeRecord }
-  | { type: 'node-warning'; nodeId: string; warning: NodeWarning }
+  | { type: 'node-record'; nodeId: string; source?: number; record: NodeRecord }
+  | { type: 'node-warning'; nodeId: string; source?: number; warning: NodeWarning }
   | { type: 'item-finished'; index: number }
   | { type: 'delivery-ready'; nodeId: string; delivery: Delivery }
   | { type: 'run-finished'; runId: string; status: RunStatus; ms: number }

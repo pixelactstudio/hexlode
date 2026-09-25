@@ -75,7 +75,12 @@ export interface FolderTarget {
 export function createOpfsOutputStore(
   root: FileSystemDirectoryHandle,
   runId: string,
-  options: { folders?: Map<string, FolderTarget>; archiveNames?: Map<string, string> } = {},
+  options: {
+    folders?: Map<string, FolderTarget>
+    archiveNames?: Map<string, string>
+    /** Deliver a single file as itself instead of in a ZIP. */
+    singleFileAsIs?: boolean
+  } = {},
 ): OutputStore & { record(written: WrittenOutput): void } {
   const written = new Map<string, WrittenOutput[]>()
   const outputDirectory = (nodeId: string) =>
@@ -108,6 +113,11 @@ export function createOpfsOutputStore(
         return { nodeId, files: summary, bytes }
       }
       if (files.length === 0) return { nodeId, files: summary, bytes }
+      if (options.singleFileAsIs && files.length === 1) {
+        const [only] = files
+        const leaf = only.name.split('/').pop() as string
+        return { nodeId, files: summary, bytes, archive: new File([only.file], leaf) }
+      }
       const deliveries = (await directoryAt(root, [
         ...runPath(runId),
         'deliveries',

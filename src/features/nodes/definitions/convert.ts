@@ -55,6 +55,8 @@ export const encoderSchemas = {
 
 const schema = z.object({
   format: z.enum(['original', 'jpeg', 'png', 'webp', 'avif', 'jxl', 'qoi']).default('webp'),
+  /** With Original: pass the item on unchanged when encoding would not make it smaller. */
+  keepSmaller: z.boolean().default(false),
   ...encoderSchemas,
 })
 
@@ -105,6 +107,13 @@ export const convertNode = defineNode({
       codecsOf(context),
       context.warn,
     )
-    return [{ port: 'out', item: encoded }]
+    const original = item.payload.encoded
+    const keepOriginal =
+      settings.format === 'original' &&
+      settings.keepSmaller &&
+      original !== undefined &&
+      !item.payload.metadataChanged &&
+      (encoded.meta.size ?? 0) >= original.byteLength
+    return [{ port: 'out', item: keepOriginal ? item : encoded }]
   },
 })

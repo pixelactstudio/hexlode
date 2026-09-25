@@ -33,6 +33,16 @@ export const outputNode = defineNode({
     const sink = context.services.output
     if (!sink) throw new Error('Output storage is not available.')
     await sink.write(context.nodeId, item.meta.name, bytes)
-    return [{ port: 'out', item }]
+    if (item.payload.encoded === bytes) return [{ port: 'out', item }]
+    // The same item, now in the encoded form Output saved.
+    return [
+      {
+        port: 'out',
+        item: {
+          meta: { ...item.meta, size: bytes.byteLength },
+          payload: { ...item.payload, encoded: bytes, metadataChanged: false },
+        },
+      },
+    ]
   },
 })

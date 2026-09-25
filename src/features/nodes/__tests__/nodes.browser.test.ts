@@ -96,6 +96,14 @@ describe('Convert', () => {
     expect(warnings()).toEqual([{ code: 'metadata_dropped', message: 'QOI cannot keep EXIF.' }])
   })
 
+  it('keeps the original file when asked to and encoding does not make it smaller', async () => {
+    const { files } = await run(
+      chain(['convert', { format: 'original', keepSmaller: true, webp: { quality: 100 } }]),
+      ['photo.webp'],
+    )
+    expect(files()[0].bytes).toEqual(await fixtureBytes('photo.webp'))
+  })
+
   it('keeps each item in its own format when set to Original', async () => {
     const { files } = await run(chain(['convert', { format: 'original' }]), [
       'photo.jpg',

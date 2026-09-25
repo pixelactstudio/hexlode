@@ -10,11 +10,47 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CompressRouteImport } from './routes/compress'
+import { Route as ConvertRouteImport } from './routes/convert'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as ResizeRouteImport } from './routes/resize'
+import { Route as StripMetadataRouteImport } from './routes/strip-metadata'
+import { Route as StudioRouteImport } from './routes/studio'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompressRoute = CompressRouteImport.update({
+  id: '/compress',
+  path: '/compress',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConvertRoute = ConvertRouteImport.update({
+  id: '/convert',
+  path: '/convert',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResizeRoute = ResizeRouteImport.update({
+  id: '/resize',
+  path: '/resize',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StripMetadataRoute = StripMetadataRouteImport.update({
+  id: '/strip-metadata',
+  path: '/strip-metadata',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudioRoute = StudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -25,27 +61,76 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/compress': typeof CompressRoute
+  '/convert': typeof ConvertRoute
+  '/privacy': typeof PrivacyRoute
+  '/resize': typeof ResizeRoute
+  '/strip-metadata': typeof StripMetadataRoute
+  '/studio': typeof StudioRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/compress': typeof CompressRoute
+  '/convert': typeof ConvertRoute
+  '/privacy': typeof PrivacyRoute
+  '/resize': typeof ResizeRoute
+  '/strip-metadata': typeof StripMetadataRoute
+  '/studio': typeof StudioRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/compress': typeof CompressRoute
+  '/convert': typeof ConvertRoute
+  '/privacy': typeof PrivacyRoute
+  '/resize': typeof ResizeRoute
+  '/strip-metadata': typeof StripMetadataRoute
+  '/studio': typeof StudioRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/compress'
+    | '/convert'
+    | '/privacy'
+    | '/resize'
+    | '/strip-metadata'
+    | '/studio'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/auth/$'
-  id: '__root__' | '/' | '/api/auth/$'
+  to:
+    | '/'
+    | '/compress'
+    | '/convert'
+    | '/privacy'
+    | '/resize'
+    | '/strip-metadata'
+    | '/studio'
+    | '/api/auth/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/compress'
+    | '/convert'
+    | '/privacy'
+    | '/resize'
+    | '/strip-metadata'
+    | '/studio'
+    | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CompressRoute: typeof CompressRoute
+  ConvertRoute: typeof ConvertRoute
+  PrivacyRoute: typeof PrivacyRoute
+  ResizeRoute: typeof ResizeRoute
+  StripMetadataRoute: typeof StripMetadataRoute
+  StudioRoute: typeof StudioRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -56,6 +141,48 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compress': {
+      id: '/compress'
+      path: '/compress'
+      fullPath: '/compress'
+      preLoaderRoute: typeof CompressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/convert': {
+      id: '/convert'
+      path: '/convert'
+      fullPath: '/convert'
+      preLoaderRoute: typeof ConvertRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resize': {
+      id: '/resize'
+      path: '/resize'
+      fullPath: '/resize'
+      preLoaderRoute: typeof ResizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/strip-metadata': {
+      id: '/strip-metadata'
+      path: '/strip-metadata'
+      fullPath: '/strip-metadata'
+      preLoaderRoute: typeof StripMetadataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/studio': {
+      id: '/studio'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof StudioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -70,8 +197,23 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CompressRoute: CompressRoute,
+  ConvertRoute: ConvertRoute,
+  PrivacyRoute: PrivacyRoute,
+  ResizeRoute: ResizeRoute,
+  StripMetadataRoute: StripMetadataRoute,
+  StudioRoute: StudioRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

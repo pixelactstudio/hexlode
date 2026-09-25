@@ -28,6 +28,7 @@ export interface PoolHostOptions {
   root?: FileSystemDirectoryHandle
   folders?: Map<string, FolderTarget>
   archiveNames?: Map<string, string>
+  singleFileAsIs?: boolean
 }
 
 interface Task {
@@ -150,6 +151,7 @@ export function createWorkerPoolHost(options: PoolHostOptions): RunHost & { disp
       output = createOpfsOutputStore(root, runId, {
         folders: options.folders,
         archiveNames: options.archiveNames,
+        singleFileAsIs: options.singleFileAsIs,
       })
       beginMessage = { type: 'begin', runId, pipeline, stepCache: options.index !== null }
       waiting = []
