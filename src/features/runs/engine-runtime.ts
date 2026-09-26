@@ -39,6 +39,16 @@ export function isEngineSupported() {
   )
 }
 
+/**
+ * Why this page cannot run the engine, or null when it can. Browsers turn off the Origin Private
+ * File System on plain HTTP from any address but localhost.
+ */
+export function engineProblem(): 'insecure' | 'unsupported' | null {
+  if (typeof window === 'undefined') return null
+  if (!window.isSecureContext) return 'insecure'
+  return isEngineSupported() ? null : 'unsupported'
+}
+
 export function createEngineWorker() {
   return new Worker(new URL('../engine/engine.worker.ts', import.meta.url), { type: 'module' })
 }
