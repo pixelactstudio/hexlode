@@ -17,6 +17,11 @@ pnpm dev
 Open [http://localhost:3000](http://localhost:3000). No `.env.local` is needed; copy
 `.env.example` to `.env.local` only to enable analytics or error reports.
 
+Hexlode processes images in the browser's Origin Private File System, which browsers turn on only
+over HTTPS or at `localhost`. To open the dev server from another device, serve it over HTTPS,
+for example with `tailscale serve --bg --https=8443 http://127.0.0.1:3000`. Over plain HTTP the
+tools explain this instead of running.
+
 ## Checks
 
 | Command | What it does |

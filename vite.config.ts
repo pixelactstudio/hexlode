@@ -48,6 +48,8 @@ const config = defineConfig({
   ssr: { noExternal: ['@astryxdesign/theme-neutral'] },
   optimizeDeps: { exclude: JSQUASH_PACKAGES },
   worker: { format: 'es' },
+  // The dev server is also opened from other devices on the tailnet, such as the T3 Code preview.
+  server: { allowedHosts: ['.ts.net'] },
   plugins: [
     devtools(),
     nitro({ rollupConfig: { external: [/^@sentry\//] } }),
