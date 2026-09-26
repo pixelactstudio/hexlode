@@ -1,5 +1,10 @@
 import { AppShell } from '@astryxdesign/core/AppShell'
+import { Badge } from '@astryxdesign/core/Badge'
+import { Icon } from '@astryxdesign/core/Icon'
+import { Link } from '@astryxdesign/core/Link'
+import { HStack } from '@astryxdesign/core/Stack'
 import { TopNav, TopNavHeading, TopNavItem } from '@astryxdesign/core/TopNav'
+import { ShieldCheck } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { HexlodeMark } from '#/features/app-shell/hexlode-mark'
@@ -13,6 +18,7 @@ export type FramePage =
   | 'studio'
   | 'privacy'
   | 'tool'
+  | 'home'
 
 const NAV_ITEMS: { page: FramePage; label: string; href: string }[] = [
   ...Object.entries(QUICK_TOOL_DEFINITIONS).map(([page, tool]) => ({
@@ -53,7 +59,19 @@ export function AppFrame({
               isSelected={item.page === current}
             />
           ))}
-          endContent={endContent}
+          endContent={
+            endContent ?? (
+              <HStack gap={4} vAlign="center">
+                <Badge
+                  label="Images stay on this device"
+                  icon={<Icon icon={ShieldCheck} size="sm" />}
+                />
+                <Link href="/privacy" isStandalone>
+                  Privacy
+                </Link>
+              </HStack>
+            )
+          }
         />
       }
     >

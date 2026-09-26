@@ -64,7 +64,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         </Theme>
         {import.meta.env.DEV ? (
           <TanStackDevtools
-            config={{ position: 'bottom-left' }}
+            config={{ position: 'bottom-right', hideUntilHover: true }}
             plugins={[
               { name: 'Tanstack Router', render: <TanStackRouterDevtoolsPanel /> },
               TanStackQueryDevtools,
