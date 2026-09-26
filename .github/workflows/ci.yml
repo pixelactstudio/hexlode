@@ -22,4 +22,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Worker, OPFS and codec tests run in Chromium through Vitest browser mode.
+      - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm validate
+      - run: docker build -t hexlode:ci .

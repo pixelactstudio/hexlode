@@ -1,0 +1,15 @@
+.git
+.github
+.husky
+.idea
+.vscode
+.claude
+.agents
+.env*
+!.env.example
+node_modules
+.output
+.nitro
+.tanstack
+coverage
+dist

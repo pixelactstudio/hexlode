@@ -7,6 +7,7 @@
 @import "@astryxdesign/core/astryx.css";
 @import "@astryxdesign/theme-neutral/theme.css";
 @import "@astryxdesign/core/tailwind-theme.css";
+@import "@xyflow/react/dist/style.css";
 @import "tailwindcss/utilities.css" layer(utilities);
 
 * {
@@ -21,4 +22,23 @@ body,
 
 body {
   margin: 0;
+}
+
+.difference-preview,
+.difference-preview img {
+  width: 100%;
+  height: 100%;
+}
+
+.difference-preview img {
+  object-fit: contain;
+}
+
+.difference-preview .astryx-overlay-scrim {
+  width: var(--difference-reveal, 50%);
+  overflow: hidden;
+}
+
+.difference-preview__source {
+  max-width: none;
 }
