@@ -1,10 +1,13 @@
+import { Grid } from '@astryxdesign/core/Grid'
 import { NumberInput } from '@astryxdesign/core/NumberInput'
 import { RadioList, RadioListItem } from '@astryxdesign/core/RadioList'
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl'
-import { Selector } from '@astryxdesign/core/Selector'
+import { SelectableCard } from '@astryxdesign/core/SelectableCard'
+import { Selector, SelectorOption } from '@astryxdesign/core/Selector'
 import { Slider } from '@astryxdesign/core/Slider'
 import { VStack } from '@astryxdesign/core/Stack'
 import { Switch } from '@astryxdesign/core/Switch'
+import { Text } from '@astryxdesign/core/Text'
 
 import {
   type CompressToolSettings,
@@ -24,29 +27,71 @@ interface PanelProps<T> {
   isDisabled?: boolean
 }
 
-export const FORMAT_OPTIONS: { value: TargetFormat; label: string }[] = [
-  { value: 'jpeg', label: 'JPEG' },
-  { value: 'png', label: 'PNG' },
-  { value: 'webp', label: 'WebP' },
-  { value: 'avif', label: 'AVIF' },
-  { value: 'jxl', label: 'JPEG XL' },
-  { value: 'qoi', label: 'QOI' },
+export const FORMAT_OPTIONS: { value: TargetFormat; label: string; hint: string }[] = [
+  { value: 'webp', label: 'WebP', hint: 'Small files. Opens in every browser.' },
+  { value: 'jpeg', label: 'JPEG', hint: 'Photos. Opens everywhere.' },
+  { value: 'avif', label: 'AVIF', hint: 'Smallest files. Slower to save.' },
+  { value: 'png', label: 'PNG', hint: 'Lossless, keeps transparency.' },
+  { value: 'jxl', label: 'JPEG XL', hint: 'Small files. Few apps open it yet.' },
+  { value: 'qoi', label: 'QOI', hint: 'Fast lossless. Rarely supported.' },
 ]
+
+export const QUALITY_HINT =
+  'Higher keeps more detail, lower makes smaller files. 75 to 85 suits most photos.'
+
+/** A small grid of cards for picking one of a few options, each with a one-line hint. */
+export function ChoiceCards<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  isDisabled,
+  columns = 3,
+}: {
+  label: string
+  value: T
+  options: { value: T; label: string; hint: string }[]
+  onChange: (value: T) => void
+  isDisabled?: boolean
+  columns?: number
+}) {
+  return (
+    <VStack gap={2} role="radiogroup" aria-label={label}>
+      <Text type="label">{label}</Text>
+      <Grid columns={columns} gap={2}>
+        {options.map((option) => (
+          <SelectableCard
+            key={option.value}
+            label={option.label}
+            isSelected={value === option.value}
+            onChange={() => onChange(option.value)}
+            isDisabled={isDisabled}
+            padding={3}
+          >
+            <VStack gap={0.5}>
+              <Text type="label" weight="semibold">
+                {option.label}
+              </Text>
+              <Text type="supporting">{option.hint}</Text>
+            </VStack>
+          </SelectableCard>
+        ))}
+      </Grid>
+    </VStack>
+  )
+}
 
 function ConvertPanel({ value, onChange, isDisabled }: PanelProps<ConvertToolSettings>) {
   const hasQuality = QUALITY_FORMATS.includes(value.format) && !value.lossless
   return (
     <VStack gap={4}>
-      <SegmentedControl
-        label="Format"
+      <ChoiceCards
+        label="Save as"
         value={value.format}
-        onChange={(format) => onChange({ ...value, format: format as TargetFormat })}
+        options={FORMAT_OPTIONS}
+        onChange={(format) => onChange({ ...value, format })}
         isDisabled={isDisabled}
-      >
-        {FORMAT_OPTIONS.map((option) => (
-          <SegmentedControlItem key={option.value} value={option.value} label={option.label} />
-        ))}
-      </SegmentedControl>
+      />
       {LOSSLESS_CAPABLE.includes(value.format) ? (
         <Switch
           label="Lossless"
@@ -59,6 +104,7 @@ function ConvertPanel({ value, onChange, isDisabled }: PanelProps<ConvertToolSet
       {hasQuality ? (
         <Slider
           label="Quality"
+          description={QUALITY_HINT}
           min={1}
           max={100}
           value={value.quality}
@@ -80,13 +126,18 @@ function CompressPanel({ value, onChange, isDisabled }: PanelProps<CompressToolS
         onChange={(mode) => onChange({ ...value, mode: mode as CompressToolSettings['mode'] })}
         isDisabled={isDisabled}
       >
-        <SegmentedControlItem value="quality" label="Quality" />
-        <SegmentedControlItem value="target" label="Target size" />
+        <SegmentedControlItem value="quality" label="By quality" />
+        <SegmentedControlItem value="target" label="To a file size" />
       </SegmentedControl>
+      <Text type="supporting">
+        {value.mode === 'quality'
+          ? 'Re-saves each image at the quality you choose. Images that would get bigger are kept as they are.'
+          : 'Finds the highest quality that fits under the size you choose.'}
+      </Text>
       {value.mode === 'quality' ? (
         <Slider
           label="Quality"
-          description="Each image keeps its format. PNG files are optimised without loss."
+          description={`Each image keeps its format; PNG files are optimised without loss. ${QUALITY_HINT}`}
           min={1}
           max={100}
           value={value.quality}
@@ -97,7 +148,8 @@ function CompressPanel({ value, onChange, isDisabled }: PanelProps<CompressToolS
       ) : (
         <>
           <NumberInput
-            label="Target size"
+            label="Maximum file size"
+            description="Every image is made to fit under this size."
             units="KB"
             min={1}
             value={value.targetKilobytes}
@@ -126,6 +178,18 @@ function CompressPanel({ value, onChange, isDisabled }: PanelProps<CompressToolS
   )
 }
 
+const RESIZE_MODES: { value: ResizeToolSettings['mode']; label: string; hint: string }[] = [
+  {
+    value: 'longestEdge',
+    label: 'Longest edge',
+    hint: 'The longer side gets this size. Works for portrait and landscape alike.',
+  },
+  { value: 'width', label: 'Width', hint: 'Sets the width. The height follows.' },
+  { value: 'height', label: 'Height', hint: 'Sets the height. The width follows.' },
+  { value: 'percent', label: 'Percentage', hint: 'Scales both sides by the same amount.' },
+  { value: 'box', label: 'Width and height', hint: 'Fits, fills or stretches to a box.' },
+]
+
 function ResizePanel({ value, onChange, isDisabled }: PanelProps<ResizeToolSettings>) {
   const number = (
     key: 'longestEdge' | 'width' | 'height' | 'percent',
@@ -144,18 +208,19 @@ function ResizePanel({ value, onChange, isDisabled }: PanelProps<ResizeToolSetti
   )
   return (
     <VStack gap={4}>
-      <SegmentedControl
+      <Selector
         label="Resize by"
         value={value.mode}
         onChange={(mode) => onChange({ ...value, mode: mode as ResizeToolSettings['mode'] })}
+        options={RESIZE_MODES.map(({ value: mode, label }) => ({ value: mode, label }))}
+        renderOption={(option) => (
+          <SelectorOption
+            label={option.label}
+            description={RESIZE_MODES.find((mode) => mode.value === option.value)?.hint}
+          />
+        )}
         isDisabled={isDisabled}
-      >
-        <SegmentedControlItem value="longestEdge" label="Longest edge" />
-        <SegmentedControlItem value="width" label="Width" />
-        <SegmentedControlItem value="height" label="Height" />
-        <SegmentedControlItem value="percent" label="Percent" />
-        <SegmentedControlItem value="box" label="Width and height" />
-      </SegmentedControl>
+      />
       {value.mode === 'longestEdge' ? number('longestEdge', 'Longest edge', 'px') : null}
       {value.mode === 'width' || value.mode === 'box' ? number('width', 'Width', 'px') : null}
       {value.mode === 'height' || value.mode === 'box' ? number('height', 'Height', 'px') : null}
@@ -191,7 +256,7 @@ function ResizePanel({ value, onChange, isDisabled }: PanelProps<ResizeToolSetti
           onChange({ ...value, method: method as ResizeToolSettings['method'] })
         }
         options={[
-          { value: 'lanczos3', label: 'Lanczos (sharpest)' },
+          { value: 'lanczos3', label: 'Lanczos (sharpest, recommended)' },
           { value: 'mitchell', label: 'Mitchell' },
           { value: 'catrom', label: 'Catmull-Rom' },
           { value: 'triangle', label: 'Bilinear (softest)' },
@@ -200,6 +265,7 @@ function ResizePanel({ value, onChange, isDisabled }: PanelProps<ResizeToolSetti
       />
       <Switch
         label="Allow enlarging"
+        description="Off: images smaller than the size are left as they are."
         value={value.allowUpscale}
         onChange={(allowUpscale) => onChange({ ...value, allowUpscale })}
         isDisabled={isDisabled}
