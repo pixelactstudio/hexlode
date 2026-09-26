@@ -6,3 +6,5 @@ export const STUDIO_MIN_WIDTH = 1024
 /** Live previews wait this long after the last change. */
 export const PREVIEW_DEBOUNCE_MS = 250
 export const NODE_DRAG_TYPE = 'application/x-hexlode-node'
+/** How the canvas frames a pipeline: nodes stay readable rather than shrinking to fit. */
+export const FIT_VIEW = { padding: 0.12, maxZoom: 1, minZoom: 0.7 }

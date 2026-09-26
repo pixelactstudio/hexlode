@@ -1,13 +1,22 @@
 import type { NodeRegistry, Pipeline } from '#/features/engine/types'
 import type { Template } from '#/features/pipelines/types'
 
+/** Template nodes wrap after this many per row, so a template fits the canvas at full size. */
+const NODES_PER_ROW = 3
+const COLUMN_STEP = 320
+/** Leaves room for the preview thumbnail each node shows once there is a sample image. */
+const ROW_STEP = 320
+
 function line(nodes: [id: string, type: string, settings?: Record<string, unknown>][]): Pipeline {
   return {
     nodes: nodes.map(([id, type, settings], index) => ({
       id,
       type,
       settings: settings ?? {},
-      position: { x: index * 256, y: 120 },
+      position: {
+        x: (index % NODES_PER_ROW) * COLUMN_STEP,
+        y: Math.floor(index / NODES_PER_ROW) * ROW_STEP,
+      },
     })),
     connections: nodes.slice(1).map(([id], index) => ({
       id: `${nodes[index][0]}-out-${id}`,

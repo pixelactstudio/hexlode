@@ -2,8 +2,6 @@ import { AspectRatio } from '@astryxdesign/core/AspectRatio'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
 import { Divider } from '@astryxdesign/core/Divider'
-import { EmptyState } from '@astryxdesign/core/EmptyState'
-import { Icon } from '@astryxdesign/core/Icon'
 import { List, ListItem } from '@astryxdesign/core/List'
 import { MetadataList, MetadataListItem } from '@astryxdesign/core/MetadataList'
 import { Selector } from '@astryxdesign/core/Selector'
@@ -13,17 +11,68 @@ import { pixel, proportional, Table } from '@astryxdesign/core/Table'
 import { Heading, Text } from '@astryxdesign/core/Text'
 import { useState } from 'react'
 
+import { IconTile } from '#/features/app-shell/icon-tile'
 import { describeTypes } from '#/features/engine/item-types'
 import type { NodeRegistry, PipelineNode } from '#/features/engine/types'
 import { FORMAT_NAMES } from '#/features/images/image-item'
 import { FileDrop } from '#/features/runs/file-drop'
 import { downloadDelivery, type RunControllerState } from '#/features/runs/run-controller'
 import { NodeSettings } from '#/features/studio/node-settings'
-import { NODE_ICONS } from '#/features/studio/node-ui'
+import { NODE_ICONS, toneOf } from '#/features/studio/node-ui'
 import type { PreviewState, PreviewView, StudioSession } from '#/features/studio/studio-session'
 import { formatBytes, formatCount, formatDuration } from '#/lib/format'
 
 const MAX_LISTED_FILES = 50
+
+const GUIDE_STEPS = [
+  {
+    title: 'Add images',
+    description: 'Select the Files node and drop images, or drop them anywhere on the canvas.',
+  },
+  {
+    title: 'Adjust each step',
+    description:
+      'Select a node to change its settings. Each node previews its result on a sample image.',
+  },
+  {
+    title: 'Connect and add nodes',
+    description:
+      'Drag from a node’s right edge to another node’s left edge. Add nodes from the list on the left.',
+  },
+  {
+    title: 'Run',
+    description: 'Press Run. The Output node collects the results into a ZIP for you to download.',
+  },
+]
+
+/** Shown when no node is selected: how the Studio works, in four steps. */
+function StudioGuide() {
+  return (
+    <VStack gap={5}>
+      <VStack gap={1}>
+        <Heading level={2}>How the Studio works</Heading>
+        <Text type="supporting">Images flow through the nodes from left to right.</Text>
+      </VStack>
+      <VStack gap={4}>
+        {GUIDE_STEPS.map((step, index) => (
+          <HStack key={step.title} gap={3} vAlign="start">
+            <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-accent-muted text-accent">
+              <Text type="supporting" weight="semibold" color="inherit">
+                {index + 1}
+              </Text>
+            </span>
+            <VStack gap={0.5}>
+              <Text type="label" weight="semibold">
+                {step.title}
+              </Text>
+              <Text type="supporting">{step.description}</Text>
+            </VStack>
+          </HStack>
+        ))}
+      </VStack>
+    </VStack>
+  )
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -50,6 +99,7 @@ function FilesPanel({
         onFiles={(files) => void session.runs.addFiles(files)}
         isDisabled={run.running}
         description="You can also drop images anywhere on the canvas."
+        size="md"
       />
       <Text type="supporting">
         {accepts.size > 0
@@ -228,15 +278,7 @@ export function NodeInspector({
   run: RunControllerState
   previews: PreviewState
 }) {
-  if (!node) {
-    return (
-      <EmptyState
-        title="Nothing selected"
-        description="Select a node to see its settings, its preview and what it did in the last run."
-        isCompact
-      />
-    )
-  }
+  if (!node) return <StudioGuide />
   const definition = registry.get(node.type)
   if (!definition) return null
   let settings: Record<string, unknown> = {}
@@ -260,7 +302,7 @@ export function NodeInspector({
       <VStack gap={2}>
         <HStack gap={2} vAlign="center" hAlign="between">
           <HStack gap={2} vAlign="center">
-            {icon ? <Icon icon={icon} color="secondary" /> : null}
+            {icon ? <IconTile icon={icon} tone={toneOf(definition.category)} /> : null}
             <Heading level={2}>{definition.label}</Heading>
           </HStack>
           {definition.hasInput ? (

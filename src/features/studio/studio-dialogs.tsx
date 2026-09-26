@@ -12,6 +12,7 @@ import { TextInput } from '@astryxdesign/core/TextInput'
 import { useEffect, useState } from 'react'
 
 import { track } from '#/features/analytics/analytics'
+import { IconTile } from '#/features/app-shell/icon-tile'
 import { GIGABYTE } from '#/features/engine/constants'
 import type { NodeRegistry } from '#/features/engine/types'
 import { MAX_PIPELINE_NAME_LENGTH, SAVE_NOTICE } from '#/features/pipelines/constants'
@@ -20,6 +21,7 @@ import type { SavedPipeline, Template } from '#/features/pipelines/types'
 import { engineRuntime } from '#/features/runs/engine-runtime'
 import { MAX_STEP_CACHE_GIGABYTES, MIN_STEP_CACHE_GIGABYTES } from '#/features/settings/constants'
 import { readSettings, writeSettings } from '#/features/settings/settings'
+import { NODE_ICONS, toneOf } from '#/features/studio/node-ui'
 import { formatBytes } from '#/lib/format'
 
 export function TemplatePicker({
@@ -37,22 +39,40 @@ export function TemplatePicker({
     <Dialog isOpen={isOpen} onOpenChange={onOpenChange} width={720}>
       <DialogHeader
         title="Start a pipeline"
-        subtitle="Pick a template. You can change every node afterwards."
+        subtitle="Pick a starting point. You can change, add or remove every node afterwards."
         onOpenChange={onOpenChange}
       />
-      <VStack padding={4}>
+      <VStack padding={6}>
         <Grid columns={{ minWidth: 260, max: 2 }} gap={3}>
           {availableTemplates(registry).map((template) => (
             <ClickableCard
               key={template.id}
               label={template.name}
               elevation="low"
+              padding={5}
+              height="100%"
               onClick={() => onChoose(template)}
             >
-              <VStack gap={1}>
-                <Heading level={3}>{template.name}</Heading>
-                <Text type="supporting">{template.description}</Text>
-                <Text type="supporting">
+              <VStack gap={3}>
+                <HStack gap={1} wrap="wrap">
+                  {template.pipeline.nodes.map((node) => {
+                    const definition = registry.get(node.type)
+                    const icon = NODE_ICONS[node.type]
+                    return icon ? (
+                      <IconTile
+                        key={node.id}
+                        icon={icon}
+                        tone={toneOf(definition?.category)}
+                        size="sm"
+                      />
+                    ) : null
+                  })}
+                </HStack>
+                <VStack gap={1}>
+                  <Heading level={3}>{template.name}</Heading>
+                  <Text type="supporting">{template.description}</Text>
+                </VStack>
+                <Text type="supporting" color="primary">
                   {template.pipeline.nodes
                     .map((node) => registry.get(node.type)?.label ?? node.type)
                     .join(' → ')}

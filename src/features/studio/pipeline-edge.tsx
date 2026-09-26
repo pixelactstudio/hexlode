@@ -4,7 +4,7 @@ import {
   type Edge,
   EdgeLabelRenderer,
   type EdgeProps,
-  getBezierPath,
+  getSmoothStepPath,
 } from '@xyflow/react'
 
 import type { ConnectionCheck } from '#/features/engine/compatibility'
@@ -27,7 +27,7 @@ function formatsLabel(stats: ConnectionStats) {
 
 export function PipelineEdgeView(props: EdgeProps<PipelineFlowEdge>) {
   const { data, selected } = props
-  const [path, labelX, labelY] = getBezierPath(props)
+  const [path, labelX, labelY] = getSmoothStepPath({ ...props, borderRadius: 16, offset: 24 })
   const refused = data?.check?.status === 'refused'
   const stats = data?.stats
   const saved = stats && stats.sourceBytes > stats.bytes ? stats.sourceBytes - stats.bytes : 0

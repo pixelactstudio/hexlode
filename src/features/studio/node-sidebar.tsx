@@ -1,4 +1,3 @@
-import { Icon } from '@astryxdesign/core/Icon'
 import { Item } from '@astryxdesign/core/Item'
 import { VStack } from '@astryxdesign/core/Stack'
 import { Text } from '@astryxdesign/core/Text'
@@ -6,6 +5,7 @@ import { TextInput } from '@astryxdesign/core/TextInput'
 import { Search } from 'lucide-react'
 import { useState } from 'react'
 
+import { IconTile } from '#/features/app-shell/icon-tile'
 import type { NodeRegistry } from '#/features/engine/types'
 import { NODE_DRAG_TYPE } from '#/features/studio/constants'
 import { CATEGORIES, NODE_ICONS } from '#/features/studio/node-ui'
@@ -42,12 +42,13 @@ export function NodeSidebar({
         hasClear
         onChange={setQuery}
       />
+      <Text type="supporting">Click a node to add it, or drag it onto the canvas.</Text>
       {CATEGORIES.map((category) => {
         const nodes = available.filter((node) => node.category === category.id)
         if (nodes.length === 0) return null
         return (
           <VStack key={category.id} gap={1}>
-            <Text type="supporting" weight="semibold">
+            <Text type="label" weight="semibold" color="secondary">
               {category.label}
             </Text>
             {nodes.map((node) => {
@@ -70,7 +71,7 @@ export function NodeSidebar({
                     density="compact"
                     align="start"
                     startContent={
-                      icon ? <Icon icon={icon} size="sm" color="secondary" /> : undefined
+                      icon ? <IconTile icon={icon} tone={category.tone} size="sm" /> : undefined
                     }
                     onClick={() => onAdd(node.type, search ? 'search' : 'click')}
                   />

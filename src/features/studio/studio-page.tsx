@@ -2,6 +2,7 @@ import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
 import { Center } from '@astryxdesign/core/Center'
 import { EmptyState } from '@astryxdesign/core/EmptyState'
+import { Icon } from '@astryxdesign/core/Icon'
 import { IconButton } from '@astryxdesign/core/IconButton'
 import { Layout, LayoutContent, LayoutHeader, LayoutPanel } from '@astryxdesign/core/Layout'
 import { Link } from '@astryxdesign/core/Link'
@@ -12,7 +13,7 @@ import { TextInput } from '@astryxdesign/core/TextInput'
 import { useToast } from '@astryxdesign/core/Toast'
 import { useNavigate } from '@tanstack/react-router'
 import { ReactFlowProvider, useReactFlow } from '@xyflow/react'
-import { Redo2, Settings, Undo2 } from 'lucide-react'
+import { Play, Redo2, Settings, Undo2 } from 'lucide-react'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 import { track } from '#/features/analytics/analytics'
@@ -30,11 +31,12 @@ import {
   pipelineFileName,
 } from '#/features/pipelines/pipeline-file'
 import { pipelineStore } from '#/features/pipelines/storage'
-import { isEngineSupported } from '#/features/runs/engine-runtime'
+import { EngineGate } from '#/features/runs/engine-unavailable'
 import { useController, useRunState } from '#/features/runs/use-run-controller'
-import { STUDIO_MIN_WIDTH } from '#/features/studio/constants'
+import { FIT_VIEW, STUDIO_MIN_WIDTH } from '#/features/studio/constants'
 import { NodeInspector } from '#/features/studio/node-inspector'
 import { NodeSidebar } from '#/features/studio/node-sidebar'
+import { NODE_WIDTH } from '#/features/studio/pipeline-node'
 import { StudioCanvas } from '#/features/studio/studio-canvas'
 import {
   OpenDialog,
@@ -153,7 +155,10 @@ function Studio({
     const { x, y, zoom } = flow.getViewport()
     const bounds = document.querySelector('.react-flow')?.getBoundingClientRect()
     const centre = bounds
-      ? { x: (bounds.width / 2 - x) / zoom - 104, y: (bounds.height / 2 - y) / zoom - 60 }
+      ? {
+          x: (bounds.width / 2 - x) / zoom - NODE_WIDTH / 2,
+          y: (bounds.height / 2 - y) / zoom - 60,
+        }
       : { x: 0, y: 0 }
     const offset = studio.pipeline.nodes.length * 12
     const id = store.addNode(type, { x: centre.x + offset, y: centre.y + offset })
@@ -208,7 +213,7 @@ function Studio({
         result: 'ok',
         nodeCount: imported.pipeline.nodes.length,
       })
-      requestAnimationFrame(() => void flow.fitView({ padding: 0.08, maxZoom: 1 }))
+      requestAnimationFrame(() => void flow.fitView(FIT_VIEW))
     } catch (reason) {
       const message =
         reason instanceof PipelineFileError ? reason.message : 'The file could not be read.'
@@ -223,13 +228,14 @@ function Studio({
   }
 
   const estimate = run.estimate
+  const imageCount = `${formatCount(run.sources.length)} image${run.sources.length === 1 ? '' : 's'}`
   const status = run.running
     ? `Running · ${formatCount(run.stats.finishedItems)} of ${formatCount(run.sources.length)} images`
     : run.sources.length === 0
       ? 'Add images to the Files node to run'
       : estimate
-        ? `${formatCount(run.sources.length)} images · ${describeEstimate(estimate)}`
-        : `${formatCount(run.sources.length)} images`
+        ? `${imageCount} · ${describeEstimate(estimate)}`
+        : imageCount
 
   const header = (
     <LayoutHeader hasDivider>
@@ -309,6 +315,7 @@ function Studio({
             <Button
               label="Run"
               size="sm"
+              icon={<Icon icon={Play} size="sm" />}
               variant="primary"
               isDisabled={run.sources.length === 0 || run.preparing}
               clickAction={start}
@@ -383,7 +390,7 @@ function Studio({
           session.refresh()
           setDialog(null)
           track('template_chosen', { template: template.id })
-          requestAnimationFrame(() => void flow.fitView({ padding: 0.08, maxZoom: 1 }))
+          requestAnimationFrame(() => void flow.fitView(FIT_VIEW))
         }}
       />
       <SaveDialog
@@ -414,16 +421,6 @@ function StudioClient({ savedPipelineId }: { savedPipelineId?: string }) {
   const session = useController(() => createStudioSession(registry))
   const wide = useWideEnough()
   if (!wide) return <NarrowScreen />
-  if (!isEngineSupported()) {
-    return (
-      <Center height="100%">
-        <EmptyState
-          title="This browser cannot run the Studio"
-          description="Hexlode needs Web Workers and the Origin Private File System. Use a current Chrome, Edge, Firefox or Safari."
-        />
-      </Center>
-    )
-  }
   return (
     <ReactFlowProvider>
       <Studio session={session} savedPipelineId={savedPipelineId} />
@@ -437,7 +434,11 @@ export function StudioPage({ savedPipelineId }: { savedPipelineId?: string }) {
   useEffect(() => setMounted(true), [])
   return (
     <AppFrame current="studio" height="fill" contentPadding={0}>
-      {mounted ? <StudioClient savedPipelineId={savedPipelineId} /> : null}
+      {mounted ? (
+        <EngineGate>
+          <StudioClient savedPipelineId={savedPipelineId} />
+        </EngineGate>
+      ) : null}
     </AppFrame>
   )
 }

@@ -5,6 +5,7 @@ import {
   Controls,
   type EdgeChange,
   type Connection as FlowConnection,
+  MarkerType,
   type NodeChange,
   ReactFlow,
   useReactFlow,
@@ -14,30 +15,41 @@ import { type DragEvent, useMemo, useRef, useState } from 'react'
 import { track } from '#/features/analytics/analytics'
 import type { NodeRegistry, Pipeline } from '#/features/engine/types'
 import type { RunControllerState } from '#/features/runs/run-controller'
-import { NODE_DRAG_TYPE } from '#/features/studio/constants'
+import { FIT_VIEW, NODE_DRAG_TYPE } from '#/features/studio/constants'
+import { summariseNode } from '#/features/studio/node-summary'
 import { PipelineEdgeView, type PipelineFlowEdge } from '#/features/studio/pipeline-edge'
-import { type PipelineFlowNode, PipelineNodeView } from '#/features/studio/pipeline-node'
+import {
+  NODE_WIDTH,
+  type PipelineFlowNode,
+  PipelineNodeView,
+} from '#/features/studio/pipeline-node'
 import type { PreviewState, StudioSession } from '#/features/studio/studio-session'
 import type { StudioState } from '#/features/studio/studio-store'
 
 const nodeTypes = { pipeline: PipelineNodeView }
 const edgeTypes = { pipeline: PipelineEdgeView }
 
-/** React Flow's own variables, set to Astryx tokens. */
+/**
+ * React Flow's override variables, set to Astryx tokens. Its stylesheet sets the `-default`
+ * variables outside any cascade layer, so only these win over it.
+ */
 const CANVAS_TOKENS = [
   '[--xy-background-color:var(--color-background-body)]',
-  '[--xy-background-pattern-dots-color-default:var(--color-border-emphasized)]',
-  '[--xy-edge-stroke-default:var(--color-border-emphasized)]',
-  '[--xy-edge-stroke-selected-default:var(--color-accent)]',
-  '[--xy-connectionline-stroke-default:var(--color-accent)]',
-  '[--xy-handle-background-color-default:var(--color-background-surface)]',
-  '[--xy-handle-border-color-default:var(--color-border-emphasized)]',
-  '[--xy-controls-button-background-color-default:var(--color-background-surface)]',
-  '[--xy-controls-button-background-color-hover-default:var(--color-overlay-hover)]',
-  '[--xy-controls-button-color-default:var(--color-text-primary)]',
-  '[--xy-controls-button-border-color-default:var(--color-border)]',
-  '[--xy-selection-background-color-default:var(--color-accent-muted)]',
-  '[--xy-selection-border-default:1px_solid_var(--color-accent)]',
+  '[--xy-background-pattern-color:var(--color-border-emphasized)]',
+  '[--xy-edge-stroke:var(--color-border-emphasized)]',
+  '[--xy-edge-stroke-selected:var(--color-accent)]',
+  '[--xy-connectionline-stroke:var(--color-accent)]',
+  '[--xy-connectionline-stroke-width:2]',
+  '[--xy-handle-background-color:var(--color-background-surface)]',
+  '[--xy-handle-border-color:var(--color-border-emphasized)]',
+  '[--xy-controls-button-background-color:var(--color-background-surface)]',
+  '[--xy-controls-button-background-color-hover:var(--color-overlay-hover)]',
+  '[--xy-controls-button-color:var(--color-text-primary)]',
+  '[--xy-controls-button-color-hover:var(--color-text-primary)]',
+  '[--xy-controls-button-border-color:var(--color-border)]',
+  '[--xy-controls-box-shadow:var(--shadow-sm)]',
+  '[--xy-selection-background-color:var(--color-accent-muted)]',
+  '[--xy-selection-border:1px_solid_var(--color-accent)]',
 ].join(' ')
 
 export function StudioCanvas({
@@ -70,6 +82,13 @@ export function StudioCanvas({
         } catch {
           // Invalid settings keep the default port.
         }
+        let summary = ''
+        try {
+          if (definition)
+            summary = summariseNode(node.type, definition.parseSettings(node.settings))
+        } catch {
+          // Invalid settings show no summary; the inspector explains them.
+        }
         return {
           id: node.id,
           type: 'pipeline',
@@ -80,6 +99,8 @@ export function StudioCanvas({
           data: {
             type: node.type,
             label: definition?.label ?? node.type,
+            category: definition?.category,
+            summary,
             hasInput: definition?.hasInput ?? true,
             ports,
             stats: run.stats.status === 'idle' ? undefined : run.stats.nodes[node.id],
@@ -110,6 +131,15 @@ export function StudioCanvas({
         sourceHandle: connection.sourcePort,
         target: connection.target,
         animated: running,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 14,
+          height: 14,
+          color:
+            studio.checks[connection.id]?.status === 'refused'
+              ? 'var(--color-error)'
+              : 'var(--color-border-emphasized)',
+        },
         data: {
           check: studio.checks[connection.id],
           stats: run.stats.status === 'idle' ? undefined : run.stats.connections[connection.id],
@@ -165,7 +195,10 @@ export function StudioCanvas({
     const position = flow.screenToFlowPosition({ x: event.clientX, y: event.clientY })
     const type = event.dataTransfer.getData(NODE_DRAG_TYPE)
     if (type) {
-      const id = store.addNode(type, { x: position.x - 104, y: position.y - 40 })
+      const id = store.addNode(type, {
+        x: position.x - NODE_WIDTH / 2,
+        y: position.y - 40,
+      })
       if (id) track('node_added', { nodeType: type, method: 'drag' })
       return
     }
@@ -200,13 +233,19 @@ export function StudioCanvas({
       onDrop={onDrop}
       deleteKeyCode={['Backspace', 'Delete']}
       fitView
-      fitViewOptions={{ padding: 0.08, maxZoom: 1 }}
+      fitViewOptions={FIT_VIEW}
       minZoom={0.2}
       maxZoom={2}
+      snapToGrid
+      snapGrid={[20, 20]}
       proOptions={{ hideAttribution: true }}
     >
       <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} />
-      <Controls showInteractive={false} />
+      <Controls
+        showInteractive={false}
+        position="bottom-left"
+        className="overflow-hidden rounded-lg"
+      />
     </ReactFlow>
   )
 }

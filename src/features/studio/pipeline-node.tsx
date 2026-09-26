@@ -1,21 +1,27 @@
 import { AspectRatio } from '@astryxdesign/core/AspectRatio'
 import { Card } from '@astryxdesign/core/Card'
-import { Icon } from '@astryxdesign/core/Icon'
+import { Divider } from '@astryxdesign/core/Divider'
 import { HStack, VStack } from '@astryxdesign/core/Stack'
 import { StatusDot } from '@astryxdesign/core/StatusDot'
 import { Text } from '@astryxdesign/core/Text'
 import { Handle, type Node, type NodeProps, Position } from '@xyflow/react'
 
-import type { Port } from '#/features/engine/types'
+import { IconTile } from '#/features/app-shell/icon-tile'
+import type { NodeCategory, Port } from '#/features/engine/types'
 import { FORMAT_NAMES } from '#/features/images/image-item'
 import type { NodeStats } from '#/features/runs/run-stats'
-import { NODE_ICONS } from '#/features/studio/node-ui'
+import { NODE_ICONS, toneOf } from '#/features/studio/node-ui'
 import type { PreviewView } from '#/features/studio/studio-session'
 import { formatBytes, formatCount, formatDuration } from '#/lib/format'
+
+export const NODE_WIDTH = 248
 
 export interface PipelineNodeData extends Record<string, unknown> {
   type: string
   label: string
+  category?: NodeCategory
+  /** One line saying what the settings do. */
+  summary: string
   hasInput: boolean
   ports: Port[]
   stats?: NodeStats
@@ -90,75 +96,89 @@ export function PipelineNodeView({ data, selected }: NodeProps<PipelineFlowNode>
   const icon = NODE_ICONS[data.type]
   const dot = status(data)
   const single = data.ports.length === 1
+  const hasDetails = Boolean(data.preview || data.hasSample || data.stats)
   return (
     <Card
       className="overflow-visible!"
       padding={0}
-      width={208}
+      width={NODE_WIDTH}
       elevation={selected ? 'med' : 'low'}
       variant={selected ? 'blue' : 'default'}
     >
       {data.hasInput ? (
-        <Handle type="target" position={Position.Left} className="z-10 size-2.5!" />
+        <Handle type="target" position={Position.Left} className="z-10 size-3!" />
       ) : null}
-      <VStack gap={2} padding={3}>
-        <HStack gap={2} vAlign="center" hAlign="between">
-          <HStack gap={2} vAlign="center">
-            {icon ? <Icon icon={icon} size="sm" color="secondary" /> : null}
-            <Text type="label" weight="semibold">
-              {data.label}
+      <HStack gap={3} padding={3} vAlign="center">
+        {icon ? <IconTile icon={icon} tone={toneOf(data.category)} size="md" /> : null}
+        <VStack gap={0.5} width="100%">
+          <Text type="label" weight="semibold" maxLines={1}>
+            {data.label}
+          </Text>
+          {data.summary ? (
+            <Text type="supporting" maxLines={1}>
+              {data.summary}
             </Text>
-          </HStack>
-          {dot ? (
-            <StatusDot
-              variant={dot.variant}
-              label={dot.label}
-              tooltip={dot.label}
-              isPulsing={'pulse' in dot}
-            />
           ) : null}
-        </HStack>
-        {data.preview?.thumbnail ? (
-          <AspectRatio ratio={16 / 10} fit="contain">
-            <img
-              src={data.preview.thumbnail}
-              alt={`Preview of ${data.label}`}
-              className="rounded-md bg-muted"
-            />
-          </AspectRatio>
+        </VStack>
+        {dot ? (
+          <StatusDot
+            variant={dot.variant}
+            label={dot.label}
+            tooltip={dot.label}
+            isPulsing={'pulse' in dot}
+          />
         ) : null}
-        {data.preview ? (
-          <PreviewLine preview={data.preview} />
-        ) : data.hasSample ? (
-          <Text type="supporting">The sample does not reach this node.</Text>
-        ) : null}
-        {data.stats ? <StatsLines stats={data.stats} /> : null}
-      </VStack>
+      </HStack>
+      {hasDetails ? (
+        <>
+          <Divider />
+          <VStack gap={2} padding={3}>
+            {data.preview?.thumbnail ? (
+              <AspectRatio ratio={16 / 10} fit="contain">
+                <img
+                  src={data.preview.thumbnail}
+                  alt={`Preview of ${data.label}`}
+                  className="rounded-md bg-muted"
+                />
+              </AspectRatio>
+            ) : null}
+            {data.preview ? (
+              <PreviewLine preview={data.preview} />
+            ) : data.hasSample ? (
+              <Text type="supporting">The sample does not reach this node.</Text>
+            ) : null}
+            {data.stats ? <StatsLines stats={data.stats} /> : null}
+          </VStack>
+        </>
+      ) : null}
       {single ? (
         <Handle
           type="source"
           position={Position.Right}
           id={data.ports[0].id}
-          className="z-10 size-2.5!"
+          className="z-10 size-3!"
         />
       ) : (
-        <VStack gap={0} paddingBlock={1}>
-          {data.ports.map((port) => (
-            <HStack key={port.id} paddingInline={3} paddingBlock={1} hAlign="end">
-              <span className="relative block w-full text-end">
-                <Text type="supporting" maxLines={1}>
-                  {port.label}
-                </Text>
-                <Handle
-                  type="source"
-                  position={Position.Right}
-                  id={port.id}
-                  className="z-10 size-2.5! -right-3!"
-                />
-              </span>
-            </HStack>
-          ))}
-        </VStack>
+        <>
+          <Divider />
+          <VStack gap={0} paddingBlock={1}>
+            {data.ports.map((port) => (
+              <HStack key={port.id} paddingInline={3} paddingBlock={1} hAlign="end">
+                <span className="relative block w-full text-end">
+                  <Text type="supporting" maxLines={1}>
+                    {port.label}
+                  </Text>
+                  <Handle
+                    type="source"
+                    position={Position.Right}
+                    id={port.id}
+                    className="z-10 size-3! -right-3!"
+                  />
+                </span>
+              </HStack>
+            ))}
+          </VStack>
+        </>
       )}
     </Card>
   )
