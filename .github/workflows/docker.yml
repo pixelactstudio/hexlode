@@ -1,0 +1,138 @@
+name: Docker image
+
+# Publishes ghcr.io/<owner>/hexlode for Dokploy to pull, then asks Dokploy to redeploy.
+# `main` updates the `latest` tag; a `v1.2.3` tag also publishes `1.2.3` and `1.2`. Every image
+# also gets a `sha-<commit>` tag to roll back to. See DEPLOY.md.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/hexlode
+
+jobs:
+  image:
+    name: build, scan and push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-,format=short
+
+      - name: Build for the scan
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: hexlode:scan
+          build-args: HEXLODE_VERSION=${{ steps.meta.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: The container starts and serves the app
+        run: |
+          docker run -d --name hexlode -p 3000:3000 -e VITE_POSTHOG_KEY=phc_runtime_check hexlode:scan
+          EXPECT_IN_PAGE=phc_runtime_check bash scripts/smoke.sh http://localhost:3000 || { docker logs hexlode; exit 1; }
+
+      - name: No critical vulnerabilities with a fix
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: hexlode:scan
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+
+      - name: Report every finding to code scanning
+        if: ${{ !cancelled() }}
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: hexlode:scan
+          severity: CRITICAL,HIGH,MEDIUM
+          format: sarif
+          output: trivy.sarif
+          skip-setup-trivy: true
+      - if: ${{ !cancelled() }}
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: trivy.sarif
+          category: trivy
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      # Built for x86 and ARM servers. Only the small runtime stage runs per platform.
+      - name: Push
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: HEXLODE_VERSION=${{ steps.meta.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: mode=max
+          sbom: true
+
+      - name: Summary
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          {
+            echo "## Published"
+            echo
+            while read -r tag; do echo "- \`$tag\`"; done <<< "$TAGS"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: deploy to Dokploy
+    needs: image
+    # Only `main` deploys, and only once the Dokploy secrets are set (see DEPLOY.md).
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Redeploy
+        env:
+          DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_APPLICATION_ID: ${{ secrets.DOKPLOY_APPLICATION_ID }}
+        run: |
+          if [ -z "$DOKPLOY_URL" ] || [ -z "$DOKPLOY_API_KEY" ] || [ -z "$DOKPLOY_APPLICATION_ID" ]; then
+            echo "::notice::Dokploy secrets are not set, so Dokploy was not asked to redeploy."
+            exit 0
+          fi
+          curl -fsS -X POST "${DOKPLOY_URL%/}/api/application.deploy" \
+            -H "x-api-key: $DOKPLOY_API_KEY" \
+            -H 'Content-Type: application/json' \
+            -d "{\"applicationId\": \"$DOKPLOY_APPLICATION_ID\"}"
+          echo "Dokploy is deploying the new image."

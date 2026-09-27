@@ -3,11 +3,12 @@
  * messages, exceptions and breadcrumbs before sending.
  */
 import { scrubSentryEvent, scrubText } from '#/features/usage/scrub'
+import type { PublicConfig } from '#/features/usage/types'
 
 let started = false
 
-export async function startErrorReporting() {
-  const dsn = import.meta.env.VITE_SENTRY_DSN as string | undefined
+export async function startErrorReporting(config: PublicConfig) {
+  const dsn = config.sentryDsn
   if (started || !dsn || typeof window === 'undefined') return
   started = true
   let Sentry: typeof import('@sentry/tanstackstart-react')

@@ -3,6 +3,7 @@
  * autocapture or session replay. Each event is checked against its schema before it is sent.
  */
 import { type AnalyticsEventName, EVENTS, type EventProperties } from '#/features/usage/events'
+import type { PublicConfig } from '#/features/usage/types'
 
 interface CaptureEvent {
   event: string
@@ -70,17 +71,17 @@ let instance: Analytics | undefined
 let starting: Promise<void> | undefined
 const queued: [AnalyticsEventName, unknown][] = []
 
-/** Starts analytics once, in the browser. Without VITE_POSTHOG_KEY it does nothing. */
-export function startAnalytics() {
+/** Starts analytics once, in the browser. Without a PostHog key it does nothing. */
+export function startAnalytics(config: PublicConfig) {
   if (typeof window === 'undefined') return Promise.resolve()
   starting ??= (async () => {
-    const key = import.meta.env.VITE_POSTHOG_KEY as string | undefined
+    const key = config.posthogKey
     if (key) {
       try {
         const { default: posthog } = await import('posthog-js')
         instance = createAnalytics({
           key,
-          host: import.meta.env.VITE_POSTHOG_HOST as string | undefined,
+          host: config.posthogHost,
           posthog: posthog as unknown as PostHogLike,
         })
       } catch {

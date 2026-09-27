@@ -18,6 +18,7 @@ import { Route as ResizeRouteImport } from './routes/resize'
 import { Route as RotateRouteImport } from './routes/rotate'
 import { Route as StripMetadataRouteImport } from './routes/strip-metadata'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ToolsPipelineIdRouteImport } from './routes/tools.$pipelineId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
@@ -66,6 +67,11 @@ const StudioRoute = StudioRouteImport.update({
   path: '/studio',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ToolsPipelineIdRoute = ToolsPipelineIdRouteImport.update({
   id: '/tools/$pipelineId',
   path: '/tools/$pipelineId',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/rotate': typeof RotateRoute
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
+  '/api/health': typeof ApiHealthRoute
   '/tools/$pipelineId': typeof ToolsPipelineIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
@@ -100,6 +107,7 @@ export interface FileRoutesByTo {
   '/rotate': typeof RotateRoute
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
+  '/api/health': typeof ApiHealthRoute
   '/tools/$pipelineId': typeof ToolsPipelineIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
@@ -114,6 +122,7 @@ export interface FileRoutesById {
   '/rotate': typeof RotateRoute
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
+  '/api/health': typeof ApiHealthRoute
   '/tools/$pipelineId': typeof ToolsPipelineIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
@@ -129,6 +138,7 @@ export interface FileRouteTypes {
     | '/rotate'
     | '/strip-metadata'
     | '/studio'
+    | '/api/health'
     | '/tools/$pipelineId'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
     | '/rotate'
     | '/strip-metadata'
     | '/studio'
+    | '/api/health'
     | '/tools/$pipelineId'
     | '/api/auth/$'
   id:
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/rotate'
     | '/strip-metadata'
     | '/studio'
+    | '/api/health'
     | '/tools/$pipelineId'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
@@ -169,6 +181,7 @@ export interface RootRouteChildren {
   RotateRoute: typeof RotateRoute
   StripMetadataRoute: typeof StripMetadataRoute
   StudioRoute: typeof StudioRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   ToolsPipelineIdRoute: typeof ToolsPipelineIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -238,6 +251,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tools/$pipelineId': {
       id: '/tools/$pipelineId'
       path: '/tools/$pipelineId'
@@ -265,6 +285,7 @@ const rootRouteChildren: RootRouteChildren = {
   RotateRoute: RotateRoute,
   StripMetadataRoute: StripMetadataRoute,
   StudioRoute: StudioRoute,
+  ApiHealthRoute: ApiHealthRoute,
   ToolsPipelineIdRoute: ToolsPipelineIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }

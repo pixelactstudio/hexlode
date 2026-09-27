@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -174,10 +174,32 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: The container starts and serves the app
+      # The key is set only on the running container, so this proves the server reads it at runtime.
+      - name: The container starts, reads its environment and serves the app
         run: |
-          docker run -d --name hexlode -p 3000:3000 hexlode:ci
-          bash scripts/smoke.sh http://localhost:3000 || { docker logs hexlode; exit 1; }
+          docker run -d --name hexlode -p 3000:3000 -e VITE_POSTHOG_KEY=phc_runtime_check hexlode:ci
+          EXPECT_IN_PAGE=phc_runtime_check bash scripts/smoke.sh http://localhost:3000 || { docker logs hexlode; exit 1; }
+
+      - name: The container reports healthy
+        run: |
+          for _ in $(seq 1 30); do
+            status=$(docker inspect hexlode --format '{{.State.Health.Status}}')
+            [ "$status" = healthy ] && exit 0
+            sleep 2
+          done
+          echo "::error::The container's health check reports $status."
+          docker logs hexlode
+          exit 1
+
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      # The published image also runs on ARM servers; this catches a broken ARM build before merge.
+      - name: The image builds for ARM
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Image size
         run: docker image ls hexlode:ci --format '| hexlode:ci | {{.Size}} |' | sed '1i | Image | Size |\n| --- | --- |' >> "$GITHUB_STEP_SUMMARY"

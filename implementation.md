@@ -30,8 +30,9 @@ Active phase: **Phase 1**.
 5. Replace `node:test` with Vitest, with browser mode on Playwright Chromium for worker, OPFS and
    codec tests.
 6. Set up PostHog and Sentry as described in Analytics below, and add the privacy page.
-7. Add a Dockerfile and deploy on Dokploy. The image builds with the public `VITE_POSTHOG_KEY`,
-   `VITE_POSTHOG_HOST` and `VITE_SENTRY_DSN` as build arguments.
+7. Add a Dockerfile and deploy on Dokploy. CI publishes the image to GHCR, and the server reads
+   the public `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST` and `VITE_SENTRY_DSN` from its environment
+   at runtime ([ADR 0008](./docs/adr/0008-one-image-configured-at-runtime.md)).
 
 ### Engine
 
@@ -145,12 +146,12 @@ removed.
 - The batch of 500 images of 12 megapixels runs with `pnpm test:scale`. It takes minutes, so it is
   outside `pnpm validate`; run it before closing a phase.
 - `pnpm validate` passes before every commit.
-- CI (`.github/workflows/`) runs on every push to `main` and `dev` and on every pull request:
+- CI (`.github/workflows/`) runs on every push to `main` and on every pull request:
   Biome, types, commit messages, the generated theme and route tree, actionlint and hadolint;
   unit tests on Linux, macOS and Windows; browser tests in three engines; coverage; the build with
-  a smoke test of the server; and the Docker image with a smoke test of the container. CodeQL,
-  `pnpm audit`, dependency review and PR titles run in their own workflows, and the scale test runs
-  weekly or on demand.
+  a smoke test of the server; and the Docker image with a smoke test of the container, its health
+  check, runtime settings and an ARM build. CodeQL, `pnpm audit`, dependency review and PR titles
+  run in their own workflows, and the scale test runs weekly or on demand.
 
 ## Analytics
 
@@ -165,6 +166,10 @@ removed.
 
 ## Deployment
 
-The app runs as one Docker container that serves the Nitro build. Dokploy on the maintainer's VPS
-builds the Dockerfile and handles the domain and HTTPS. A future cloud mode adds a Postgres
-container next to it.
+The app runs as one Docker container that serves the Nitro build. The `Docker image` workflow
+publishes `ghcr.io/pixelactstudio/hexlode` for x86 and ARM on every push to `main`, then asks
+Dokploy on the maintainer's VPS to redeploy. Dokploy pulls the image, sets its environment and
+handles the domain and HTTPS ([ADR 0008](./docs/adr/0008-one-image-configured-at-runtime.md)).
+`/api/health` answers the container health check that Dokploy's zero-downtime updates wait for.
+A future cloud mode adds a Postgres service on the same VPS, reached through `DATABASE_URL`.
+[DEPLOY.md](./DEPLOY.md) has the steps.

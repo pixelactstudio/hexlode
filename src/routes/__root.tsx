@@ -12,6 +12,7 @@ import { useColourMode } from '#/features/theme/colour-mode-menu'
 import { DEFAULT_COLOUR_MODE } from '#/features/theme/constants'
 import { hexlodeTheme } from '#/features/theme/hexlode'
 import { startErrorReporting } from '#/features/usage/error-reports'
+import { getPublicConfig } from '#/features/usage/public-config'
 import { startAnalytics } from '#/features/usage/usage'
 import { RouterLink } from '#/lib/router-link'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
@@ -22,6 +23,9 @@ interface MyRouterContext {
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
+  // Read once per visit on the server, so the deployment's environment sets the keys.
+  loader: () => getPublicConfig(),
+  staleTime: Number.POSITIVE_INFINITY,
   head: () => ({
     meta: [
       {
@@ -52,10 +56,11 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const config = Route.useLoaderData()
   useEffect(() => {
-    void startAnalytics()
-    void startErrorReporting()
-  }, [])
+    void startAnalytics(config)
+    void startErrorReporting(config)
+  }, [config])
   const mode = useColourMode()
   return (
     // The inline script sets the colour mode before paint, so the attribute can differ from the

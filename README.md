@@ -38,13 +38,15 @@ Browser tests use the Chromium at `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`, or the 
 
 ## Docker
 
+CI publishes `ghcr.io/pixelactstudio/hexlode` for x86 and ARM on every push to `main`.
+
 ```bash
-docker build -t hexlode .
-docker run -p 3000:3000 hexlode
+docker run -p 3000:3000 ghcr.io/pixelactstudio/hexlode:latest
 ```
 
-Pass `--build-arg VITE_POSTHOG_KEY=…` and `--build-arg VITE_SENTRY_DSN=…` to enable analytics and
-error reports.
+Settings come from the container's environment, for example `-e VITE_POSTHOG_KEY=…` and
+`-e VITE_SENTRY_DSN=…` to enable analytics and error reports. [DEPLOY.md](./DEPLOY.md) covers
+Dokploy, every variable, zero-downtime updates and deploying on each push.
 
 ## Documents
 
