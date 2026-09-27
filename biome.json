@@ -7,7 +7,16 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!src/routeTree.gen.ts", "!src/styles.css", "!pnpm-lock.yaml"]
+    "includes": [
+      "**",
+      "!src/routeTree.gen.ts",
+      "!src/styles.css",
+      "!pnpm-lock.yaml",
+      "!src/features/theme/hexlode.js",
+      "!src/features/theme/hexlode.d.ts",
+      "!src/features/theme/hexlode.variants.d.ts",
+      "!src/features/theme/hexlode-theme.css"
+    ]
   },
   "formatter": {
     "enabled": true,

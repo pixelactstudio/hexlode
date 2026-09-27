@@ -1,0 +1,35 @@
+/**
+ * Error reports. Sentry runs without personal data or replay; file names are removed from
+ * messages, exceptions and breadcrumbs before sending.
+ */
+import { scrubSentryEvent, scrubText } from '#/features/usage/scrub'
+import type { PublicConfig } from '#/features/usage/types'
+
+let started = false
+
+export async function startErrorReporting(config: PublicConfig) {
+  const dsn = config.sentryDsn
+  if (started || !dsn || typeof window === 'undefined') return
+  started = true
+  let Sentry: typeof import('@sentry/tanstackstart-react')
+  try {
+    Sentry = await import('@sentry/tanstackstart-react')
+  } catch {
+    // A content blocker stopped Sentry. The app works the same without error reports.
+    return
+  }
+  Sentry.init({
+    dsn,
+    sendDefaultPii: false,
+    tracesSampleRate: 0,
+    replaysSessionSampleRate: 0,
+    replaysOnErrorSampleRate: 0,
+    beforeSend: (event) => scrubSentryEvent(event),
+    beforeBreadcrumb: (breadcrumb) => {
+      if (breadcrumb.category === 'console' || breadcrumb.category?.startsWith('ui.')) return null
+      return breadcrumb.message
+        ? { ...breadcrumb, message: scrubText(breadcrumb.message) }
+        : breadcrumb
+    },
+  })
+}

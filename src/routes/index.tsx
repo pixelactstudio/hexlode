@@ -1,14 +1,25 @@
 import { createFileRoute } from '@tanstack/react-router'
 
+import { ClosingCall, DeviceSection } from '#/features/home/device-section'
+import { Formats } from '#/features/home/formats'
+import { Hero } from '#/features/home/hero'
+import { Rails } from '#/features/home/section'
+import { StudioBento } from '#/features/home/studio-bento'
+import { ToolGrid } from '#/features/home/tool-grid'
+import { usePageView } from '#/features/usage/use-page-view'
+
 export const Route = createFileRoute('/')({ component: Home })
 
 function Home() {
+  usePageView({ page: 'home' })
   return (
-    <div className="p-8">
-      <h1 className="text-4xl font-bold">Welcome to TanStack Start</h1>
-      <p className="mt-4 text-lg">
-        Edit <code>src/routes/index.tsx</code> to get started.
-      </p>
-    </div>
+    <Rails>
+      <Hero />
+      <Formats />
+      <StudioBento />
+      <ToolGrid />
+      <DeviceSection />
+      <ClosingCall />
+    </Rails>
   )
 }

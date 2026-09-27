@@ -10,7 +10,16 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as McpRouteImport } from './routes/mcp'
+import { Route as CompressRouteImport } from './routes/compress'
+import { Route as ConvertRouteImport } from './routes/convert'
+import { Route as CropRouteImport } from './routes/crop'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as ResizeRouteImport } from './routes/resize'
+import { Route as RotateRouteImport } from './routes/rotate'
+import { Route as StripMetadataRouteImport } from './routes/strip-metadata'
+import { Route as StudioRouteImport } from './routes/studio'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ToolsPipelineIdRouteImport } from './routes/tools.$pipelineId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -18,9 +27,54 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
+const CompressRoute = CompressRouteImport.update({
+  id: '/compress',
+  path: '/compress',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConvertRoute = ConvertRouteImport.update({
+  id: '/convert',
+  path: '/convert',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CropRoute = CropRouteImport.update({
+  id: '/crop',
+  path: '/crop',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResizeRoute = ResizeRouteImport.update({
+  id: '/resize',
+  path: '/resize',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RotateRoute = RotateRouteImport.update({
+  id: '/rotate',
+  path: '/rotate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StripMetadataRoute = StripMetadataRouteImport.update({
+  id: '/strip-metadata',
+  path: '/strip-metadata',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudioRoute = StudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolsPipelineIdRoute = ToolsPipelineIdRouteImport.update({
+  id: '/tools/$pipelineId',
+  path: '/tools/$pipelineId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -31,31 +85,104 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/mcp': typeof McpRoute
+  '/compress': typeof CompressRoute
+  '/convert': typeof ConvertRoute
+  '/crop': typeof CropRoute
+  '/privacy': typeof PrivacyRoute
+  '/resize': typeof ResizeRoute
+  '/rotate': typeof RotateRoute
+  '/strip-metadata': typeof StripMetadataRoute
+  '/studio': typeof StudioRoute
+  '/api/health': typeof ApiHealthRoute
+  '/tools/$pipelineId': typeof ToolsPipelineIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/mcp': typeof McpRoute
+  '/compress': typeof CompressRoute
+  '/convert': typeof ConvertRoute
+  '/crop': typeof CropRoute
+  '/privacy': typeof PrivacyRoute
+  '/resize': typeof ResizeRoute
+  '/rotate': typeof RotateRoute
+  '/strip-metadata': typeof StripMetadataRoute
+  '/studio': typeof StudioRoute
+  '/api/health': typeof ApiHealthRoute
+  '/tools/$pipelineId': typeof ToolsPipelineIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/mcp': typeof McpRoute
+  '/compress': typeof CompressRoute
+  '/convert': typeof ConvertRoute
+  '/crop': typeof CropRoute
+  '/privacy': typeof PrivacyRoute
+  '/resize': typeof ResizeRoute
+  '/rotate': typeof RotateRoute
+  '/strip-metadata': typeof StripMetadataRoute
+  '/studio': typeof StudioRoute
+  '/api/health': typeof ApiHealthRoute
+  '/tools/$pipelineId': typeof ToolsPipelineIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/mcp' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/compress'
+    | '/convert'
+    | '/crop'
+    | '/privacy'
+    | '/resize'
+    | '/rotate'
+    | '/strip-metadata'
+    | '/studio'
+    | '/api/health'
+    | '/tools/$pipelineId'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/mcp' | '/api/auth/$'
-  id: '__root__' | '/' | '/mcp' | '/api/auth/$'
+  to:
+    | '/'
+    | '/compress'
+    | '/convert'
+    | '/crop'
+    | '/privacy'
+    | '/resize'
+    | '/rotate'
+    | '/strip-metadata'
+    | '/studio'
+    | '/api/health'
+    | '/tools/$pipelineId'
+    | '/api/auth/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/compress'
+    | '/convert'
+    | '/crop'
+    | '/privacy'
+    | '/resize'
+    | '/rotate'
+    | '/strip-metadata'
+    | '/studio'
+    | '/api/health'
+    | '/tools/$pipelineId'
+    | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  McpRoute: typeof McpRoute
+  CompressRoute: typeof CompressRoute
+  ConvertRoute: typeof ConvertRoute
+  CropRoute: typeof CropRoute
+  PrivacyRoute: typeof PrivacyRoute
+  ResizeRoute: typeof ResizeRoute
+  RotateRoute: typeof RotateRoute
+  StripMetadataRoute: typeof StripMetadataRoute
+  StudioRoute: typeof StudioRoute
+  ApiHealthRoute: typeof ApiHealthRoute
+  ToolsPipelineIdRoute: typeof ToolsPipelineIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -68,11 +195,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
+    '/compress': {
+      id: '/compress'
+      path: '/compress'
+      fullPath: '/compress'
+      preLoaderRoute: typeof CompressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/convert': {
+      id: '/convert'
+      path: '/convert'
+      fullPath: '/convert'
+      preLoaderRoute: typeof ConvertRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/crop': {
+      id: '/crop'
+      path: '/crop'
+      fullPath: '/crop'
+      preLoaderRoute: typeof CropRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resize': {
+      id: '/resize'
+      path: '/resize'
+      fullPath: '/resize'
+      preLoaderRoute: typeof ResizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rotate': {
+      id: '/rotate'
+      path: '/rotate'
+      fullPath: '/rotate'
+      preLoaderRoute: typeof RotateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/strip-metadata': {
+      id: '/strip-metadata'
+      path: '/strip-metadata'
+      fullPath: '/strip-metadata'
+      preLoaderRoute: typeof StripMetadataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/studio': {
+      id: '/studio'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof StudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tools/$pipelineId': {
+      id: '/tools/$pipelineId'
+      path: '/tools/$pipelineId'
+      fullPath: '/tools/$pipelineId'
+      preLoaderRoute: typeof ToolsPipelineIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -87,7 +277,16 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  McpRoute: McpRoute,
+  CompressRoute: CompressRoute,
+  ConvertRoute: ConvertRoute,
+  CropRoute: CropRoute,
+  PrivacyRoute: PrivacyRoute,
+  ResizeRoute: ResizeRoute,
+  RotateRoute: RotateRoute,
+  StripMetadataRoute: StripMetadataRoute,
+  StudioRoute: StudioRoute,
+  ApiHealthRoute: ApiHealthRoute,
+  ToolsPipelineIdRoute: ToolsPipelineIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
