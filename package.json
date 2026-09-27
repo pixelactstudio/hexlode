@@ -47,7 +47,7 @@
     "@jsquash/qoi": "^1.1.0",
     "@jsquash/resize": "^2.1.1",
     "@jsquash/webp": "^1.5.0",
-    "@sentry/tanstackstart-react": "^10.67.0",
+    "@sentry/tanstackstart-react": "^11.0.0",
     "@t3-oss/env-core": "^0.13.10",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "latest",
