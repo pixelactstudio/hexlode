@@ -33,12 +33,16 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HEXLODE_VERSION=$HEXLODE_VERSION
 # The server keeps Sentry outside its bundle, so it is installed next to it, at the version the
-# lockfile pins.
+# lockfile pins. npm, corepack and yarn are removed afterwards: the server never uses them, and
+# their bundled dependencies would otherwise ship, and be scanned, as part of the image.
 COPY --from=build /app/.output/sentry-version /tmp/sentry-version
 RUN npm install --omit=dev --no-save --no-audit --no-fund \
       "@sentry/tanstackstart-react@$(cat /tmp/sentry-version)" \
     && npm cache clean --force \
-    && rm /tmp/sentry-version
+    && rm -rf /tmp/sentry-version /root/.npm \
+      /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+      /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+      /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 COPY --from=build --chown=1000:1000 /app/.output ./.output
 # The node image's unprivileged user.
 USER 1000:1000
