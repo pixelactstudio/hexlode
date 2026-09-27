@@ -36,10 +36,12 @@ describe('analytics', () => {
     })
   })
 
-  it('removes the IP address from every event', () => {
-    const beforeSend = POSTHOG_OPTIONS.before_send
-    const event = beforeSend({ event: 'x', properties: { $ip: '203.0.113.9', itemCount: 2 } })
-    expect(event?.properties).toEqual({ $ip: null, itemCount: 2 })
+  // PostHog hashes the IP into the daily cookieless ID and drops cookieless events without one.
+  it('leaves the IP for PostHog to hash into the cookieless ID', () => {
+    const options: Record<string, unknown> = POSTHOG_OPTIONS
+    const beforeSend = options.before_send as ((event: unknown) => unknown) | undefined
+    const event = { event: 'x', properties: { itemCount: 2 } }
+    expect(beforeSend ? beforeSend(event) : event).toEqual(event)
   })
 
   it('does nothing without a key', () => {

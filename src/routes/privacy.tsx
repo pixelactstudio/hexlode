@@ -57,8 +57,9 @@ function Privacy() {
           <Heading level={2}>What Hexlode measures</Heading>
           <Text type="body" as="p">
             Product analytics run without cookies and without identifying you. Your IP address is
-            discarded. Events contain only counts, timings, node types, settings and error codes.
-            They never contain file names, paths, pixels, image metadata or text you type.
+            turned into an anonymous ID that changes daily, then discarded. Events contain only
+            counts, timings, node types, settings and error codes. They never contain file names,
+            paths, pixels, image metadata or text you type.
           </Text>
           <List listStyle="disc">
             {Object.entries(EVENTS).map(([name, event]) => (

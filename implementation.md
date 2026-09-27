@@ -155,13 +155,14 @@ removed.
 
 ## Analytics
 
-- PostHog uses `cookieless_mode: 'always'` and `person_profiles: 'never'`, with IP capture, session
-  replay and autocapture turned off. The app sends its own events from one analytics module
+- PostHog uses `cookieless_mode: 'always'` and `person_profiles: 'never'`, with session replay and
+  autocapture turned off. The app sends its own events from one analytics module
   ([ADR 0005](./docs/adr/0005-cookieless-explicit-analytics.md)).
 - Sentry sends errors with `sendDefaultPii: false` and no replay. File names are removed from error
   messages before sending.
 - The PostHog project must have cookieless mode enabled and "Discard client IP data" turned on;
-  without the first, PostHog ignores cookieless events. The client also clears `$ip` on every event.
+  without the first, PostHog ignores cookieless events. The client must not clear `$ip`: PostHog
+  hashes it into the daily anonymous ID and drops cookieless events without it.
 - The event catalogue lives in `src/features/usage/events.ts`, and the privacy page lists it.
 
 ## Deployment
