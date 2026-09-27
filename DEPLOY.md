@@ -70,7 +70,7 @@ starts, and passes its health check, before the old one stops:
 ```
 
 The image already has a health check. Only if you want to change its timing, set **Health
-Check** (times are in nanoseconds). The image has no `curl`, so the check uses Node:
+Check** (times are in nanoseconds). The image is distroless, with no shell or `curl`, so the check runs Node directly:
 
 ```json
 {
