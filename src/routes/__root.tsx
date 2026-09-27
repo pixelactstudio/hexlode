@@ -7,9 +7,8 @@ import { createRootRouteWithContext, HeadContent, Scripts } from '@tanstack/reac
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 
 import { useEffect } from 'react'
-
-import { startAnalytics } from '#/features/analytics/analytics'
-import { startErrorReporting } from '#/features/analytics/sentry'
+import { startErrorReporting } from '#/features/usage/error-reports'
+import { startAnalytics } from '#/features/usage/usage'
 import { RouterLink } from '#/lib/router-link'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import appCss from '../styles.css?url'

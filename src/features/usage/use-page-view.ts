@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
-
-import { track } from '#/features/analytics/analytics'
-import type { EventProperties } from '#/features/analytics/events'
+import type { EventProperties } from '#/features/usage/events'
+import { track } from '#/features/usage/usage'
 
 export function usePageView(properties: EventProperties<'page_viewed'>) {
   const { page, tool } = properties

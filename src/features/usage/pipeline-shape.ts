@@ -1,5 +1,5 @@
-import type { PipelineShape } from '#/features/analytics/events'
 import type { NodeRegistry, Pipeline } from '#/features/engine/types'
+import type { PipelineShape } from '#/features/usage/events'
 
 const SAFE_STRING = /^[a-z0-9.:-]{0,24}$/i
 

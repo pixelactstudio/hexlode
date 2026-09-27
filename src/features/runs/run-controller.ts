@@ -3,9 +3,6 @@
  * starting and cancelling runs, statistics and deliveries. Plain TypeScript; pages subscribe.
  */
 
-import { track } from '#/features/analytics/analytics'
-import type { QUICK_TOOLS } from '#/features/analytics/events'
-import { pipelineShape } from '#/features/analytics/pipeline-shape'
 import { filesAccepts } from '#/features/engine/compatibility'
 import { type Estimate, estimateRun } from '#/features/engine/estimate'
 import type { FolderTarget } from '#/features/engine/opfs/run-stores'
@@ -17,6 +14,9 @@ import { recordRunSpeed, speedFactor } from '#/features/runs/calibration'
 import { createEngineWorker, engineRuntime } from '#/features/runs/engine-runtime'
 import { createRunStats, type RunSnapshot } from '#/features/runs/run-stats'
 import { type InputFile, prepareSources, type RefusedFile } from '#/features/runs/sources'
+import type { QUICK_TOOLS } from '#/features/usage/events'
+import { pipelineShape } from '#/features/usage/pipeline-shape'
+import { track } from '#/features/usage/usage'
 import { downloadBlob } from '#/lib/download'
 
 type Surface = 'quick-tool' | 'pipeline-tool' | 'studio'

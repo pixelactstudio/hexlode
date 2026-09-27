@@ -15,10 +15,6 @@ import { useNavigate } from '@tanstack/react-router'
 import { ReactFlowProvider, useReactFlow } from '@xyflow/react'
 import { Play, Redo2, Settings, Undo2 } from 'lucide-react'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-
-import { track } from '#/features/analytics/analytics'
-import { pipelineShape } from '#/features/analytics/pipeline-shape'
-import { usePageView } from '#/features/analytics/use-page-view'
 import { AppFrame } from '#/features/app-shell/app-frame'
 import { describeEstimate } from '#/features/engine/estimate'
 import type { FolderTarget } from '#/features/engine/opfs/run-stores'
@@ -45,6 +41,9 @@ import {
   TemplatePicker,
 } from '#/features/studio/studio-dialogs'
 import { createStudioSession, type StudioSession } from '#/features/studio/studio-session'
+import { pipelineShape } from '#/features/usage/pipeline-shape'
+import { track } from '#/features/usage/usage'
+import { usePageView } from '#/features/usage/use-page-view'
 import { downloadBlob } from '#/lib/download'
 import { formatCount } from '#/lib/format'
 

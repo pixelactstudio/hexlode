@@ -5,9 +5,9 @@ import { List, ListItem } from '@astryxdesign/core/List'
 import { VStack } from '@astryxdesign/core/Stack'
 import { Heading, Text } from '@astryxdesign/core/Text'
 import { createFileRoute } from '@tanstack/react-router'
-import { EVENTS } from '#/features/analytics/events'
-import { usePageView } from '#/features/analytics/use-page-view'
 import { AppFrame } from '#/features/app-shell/app-frame'
+import { EVENTS } from '#/features/usage/events'
+import { usePageView } from '#/features/usage/use-page-view'
 
 export const Route = createFileRoute('/privacy')({
   head: () => ({ meta: [{ title: 'Privacy — Hexlode' }] }),

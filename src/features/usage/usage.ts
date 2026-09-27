@@ -2,7 +2,7 @@
  * The only way the app sends product analytics. PostHog runs cookieless, without person profiles,
  * autocapture or session replay. Each event is checked against its schema before it is sent.
  */
-import { type AnalyticsEventName, EVENTS, type EventProperties } from '#/features/analytics/events'
+import { type AnalyticsEventName, EVENTS, type EventProperties } from '#/features/usage/events'
 
 interface CaptureEvent {
   event: string
@@ -76,12 +76,16 @@ export function startAnalytics() {
   starting ??= (async () => {
     const key = import.meta.env.VITE_POSTHOG_KEY as string | undefined
     if (key) {
-      const { default: posthog } = await import('posthog-js')
-      instance = createAnalytics({
-        key,
-        host: import.meta.env.VITE_POSTHOG_HOST as string | undefined,
-        posthog: posthog as unknown as PostHogLike,
-      })
+      try {
+        const { default: posthog } = await import('posthog-js')
+        instance = createAnalytics({
+          key,
+          host: import.meta.env.VITE_POSTHOG_HOST as string | undefined,
+          posthog: posthog as unknown as PostHogLike,
+        })
+      } catch {
+        // A content blocker stopped PostHog. The app works the same without analytics.
+      }
     }
     for (const [event, properties] of queued.splice(0)) {
       instance?.track(event, properties as never)

@@ -3,8 +3,6 @@ import { Grid } from '@astryxdesign/core/Grid'
 import { VStack } from '@astryxdesign/core/Stack'
 import { Heading, Text } from '@astryxdesign/core/Text'
 import { useEffect, useState } from 'react'
-import { track } from '#/features/analytics/analytics'
-import { usePageView } from '#/features/analytics/use-page-view'
 import { AppFrame } from '#/features/app-shell/app-frame'
 import { IconTile } from '#/features/app-shell/icon-tile'
 import { productRegistry } from '#/features/nodes/registry'
@@ -21,6 +19,8 @@ import { EngineGate } from '#/features/runs/engine-unavailable'
 import { createRunController } from '#/features/runs/run-controller'
 import { FilesCard, ResultsCard, StepCard } from '#/features/runs/run-panel'
 import { useController, useRunState } from '#/features/runs/use-run-controller'
+import { track } from '#/features/usage/usage'
+import { usePageView } from '#/features/usage/use-page-view'
 
 function QuickToolSteps<T extends QuickTool>({ tool }: { tool: T }) {
   const definition = QUICK_TOOL_DEFINITIONS[tool]

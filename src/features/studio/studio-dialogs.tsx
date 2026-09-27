@@ -10,8 +10,6 @@ import { HStack, VStack } from '@astryxdesign/core/Stack'
 import { Heading, Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { useEffect, useState } from 'react'
-
-import { track } from '#/features/analytics/analytics'
 import { IconTile } from '#/features/app-shell/icon-tile'
 import { GIGABYTE } from '#/features/engine/constants'
 import type { NodeRegistry } from '#/features/engine/types'
@@ -22,6 +20,7 @@ import { engineRuntime } from '#/features/runs/engine-runtime'
 import { MAX_STEP_CACHE_GIGABYTES, MIN_STEP_CACHE_GIGABYTES } from '#/features/settings/constants'
 import { readSettings, writeSettings } from '#/features/settings/settings'
 import { NODE_ICONS, toneOf } from '#/features/studio/node-ui'
+import { track } from '#/features/usage/usage'
 import { formatBytes } from '#/lib/format'
 
 export function TemplatePicker({

@@ -2,8 +2,9 @@
  * The four quick tools. Each is a fixed pipeline on the same engine as the Studio
  * (ADR 0001): Files, one processing node, Output.
  */
-import type { QUICK_TOOLS } from '#/features/analytics/events'
+
 import type { Pipeline } from '#/features/engine/types'
+import type { QUICK_TOOLS } from '#/features/usage/events'
 
 export type QuickTool = (typeof QUICK_TOOLS)[number]
 

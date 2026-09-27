@@ -32,8 +32,10 @@ Use pnpm. The scripts are in `package.json`; `pnpm validate` runs every check.
 - Put a feature's limits and defaults in `constants.ts`, its contracts in `types.ts`, and its
   parsing in `validators.ts`.
 - Move a helper to `src/lib` once two features use it.
-- Send analytics only through the analytics module, with event properties limited to counts,
-  timings, node types, settings and error codes.
+- Send analytics only through the analytics module in `src/features/usage/`, with event properties
+  limited to counts, timings, node types, settings and error codes.
+- Keep words such as `analytics`, `tracking` and `sentry` out of file and folder names. Content
+  blockers block matching URLs, and in dev one blocked module leaves every page unhydrated.
 - `src/routeTree.gen.ts` and the files in `drizzle/` are generated. For schema changes, edit
   `src/db/schema.ts` and run `pnpm db:generate`.
 - Keep secrets in `.env.local`. `.env.example` holds placeholders only.

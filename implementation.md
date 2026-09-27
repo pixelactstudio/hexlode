@@ -146,7 +146,7 @@ removed.
   messages before sending.
 - The PostHog project must have cookieless mode enabled and "Discard client IP data" turned on;
   without the first, PostHog ignores cookieless events. The client also clears `$ip` on every event.
-- The event catalogue lives in `src/features/analytics/events.ts`, and the privacy page lists it.
+- The event catalogue lives in `src/features/usage/events.ts`, and the privacy page lists it.
 
 ## Deployment
 

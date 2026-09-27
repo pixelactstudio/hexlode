@@ -11,14 +11,13 @@ import { Heading, Text } from '@astryxdesign/core/Text'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowRight, Check, Workflow } from 'lucide-react'
 import { useSyncExternalStore } from 'react'
-
-import { usePageView } from '#/features/analytics/use-page-view'
 import { AppFrame } from '#/features/app-shell/app-frame'
 import { IconTile } from '#/features/app-shell/icon-tile'
 import { productRegistry } from '#/features/nodes/registry'
 import { pipelineStore } from '#/features/pipelines/storage'
 import { QUICK_TOOL_UI } from '#/features/quick-tools/tool-ui'
 import { QUICK_TOOL_DEFINITIONS, type QuickTool } from '#/features/quick-tools/tools'
+import { usePageView } from '#/features/usage/use-page-view'
 
 export const Route = createFileRoute('/')({ component: Home })
 

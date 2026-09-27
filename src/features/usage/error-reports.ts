@@ -2,7 +2,7 @@
  * Error reports. Sentry runs without personal data or replay; file names are removed from
  * messages, exceptions and breadcrumbs before sending.
  */
-import { scrubSentryEvent, scrubText } from '#/features/analytics/scrub'
+import { scrubSentryEvent, scrubText } from '#/features/usage/scrub'
 
 let started = false
 
@@ -10,7 +10,13 @@ export async function startErrorReporting() {
   const dsn = import.meta.env.VITE_SENTRY_DSN as string | undefined
   if (started || !dsn || typeof window === 'undefined') return
   started = true
-  const Sentry = await import('@sentry/tanstackstart-react')
+  let Sentry: typeof import('@sentry/tanstackstart-react')
+  try {
+    Sentry = await import('@sentry/tanstackstart-react')
+  } catch {
+    // A content blocker stopped Sentry. The app works the same without error reports.
+    return
+  }
   Sentry.init({
     dsn,
     sendDefaultPii: false,

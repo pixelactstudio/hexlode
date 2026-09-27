@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest'
-
-import { createAnalytics, POSTHOG_OPTIONS } from '#/features/analytics/analytics'
-import { pipelineShape } from '#/features/analytics/pipeline-shape'
-import { scrubSentryEvent, scrubText } from '#/features/analytics/scrub'
 import { chain } from '#/features/nodes/__tests__/harness'
 import { productRegistry } from '#/features/nodes/registry'
+import { pipelineShape } from '#/features/usage/pipeline-shape'
+import { scrubSentryEvent, scrubText } from '#/features/usage/scrub'
+import { createAnalytics, POSTHOG_OPTIONS } from '#/features/usage/usage'
 
 function fakePostHog() {
   const captured: { event: string; properties: Record<string, unknown> }[] = []

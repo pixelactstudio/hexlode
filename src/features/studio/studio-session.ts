@@ -3,7 +3,6 @@
  * and live previews on the sample image. Plain TypeScript; the page subscribes.
  */
 
-import { track } from '#/features/analytics/analytics'
 import type { NodeRegistry } from '#/features/engine/types'
 import {
   createPreviewer,
@@ -15,6 +14,7 @@ import { createPreviewWorker } from '#/features/runs/engine-runtime'
 import { createRunController } from '#/features/runs/run-controller'
 import { PREVIEW_DEBOUNCE_MS } from '#/features/studio/constants'
 import { createStudioStore } from '#/features/studio/studio-store'
+import { track } from '#/features/usage/usage'
 
 export interface PreviewView extends Omit<NodePreview, 'thumbnail' | 'before' | 'after'> {
   thumbnail?: string

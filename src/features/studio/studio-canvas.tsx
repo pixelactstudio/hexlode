@@ -11,8 +11,6 @@ import {
   useReactFlow,
 } from '@xyflow/react'
 import { type DragEvent, useMemo, useRef, useState } from 'react'
-
-import { track } from '#/features/analytics/analytics'
 import type { NodeRegistry, Pipeline } from '#/features/engine/types'
 import type { RunControllerState } from '#/features/runs/run-controller'
 import { FIT_VIEW, NODE_DRAG_TYPE } from '#/features/studio/constants'
@@ -25,6 +23,7 @@ import {
 } from '#/features/studio/pipeline-node'
 import type { PreviewState, StudioSession } from '#/features/studio/studio-session'
 import type { StudioState } from '#/features/studio/studio-store'
+import { track } from '#/features/usage/usage'
 
 const nodeTypes = { pipeline: PipelineNodeView }
 const edgeTypes = { pipeline: PipelineEdgeView }

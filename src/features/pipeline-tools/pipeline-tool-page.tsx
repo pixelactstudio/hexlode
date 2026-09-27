@@ -6,8 +6,6 @@ import { Heading, Text } from '@astryxdesign/core/Text'
 import { useNavigate } from '@tanstack/react-router'
 import { Workflow } from 'lucide-react'
 import { useEffect, useState, useSyncExternalStore } from 'react'
-
-import { usePageView } from '#/features/analytics/use-page-view'
 import { AppFrame } from '#/features/app-shell/app-frame'
 import { IconTile } from '#/features/app-shell/icon-tile'
 import { productRegistry } from '#/features/nodes/registry'
@@ -18,6 +16,7 @@ import { EngineGate } from '#/features/runs/engine-unavailable'
 import { createRunController } from '#/features/runs/run-controller'
 import { FilesCard, ResultsCard } from '#/features/runs/run-panel'
 import { useController, useRunState } from '#/features/runs/use-run-controller'
+import { usePageView } from '#/features/usage/use-page-view'
 
 function outputsOf(pipeline: SavedPipeline) {
   return pipeline.pipeline.nodes.filter((node) => node.type === 'output')
