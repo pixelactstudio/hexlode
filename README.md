@@ -1,10 +1,30 @@
-# Hexlode
+<div align="center">
+  <img src="./public/hexlode-mark.svg" alt="Hexlode" width="64" height="64" />
+  <h1>Hexlode</h1>
+  <p>Open-source image processing that runs in your browser.</p>
+</div>
 
-[![CI](https://github.com/pixelactstudio/hexlode/actions/workflows/ci.yml/badge.svg)](https://github.com/pixelactstudio/hexlode/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/pixelactstudio/hexlode/actions/workflows/codeql.yml/badge.svg)](https://github.com/pixelactstudio/hexlode/actions/workflows/codeql.yml)
+<p align="center">
+  <a href="https://github.com/pixelactstudio/hexlode/actions/workflows/ci.yml">
+    <img src="https://github.com/pixelactstudio/hexlode/actions/workflows/ci.yml/badge.svg" alt="CI" />
+  </a>
+  <a href="https://github.com/pixelactstudio/hexlode/actions/workflows/codeql.yml">
+    <img src="https://github.com/pixelactstudio/hexlode/actions/workflows/codeql.yml/badge.svg" alt="CodeQL" />
+  </a>
+  <a href="./LICENSE">
+    <img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0 license" />
+  </a>
+</p>
 
-Open-source image processing in the browser: quick tools for converting, compressing, resizing, cropping,
-rotating and stripping metadata, and a node-based Studio for batch pipelines. Images never leave your device.
+Hexlode has quick tools for converting, compressing, resizing, cropping, rotating and stripping
+metadata, and a node-based Studio for running many images through the same pipeline. Images are
+processed on your device, without uploading them.
+
+## Principles
+
+- Process images on the user's device.
+- Make the Studio canvas show real work: progress, results and errors.
+- Never send image bytes, filenames, thumbnails or metadata to analytics.
 
 ## Run locally
 
@@ -57,3 +77,5 @@ engine, [CONTEXT.md](./CONTEXT.md) the vocabulary and [docs/adr/](./docs/adr/) t
 
 [Apache License 2.0](./LICENSE). Copyright 2026 Dev Talan. The jSquash codecs keep their own
 licences, listed in `node_modules/@jsquash/*/LICENSE` and bundled with the app.
+
+An open-source project by [Pixelact Studio](https://pixelactstudio.com).
