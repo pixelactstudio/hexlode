@@ -1,7 +1,7 @@
 # Hexlode
 
-Open-source image processing in the browser: quick tools for converting, compressing, resizing and
-stripping metadata, and a node-based Studio for batch pipelines. Images never leave your device.
+Open-source image processing in the browser: quick tools for converting, compressing, resizing, cropping,
+rotating and stripping metadata, and a node-based Studio for batch pipelines. Images never leave your device.
 
 ## Run locally
 

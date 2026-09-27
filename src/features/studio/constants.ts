@@ -8,3 +8,13 @@ export const PREVIEW_DEBOUNCE_MS = 250
 export const NODE_DRAG_TYPE = 'application/x-hexlode-node'
 /** How the canvas frames a pipeline: nodes stay readable rather than shrinking to fit. */
 export const FIT_VIEW = { padding: 0.12, maxZoom: 1, minZoom: 0.7 }
+/** A duplicated node appears this far below and to the right of the original. */
+export const DUPLICATE_OFFSET = 40
+/** The draft of the open pipeline is written this long after the last change. */
+export const DRAFT_SAVE_DELAY_MS = 400
+
+/** The node library, and the rail of icons it folds into. */
+export const LIBRARY_WIDTH = 248
+export const LIBRARY_RAIL_WIDTH = 56
+
+export const INSPECTOR_WIDTH = 380

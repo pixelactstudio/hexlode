@@ -3,6 +3,7 @@
  * the whole pipeline, so the number of items held in memory is bounded by the pool size, not by
  * the batch size.
  */
+import { ENGINE_LOAD_FAILED_MESSAGE } from '#/features/engine/constants'
 import { appDirectory } from '#/features/engine/opfs/files'
 import {
   clearRuns,
@@ -40,6 +41,8 @@ interface Task {
 interface PoolWorker {
   worker: Worker
   busy: boolean
+  /** Set once the worker errors, for example when its script fails to load. */
+  failure?: Error
 }
 
 export function createWorkerPoolHost(options: PoolHostOptions): RunHost & { dispose(): void } {
@@ -85,8 +88,10 @@ export function createWorkerPoolHost(options: PoolHostOptions): RunHost & { disp
     const entry: PoolWorker = { worker, busy: false }
     worker.onerror = (event) => {
       event.preventDefault()
+      // A script that fails to load (a 502 or a blocked MIME type) errors with no message.
+      entry.failure = new Error(event.message || ENGINE_LOAD_FAILED_MESSAGE)
       for (const [taskId, task] of tasks) {
-        task.reject(new Error(event.message || 'A worker stopped unexpectedly.'))
+        task.reject(entry.failure)
         tasks.delete(taskId)
       }
     }
@@ -132,6 +137,7 @@ export function createWorkerPoolHost(options: PoolHostOptions): RunHost & { disp
     const onAbort = () => terminateAll()
     signal.addEventListener('abort', onAbort, { once: true })
     try {
+      if (entry.failure) throw entry.failure
       await new Promise<void>((resolve, reject) => {
         tasks.set(taskId, { emit, resolve, reject })
         const message = request(taskId)
@@ -155,7 +161,7 @@ export function createWorkerPoolHost(options: PoolHostOptions): RunHost & { disp
       })
       beginMessage = { type: 'begin', runId, pipeline, stepCache: options.index !== null }
       waiting = []
-      if (workers.length !== options.size) {
+      if (workers.length !== options.size || workers.some((entry) => entry.failure)) {
         for (const { worker } of workers) worker.terminate()
         workers = Array.from({ length: options.size }, spawn)
       } else {

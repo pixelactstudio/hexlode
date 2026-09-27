@@ -6,3 +6,5 @@ export const SAVED_PIPELINES_KEY = 'hexlode:pipelines'
 export const MAX_PIPELINE_NAME_LENGTH = 80
 export const SAVE_NOTICE =
   'Saved in this browser only. Clearing site data deletes it; export a .hexlode file to keep a backup.'
+/** The pipeline open in the Studio, kept so a reload does not lose unsaved work. */
+export const STUDIO_DRAFT_KEY = 'hexlode:studio-draft'

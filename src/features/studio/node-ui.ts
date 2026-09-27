@@ -34,14 +34,14 @@ export const NODE_ICONS: Record<string, ComponentType<SVGProps<SVGSVGElement>>> 
   compare: Columns2,
 }
 
-/** Sidebar categories, in the order of the node catalogue. */
-export const CATEGORIES: { id: NodeCategory; label: string; tone: Tone }[] = [
-  { id: 'input', label: 'Input and routing', tone: 'blue' },
-  { id: 'size', label: 'Size and shape', tone: 'purple' },
-  { id: 'colour', label: 'Colour and look', tone: 'pink' },
-  { id: 'overlay', label: 'Overlays', tone: 'orange' },
-  { id: 'metadata', label: 'Metadata', tone: 'teal' },
-  { id: 'output', label: 'Output and encoding', tone: 'green' },
+/** Node library categories, in the order of the node catalogue. */
+export const CATEGORIES: { id: NodeCategory; label: string; short: string; tone: Tone }[] = [
+  { id: 'input', label: 'Input and routing', short: 'Input', tone: 'blue' },
+  { id: 'size', label: 'Size and shape', short: 'Shape', tone: 'purple' },
+  { id: 'colour', label: 'Colour and look', short: 'Colour', tone: 'pink' },
+  { id: 'overlay', label: 'Overlays', short: 'Overlays', tone: 'orange' },
+  { id: 'metadata', label: 'Metadata', short: 'Metadata', tone: 'teal' },
+  { id: 'output', label: 'Output and encoding', short: 'Output', tone: 'green' },
 ]
 
 export function toneOf(category: NodeCategory | undefined): Tone {

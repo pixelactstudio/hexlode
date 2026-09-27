@@ -1,4 +1,5 @@
 import { Button } from '@astryxdesign/core/Button'
+import { Collapsible } from '@astryxdesign/core/Collapsible'
 import { IconButton } from '@astryxdesign/core/IconButton'
 import { NumberInput } from '@astryxdesign/core/NumberInput'
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl'
@@ -12,10 +13,9 @@ import { Trash2 } from 'lucide-react'
 
 import type { AnyNodeDefinition } from '#/features/engine/types'
 import { canPickFolder } from '#/features/image-input/folder'
-import { ASPECT_PRESETS, CROP_POSITIONS } from '#/features/nodes/definitions/crop'
 import type { FilterRule } from '#/features/nodes/definitions/filter'
 import { RENAME_TOKENS } from '#/features/nodes/definitions/rename'
-import { FORMAT_OPTIONS, SettingsPanel } from '#/features/quick-tools/settings-panels'
+import { Field, FORMAT_OPTIONS, SettingsPanel } from '#/features/quick-tools/settings-panels'
 
 type Settings = Record<string, unknown>
 
@@ -25,7 +25,23 @@ interface EditorProps {
   isDisabled?: boolean
 }
 
-const label = (value: string) => value.charAt(0).toUpperCase() + value.slice(1).replaceAll('-', ' ')
+/** Options most people never change, closed until opened. */
+function MoreOptions({ children }: { children: React.ReactNode }) {
+  return (
+    <Collapsible
+      defaultIsOpen={false}
+      trigger={
+        <Text type="label" color="secondary">
+          More options
+        </Text>
+      }
+    >
+      <VStack gap={4} paddingBlock={2}>
+        {children}
+      </VStack>
+    </Collapsible>
+  )
+}
 
 function ConvertEditor({ settings, onChange, isDisabled }: EditorProps) {
   const format = settings.format as string
@@ -64,15 +80,17 @@ function ConvertEditor({ settings, onChange, isDisabled }: EditorProps) {
     />
   )
   const subsampling = (
-    <SegmentedControl
-      label="Colour detail"
-      value={String(options.chromaSubsampling)}
-      onChange={(value) => setOption('chromaSubsampling', value)}
-      isDisabled={isDisabled}
-    >
-      <SegmentedControlItem value="420" label="4:2:0 (smaller)" />
-      <SegmentedControlItem value="444" label="4:4:4 (full)" />
-    </SegmentedControl>
+    <Field label="Colour detail">
+      <SegmentedControl
+        label="Colour detail"
+        value={String(options.chromaSubsampling)}
+        onChange={(value) => setOption('chromaSubsampling', value)}
+        isDisabled={isDisabled}
+      >
+        <SegmentedControlItem value="420" label="Smaller files" />
+        <SegmentedControlItem value="444" label="Full colour" />
+      </SegmentedControl>
+    </Field>
   )
   return (
     <VStack gap={4}>
@@ -94,47 +112,55 @@ function ConvertEditor({ settings, onChange, isDisabled }: EditorProps) {
       {format === 'jpeg' ? (
         <>
           {quality}
-          <Switch
-            label="Progressive"
-            value={options.progressive === true}
-            onChange={(value) => setOption('progressive', value)}
-            isDisabled={isDisabled}
-          />
-          {subsampling}
+          <MoreOptions>
+            <Switch
+              label="Progressive"
+              value={options.progressive === true}
+              onChange={(value) => setOption('progressive', value)}
+              isDisabled={isDisabled}
+            />
+            {subsampling}
+          </MoreOptions>
         </>
       ) : null}
       {format === 'webp' ? (
         <>
-          {lossless}
           {quality}
-          {effort(6)}
-          <Switch
-            label="Sharp colour conversion"
-            value={options.sharpYuv === true}
-            onChange={(value) => setOption('sharpYuv', value)}
-            isDisabled={isDisabled}
-          />
+          {lossless}
+          <MoreOptions>
+            {effort(6)}
+            <Switch
+              label="Sharp colour conversion"
+              value={options.sharpYuv === true}
+              onChange={(value) => setOption('sharpYuv', value)}
+              isDisabled={isDisabled}
+            />
+          </MoreOptions>
         </>
       ) : null}
       {format === 'avif' ? (
         <>
-          {lossless}
           {quality}
-          {effort(10)}
-          {subsampling}
+          {lossless}
+          <MoreOptions>
+            {effort(10)}
+            {subsampling}
+          </MoreOptions>
         </>
       ) : null}
       {format === 'jxl' ? (
         <>
-          {lossless}
           {quality}
-          {effort(9, 1)}
-          <Switch
-            label="Progressive"
-            value={options.progressive === true}
-            onChange={(value) => setOption('progressive', value)}
-            isDisabled={isDisabled}
-          />
+          {lossless}
+          <MoreOptions>
+            {effort(9, 1)}
+            <Switch
+              label="Progressive"
+              value={options.progressive === true}
+              onChange={(value) => setOption('progressive', value)}
+              isDisabled={isDisabled}
+            />
+          </MoreOptions>
         </>
       ) : null}
       {format === 'png' ? (
@@ -345,84 +371,6 @@ function FilterEditor({ settings, onChange, isDisabled }: EditorProps) {
   )
 }
 
-function CropEditor({ settings, onChange, isDisabled }: EditorProps) {
-  return (
-    <VStack gap={4}>
-      <Selector
-        label="Aspect ratio"
-        value={String(settings.aspect)}
-        onChange={(aspect) => onChange({ aspect })}
-        options={[
-          ...ASPECT_PRESETS.map((preset) => ({ value: preset, label: preset })),
-          { value: 'custom', label: 'Custom' },
-        ]}
-        isDisabled={isDisabled}
-      />
-      {settings.aspect === 'custom' ? (
-        <HStack gap={2}>
-          <NumberInput
-            label="Width part"
-            min={0.01}
-            value={Number(settings.customWidth)}
-            onChange={(customWidth) => onChange({ customWidth })}
-            isDisabled={isDisabled}
-          />
-          <NumberInput
-            label="Height part"
-            min={0.01}
-            value={Number(settings.customHeight)}
-            onChange={(customHeight) => onChange({ customHeight })}
-            isDisabled={isDisabled}
-          />
-        </HStack>
-      ) : null}
-      <Selector
-        label="Position"
-        value={String(settings.position)}
-        onChange={(position) => onChange({ position })}
-        options={CROP_POSITIONS.map((position) => ({ value: position, label: label(position) }))}
-        isDisabled={isDisabled}
-      />
-    </VStack>
-  )
-}
-
-function RotateEditor({ settings, onChange, isDisabled }: EditorProps) {
-  return (
-    <VStack gap={4}>
-      <Switch
-        label="Turn upright from the camera orientation"
-        value={settings.auto === true}
-        onChange={(auto) => onChange({ auto })}
-        isDisabled={isDisabled}
-      />
-      <SegmentedControl
-        label="Rotate"
-        value={String(settings.rotate)}
-        onChange={(value) => onChange({ rotate: Number(value) })}
-        isDisabled={isDisabled}
-      >
-        <SegmentedControlItem value="0" label="0°" />
-        <SegmentedControlItem value="90" label="90°" />
-        <SegmentedControlItem value="180" label="180°" />
-        <SegmentedControlItem value="270" label="270°" />
-      </SegmentedControl>
-      <Switch
-        label="Flip horizontally"
-        value={settings.flipHorizontal === true}
-        onChange={(flipHorizontal) => onChange({ flipHorizontal })}
-        isDisabled={isDisabled}
-      />
-      <Switch
-        label="Flip vertically"
-        value={settings.flipVertical === true}
-        onChange={(flipVertical) => onChange({ flipVertical })}
-        isDisabled={isDisabled}
-      />
-    </VStack>
-  )
-}
-
 function CompressEditor({ settings, onChange, isDisabled }: EditorProps) {
   return (
     <VStack gap={4}>
@@ -430,6 +378,7 @@ function CompressEditor({ settings, onChange, isDisabled }: EditorProps) {
         label="Target size"
         units="KB"
         min={1}
+        width={160}
         value={Number(settings.targetKilobytes)}
         onChange={(targetKilobytes) => onChange({ targetKilobytes })}
         isDisabled={isDisabled}
@@ -504,20 +453,30 @@ function RenameEditor({ settings, onChange, isDisabled }: EditorProps) {
 
 function OutputEditor({ settings, onChange, isDisabled }: EditorProps) {
   const folders = canPickFolder()
+  const isFolder = settings.destination === 'folder'
   return (
     <VStack gap={4}>
-      <SegmentedControl
+      <Field
         label="Deliver as"
-        value={String(settings.destination)}
-        onChange={(destination) => onChange({ destination })}
-        isDisabled={isDisabled}
+        hint={
+          isFolder
+            ? 'You choose the folder when the run starts.'
+            : folders
+              ? undefined
+              : 'This browser cannot save to a folder, so results come as a ZIP.'
+        }
       >
-        <SegmentedControlItem value="zip" label="ZIP" />
-        <SegmentedControlItem value="folder" label="Folder" isDisabled={!folders} />
-      </SegmentedControl>
-      {settings.destination === 'folder' ? (
-        <Text type="supporting">You choose the folder when the run starts.</Text>
-      ) : (
+        <SegmentedControl
+          label="Deliver as"
+          value={String(settings.destination)}
+          onChange={(destination) => onChange({ destination })}
+          isDisabled={isDisabled}
+        >
+          <SegmentedControlItem value="zip" label="ZIP" />
+          <SegmentedControlItem value="folder" label="Folder" isDisabled={!folders} />
+        </SegmentedControl>
+      </Field>
+      {isFolder ? null : (
         <>
           <TextInput
             label="ZIP name"
@@ -537,6 +496,20 @@ function OutputEditor({ settings, onChange, isDisabled }: EditorProps) {
     </VStack>
   )
 }
+
+/** Node types whose inspector shows a settings form. */
+export const NODE_TYPES_WITH_SETTINGS = new Set([
+  'convert',
+  'filter',
+  'resize',
+  'strip-metadata',
+  'crop',
+  'rotate',
+  'compress-to-size',
+  'optimize-png',
+  'rename',
+  'output',
+])
 
 /** The settings form for a node, or null when it has none. */
 export function NodeSettings({
@@ -570,9 +543,15 @@ export function NodeSettings({
         />
       )
     case 'crop':
-      return <CropEditor {...props} />
     case 'rotate':
-      return <RotateEditor {...props} />
+      return (
+        <SettingsPanel
+          tool={definition.type}
+          value={settings as never}
+          onChange={(value) => onChange(value as unknown as Settings)}
+          isDisabled={isDisabled}
+        />
+      )
     case 'compress-to-size':
       return <CompressEditor {...props} />
     case 'optimize-png':

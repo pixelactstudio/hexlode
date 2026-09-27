@@ -20,6 +20,32 @@ import { productRegistry } from '#/features/nodes/registry'
 const createWorker = () =>
   new Worker(new URL('../engine.worker.ts', import.meta.url), { type: 'module' })
 
+/** A worker whose script cannot load, as when the dev server is down. */
+const createBrokenWorker =
+  (loadFailed: Promise<unknown>[] = []) =>
+  () => {
+    const worker = new Worker(new URL('/missing-engine.worker.js', location.href), {
+      type: 'module',
+    })
+    loadFailed.push(new Promise((resolve) => worker.addEventListener('error', resolve)))
+    return worker
+  }
+
+const LOAD_FAILED =
+  'Hexlode could not start its image engine. Check your connection and reload the page.'
+
+function settlesWithin<T>(promise: Promise<T>, ms = 5_000) {
+  return Promise.race([
+    promise.then(
+      (value) => ({ settled: 'resolved' as const, value }),
+      (reason: unknown) => ({ settled: 'rejected' as const, reason }),
+    ),
+    new Promise<{ settled: 'hung' }>((resolve) =>
+      setTimeout(() => resolve({ settled: 'hung' }), ms),
+    ),
+  ])
+}
+
 async function sources(names: string[]): Promise<SourceItem[]> {
   return Promise.all(
     names.map(async (name, index) => {
@@ -132,5 +158,56 @@ describe('worker pool', () => {
     expect(result.status).toBe('cancelled')
     expect(result.deliveries[0].files.length).toBeGreaterThanOrEqual(1)
     expect(result.deliveries[0].files.length).toBeLessThan(6)
+  })
+
+  it('rejects work sent to a worker whose script failed to load', async () => {
+    const loadFailed: Promise<unknown>[] = []
+    const host = createWorkerPoolHost({
+      size: 1,
+      createWorker: createBrokenWorker(loadFailed),
+      index: null,
+    })
+    await host.begin({
+      runId: 'broken',
+      pipeline: chain(['convert', { format: 'png' }]),
+      plan: undefined as never,
+    })
+    await Promise.all(loadFailed)
+    const [source] = await sources(['photo.jpg'])
+    const outcome = await settlesWithin(
+      host.runSource(source, () => {}, new AbortController().signal),
+    )
+    host.dispose()
+    expect(outcome).toMatchObject({ settled: 'rejected', reason: new Error(LOAD_FAILED) })
+  })
+
+  it('fails a run with a readable error when the engine cannot load, and again on retry', async () => {
+    const host = createWorkerPoolHost({ size: 2, createWorker: createBrokenWorker(), index: null })
+    const pipeline = chain(['convert', { format: 'png' }])
+    const first = await settlesWithin(run(pipeline, host, ['photo.jpg', 'oriented.jpg']))
+    const retry = await settlesWithin(run(pipeline, host, ['photo.jpg', 'oriented.jpg']))
+    host.dispose()
+    expect([first.settled, retry.settled]).toEqual(['resolved', 'resolved'])
+    for (const outcome of [first, retry]) {
+      if (outcome.settled !== 'resolved') continue
+      expect(outcome.value.result).toMatchObject({ status: 'failed', error: LOAD_FAILED })
+    }
+  })
+
+  it('starts fresh workers on the next run once the engine loads again', async () => {
+    let serverUp = false
+    const broken = createBrokenWorker()
+    const host = createWorkerPoolHost({
+      size: 1,
+      createWorker: () => (serverUp ? createWorker() : broken()),
+      index: null,
+    })
+    const pipeline = chain(['convert', { format: 'png' }])
+    const down = await run(pipeline, host, ['photo.jpg'])
+    serverUp = true
+    const up = await run(pipeline, host, ['photo.jpg'])
+    host.dispose()
+    expect(down.result.status).toBe('failed')
+    expect(up.result.status).toBe('complete')
   })
 })

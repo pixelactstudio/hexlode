@@ -1,11 +1,15 @@
 import { Badge } from '@astryxdesign/core/Badge'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { HStack } from '@astryxdesign/core/Stack'
 import {
   BaseEdge,
   type Edge,
   EdgeLabelRenderer,
   type EdgeProps,
   getSmoothStepPath,
+  useReactFlow,
 } from '@xyflow/react'
+import { X } from 'lucide-react'
 
 import type { ConnectionCheck } from '#/features/engine/compatibility'
 import { FORMAT_LABELS } from '#/features/engine/item-types'
@@ -27,6 +31,7 @@ function formatsLabel(stats: ConnectionStats) {
 
 export function PipelineEdgeView(props: EdgeProps<PipelineFlowEdge>) {
   const { data, selected } = props
+  const flow = useReactFlow()
   const [path, labelX, labelY] = getSmoothStepPath({ ...props, borderRadius: 16, offset: 24 })
   const refused = data?.check?.status === 'refused'
   const stats = data?.stats
@@ -48,19 +53,32 @@ export function PipelineEdgeView(props: EdgeProps<PipelineFlowEdge>) {
       <BaseEdge
         id={props.id}
         path={path}
+        interactionWidth={24}
         markerEnd={props.markerEnd}
         className={[
           refused ? 'stroke-error!' : selected ? 'stroke-accent!' : 'stroke-border-strong!',
           selected ? '[stroke-width:2.5]!' : '[stroke-width:1.5]!',
         ].join(' ')}
       />
-      {parts.length > 0 ? (
+      {parts.length > 0 || selected ? (
         <EdgeLabelRenderer>
           <div
             className="nodrag nopan pointer-events-auto absolute"
             style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
           >
-            <Badge label={parts.join(' · ')} variant={variant} />
+            <HStack gap={1} vAlign="center">
+              {parts.length > 0 ? <Badge label={parts.join(' · ')} variant={variant} /> : null}
+              {selected && !data?.running ? (
+                <IconButton
+                  label="Delete connection"
+                  tooltip="Delete connection"
+                  icon={<X size={14} />}
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => void flow.deleteElements({ edges: [{ id: props.id }] })}
+                />
+              ) : null}
+            </HStack>
           </div>
         </EdgeLabelRenderer>
       ) : null}

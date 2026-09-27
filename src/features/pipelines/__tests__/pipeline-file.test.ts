@@ -112,9 +112,13 @@ describe('pipeline file', () => {
 })
 
 describe('templates', () => {
-  it('offers Web-ready photos and Blank, whose nodes all exist', () => {
+  it('offers every template whose nodes all exist, with Blank last', () => {
     expect(availableTemplates(productRegistry).map((template) => template.id)).toEqual([
       'web-ready-photos',
+      'email-photos',
+      'remove-location',
+      'square-thumbnails',
+      'webp-and-avif',
       'blank',
     ])
   })

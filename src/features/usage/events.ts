@@ -8,7 +8,14 @@ const count = z.number().int().nonnegative()
 const code = z.string().regex(/^[a-z0-9_]{1,40}$/)
 const nodeType = z.string().regex(/^[a-z0-9.-]{1,40}$/)
 const surface = z.enum(['quick-tool', 'pipeline-tool', 'studio'])
-export const QUICK_TOOLS = ['convert', 'compress', 'resize', 'strip-metadata'] as const
+export const QUICK_TOOLS = [
+  'convert',
+  'compress',
+  'resize',
+  'crop',
+  'rotate',
+  'strip-metadata',
+] as const
 const tool = z.enum(QUICK_TOOLS)
 const settingValue: z.ZodType<unknown> = z.lazy(() =>
   z.union([

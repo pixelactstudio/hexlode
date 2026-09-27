@@ -1,7 +1,6 @@
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
 import { Card } from '@astryxdesign/core/Card'
-import { Divider } from '@astryxdesign/core/Divider'
 import { Icon } from '@astryxdesign/core/Icon'
 import { ProgressBar } from '@astryxdesign/core/ProgressBar'
 import { HStack, VStack } from '@astryxdesign/core/Stack'
@@ -17,197 +16,203 @@ import {
   type RunController,
   type RunControllerState,
 } from '#/features/runs/run-controller'
+import { SourceList } from '#/features/runs/source-list'
 import { formatBytes, formatCount, formatDuration } from '#/lib/format'
 
 function plural(count: number, noun: string) {
   return `${formatCount(count)} ${noun}${count === 1 ? '' : 's'}`
 }
 
-/** A numbered step of a tool page: add images, choose settings, run. */
-export function StepCard({
+/** The number of a step on a tool page, so the eye reads the panels in order. */
+function StepNumber({ step }: { step: number }) {
+  return (
+    <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-accent-muted font-semibold text-primary text-xs tabular-nums">
+      {step}
+    </span>
+  )
+}
+
+/**
+ * A numbered panel of a tool page: a header with the step and its name, the body, and an optional
+ * footer for the actions. It fills the height of its row, keeping the footer at the bottom.
+ */
+export function ToolPanel({
   step,
   title,
-  description,
-  endContent,
-  padding = 6,
+  end,
   children,
+  footer,
 }: {
   step: number
   title: string
-  description?: string
-  endContent?: ReactNode
-  padding?: 0 | 6
-  children?: ReactNode
+  end?: ReactNode
+  children: ReactNode
+  footer?: ReactNode
 }) {
-  const header = (
-    <HStack gap={3} vAlign="start" hAlign="between">
-      <HStack gap={3} vAlign="start">
-        <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-muted text-accent">
-          <Text type="label" weight="semibold" color="inherit">
-            {step}
-          </Text>
-        </span>
-        <VStack gap={1}>
-          <Heading level={2}>{title}</Heading>
-          {description ? <Text type="supporting">{description}</Text> : null}
-        </VStack>
-      </HStack>
-      {endContent}
-    </HStack>
-  )
   return (
-    <Card padding={padding} elevation="low" height="100%">
-      {padding === 0 ? (
-        <VStack gap={0}>
-          <VStack padding={6}>{header}</VStack>
-          {children}
-        </VStack>
-      ) : (
-        <VStack gap={5}>
-          {header}
-          {children}
-        </VStack>
-      )}
+    <Card padding={0} height="100%">
+      <span className="flex h-full flex-col">
+        <span className="block border-border border-b">
+          <HStack gap={3} vAlign="center" hAlign="between" paddingInline={5} paddingBlock={4}>
+            <HStack gap={3} vAlign="center">
+              <StepNumber step={step} />
+              <Heading level={2}>{title}</Heading>
+            </HStack>
+            {end}
+          </HStack>
+        </span>
+        <span className="flex flex-1 flex-col gap-5 p-5">{children}</span>
+        {footer ? (
+          <span className="block border-border border-t">
+            <VStack gap={4} padding={5}>
+              {footer}
+            </VStack>
+          </span>
+        ) : null}
+      </span>
     </Card>
   )
 }
 
-export function FilesCard({
+/** The drop area and the list of added images, as the first panel of a tool page. */
+export function FilesSection({
   controller,
   state,
-  step = 1,
 }: {
   controller: RunController
   state: RunControllerState
-  step?: number
 }) {
   const count = state.sources.length
-  const bytes = state.sources.reduce((sum, source) => sum + (source.meta.size ?? 0), 0)
   return (
-    <StepCard
-      step={step}
+    <ToolPanel
+      step={1}
       title="Add images"
-      description="Drop as many as you like. They are read on this device and never uploaded."
-    >
-      <FileDrop onFiles={(files) => void controller.addFiles(files)} isDisabled={state.running} />
-      {count > 0 ? (
-        <HStack gap={2} vAlign="center" hAlign="between">
-          <Text type="body" weight="semibold">
-            {`${plural(count, 'image')} added · ${formatBytes(bytes)}`}
+      end={
+        count > 0 ? (
+          <Text type="supporting" hasTabularNumbers>
+            {plural(count, 'image')}
           </Text>
-          <Button
-            label="Remove all"
-            size="sm"
-            variant="ghost"
-            onClick={() => void controller.clearFiles()}
-            isDisabled={state.running}
-          />
-        </HStack>
-      ) : null}
-    </StepCard>
+        ) : undefined
+      }
+    >
+      <FileDrop
+        onFiles={(files) => void controller.addFiles(files)}
+        isDisabled={state.running}
+        size={count > 0 ? 'md' : 'fill'}
+      />
+      <SourceList controller={controller} state={state} />
+    </ToolPanel>
   )
 }
 
-/** Run controls, progress, results and download for a pipeline with one Output node. */
-export function ResultsCard({
+/** Status, run button, progress and download for a pipeline with one Output node. */
+export function RunSection({
   controller,
   state,
   outputNodeId,
   runLabel,
   surface,
-  step = 3,
 }: {
   controller: RunController
   state: RunControllerState
   outputNodeId: string
   runLabel: string
   surface: 'quick-tool' | 'pipeline-tool'
-  step?: number
 }) {
   const { stats, sources, running } = state
   const delivery = stats.deliveries[outputNodeId]
-  const rows = resultRows(state)
   const canRun = sources.length > 0 && !running && !state.preparing
   const count = sources.length
   const done = stats.status !== 'idle' && stats.status !== 'running'
   const delivered = delivery?.files.length ?? 0
   const totalIn = sources.reduce((sum, source) => sum + (source.meta.size ?? 0), 0)
 
-  const title = running
-    ? `Working on ${formatCount(Math.min(count, stats.finishedItems + 1))} of ${formatCount(count)}`
-    : done
-      ? `${formatCount(delivered)} of ${plural(count, 'image')} done`
-      : 'Run and download'
-  const description =
-    done && stats.status === 'complete'
-      ? `Finished in ${formatDuration(stats.ms)}. ${formatBytes(totalIn)} became ${formatBytes(delivery?.bytes ?? 0)}.`
+  const status = running
+    ? `Working on ${formatCount(Math.min(count, stats.finishedItems + 1))} of ${formatCount(count)}…`
+    : done && stats.status === 'complete'
+      ? `${formatCount(delivered)} of ${plural(count, 'image')} done in ${formatDuration(stats.ms)}. ${formatBytes(totalIn)} became ${formatBytes(delivery?.bytes ?? 0)}.`
       : done && stats.status === 'cancelled'
         ? 'Cancelled. The images that finished can still be downloaded.'
         : count === 0
-          ? 'Add images in step 1 first. The results appear here.'
+          ? 'Add images to start.'
           : state.estimate
-            ? `${plural(count, 'image')} ready. Estimated time: ${describeEstimate(state.estimate)}.`
-            : `${plural(count, 'image')} ready.`
+            ? `${plural(count, 'image')} ready · ${describeEstimate(state.estimate)}`
+            : `${plural(count, 'image')} ready`
 
-  const actions = (
-    <HStack gap={2} vAlign="center">
-      {running ? (
-        <Button label="Cancel" variant="secondary" onClick={() => controller.cancel()} />
+  const run = async () => {
+    await controller.start({ singleFileAsIs: true })
+  }
+
+  return (
+    <VStack gap={3}>
+      {state.error ? (
+        <Banner status="error" title="The run stopped" description={state.error} />
       ) : null}
-      {delivery?.archive && !running ? (
-        <Button
-          label={
-            delivery.files.length === 1 ? 'Download' : `Download ZIP of ${delivery.files.length}`
-          }
-          variant="primary"
-          size="lg"
-          icon={<Icon icon={Download} size="sm" />}
-          onClick={() => downloadDelivery(delivery, surface)}
+      {running ? (
+        <ProgressBar
+          label="Progress"
+          isLabelHidden
+          value={stats.finishedItems}
+          max={Math.max(1, count)}
         />
+      ) : null}
+      <Text type="supporting" hasTabularNumbers>
+        {status}
+      </Text>
+      {running ? (
+        <Button
+          label="Cancel"
+          variant="secondary"
+          width="100%"
+          onClick={() => controller.cancel()}
+        />
+      ) : delivery?.archive ? (
+        <HStack gap={2}>
+          <span className="min-w-0 flex-1">
+            <Button
+              label={
+                delivery.files.length === 1
+                  ? 'Download'
+                  : `Download ZIP of ${formatCount(delivery.files.length)}`
+              }
+              variant="primary"
+              size="lg"
+              width="100%"
+              icon={<Icon icon={Download} size="sm" />}
+              onClick={() => downloadDelivery(delivery, surface)}
+            />
+          </span>
+          <Button
+            label="Run again"
+            variant="secondary"
+            size="lg"
+            isDisabled={!canRun}
+            clickAction={run}
+          />
+        </HStack>
       ) : (
         <Button
           label={runLabel}
           variant="primary"
           size="lg"
+          width="100%"
           isDisabled={!canRun}
           isLoading={running}
-          clickAction={async () => {
-            await controller.start({ singleFileAsIs: true })
-          }}
+          clickAction={run}
         />
       )}
-    </HStack>
+    </VStack>
   )
+}
 
+/** Before and after sizes for every image, once a run has started. */
+export function ResultsSection({ state }: { state: RunControllerState }) {
+  const rows = resultRows(state)
+  if (state.stats.status === 'idle' || rows.length === 0) return null
   return (
-    <VStack gap={4}>
-      {state.error ? (
-        <Banner status="error" title="The run stopped" description={state.error} />
-      ) : null}
-      <StepCard
-        step={step}
-        title={title}
-        description={description}
-        endContent={actions}
-        padding={0}
-      >
-        {running ? (
-          <VStack paddingInline={6} paddingBlock={2}>
-            <ProgressBar
-              label="Progress"
-              isLabelHidden
-              value={stats.finishedItems}
-              max={Math.max(1, count)}
-            />
-          </VStack>
-        ) : null}
-        {rows.length > 0 ? (
-          <>
-            <Divider />
-            <ResultsTable rows={rows} />
-          </>
-        ) : null}
-      </StepCard>
+    <VStack gap={3}>
+      <Heading level={2}>Results</Heading>
+      <ResultsTable rows={rows} />
     </VStack>
   )
 }

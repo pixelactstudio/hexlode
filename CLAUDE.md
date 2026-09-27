@@ -16,7 +16,7 @@ When the user changes a decision, update the document that owns it in the same c
 
 ## Stack
 
-TanStack Start (React 19, Vite, Nitro), TypeScript, React Flow, Astryx with Tailwind, jSquash
+TanStack Start (React 19, Vite, Nitro), TypeScript, React Flow, Astryx with Tailwind, Motion, jSquash
 codecs in Web Workers, OPFS, PostHog and Sentry. Drizzle, PostgreSQL and Better Auth are dormant
 until cloud work: keep them compiling and build version 1 features without them.
 
@@ -38,6 +38,8 @@ Use pnpm. The scripts are in `package.json`; `pnpm validate` runs every check.
   blockers block matching URLs, and in dev one blocked module leaves every page unhydrated.
 - `src/routeTree.gen.ts` and the files in `drizzle/` are generated. For schema changes, edit
   `src/db/schema.ts` and run `pnpm db:generate`.
+- The theme's CSS and built object (`hexlode-theme.css`, `hexlode.js` and its `.d.ts` files in
+  `src/features/theme/`) are generated too. Edit `hexlode-theme.ts`, then run `pnpm theme:build`.
 - Keep secrets in `.env.local`. `.env.example` holds placeholders only.
 
 ## Tests
@@ -59,7 +61,8 @@ Tailwind utilities such as `bg-surface`, `text-primary` and `rounded-lg`.
   component exists.
 - Use AppShell or Layout for page frames, Table or List for dense data, Card for widgets and
   settings groups, and StatusDot or Token for status.
-- Set brand colours through `pnpm exec astryx theme`.
+- Set colours, type and other tokens in `src/features/theme/hexlode-theme.ts`, then run
+  `pnpm theme:build`. Every colour needs a light and a dark value.
 - Style the Studio canvas with the same tokens and hide the React Flow attribution.
 
 ## Commits

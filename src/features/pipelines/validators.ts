@@ -37,3 +37,9 @@ export const savedPipelinesSchema = z.array(
     pipeline: pipelineSchema,
   }),
 )
+
+export const studioDraftSchema = z.object({
+  name: z.string().max(MAX_PIPELINE_NAME_LENGTH),
+  savedId: z.string().min(1).nullable(),
+  pipeline: pipelineSchema,
+})

@@ -1,6 +1,6 @@
 # Hexlode product
 
-> Updated: 2026-09-26 (Phase 1 build)
+> Updated: 2026-09-27 (Phase 1 interface redesign: animated home page, top bar, tool pages)
 > Delivery plan: [implementation.md](./implementation.md). Vocabulary: [CONTEXT.md](./CONTEXT.md).
 > Decisions and their reasons: [docs/adr/](./docs/adr/).
 
@@ -23,9 +23,38 @@ large batches: photographers, web developers, designers, shop owners and content
 
 ## Home page
 
-The home page shows the name and five text links: Convert, Compress, Resize, Strip metadata and
-Studio. It has no hero section, marketing copy or feature grid. Saved pipeline tools appear under
-the five links once the user has some.
+The home page presents the Studio first, then the quick tools. A centred hero says what Hexlode
+does (batch image editing in the browser), offers Open the Studio and Browse quick tools, and shows
+a screenshot of the Studio after a real run, in both colour modes, taken at twice the pixel density.
+It grows past the text column on large screens so its text stays legible, and rises from a slight
+tilt once as the page opens, the same way on every load. The screenshots and the sample photos in `public/home/` are made with the app itself;
+retake them when the Studio's look changes.
+
+Below the hero, in one bordered column:
+
+- The formats Hexlode opens and saves.
+- The Studio: moving pictures of chaining steps, previews that follow a setting, work spread over
+  workers, the step cache and saving a pipeline as a tool, then the templates.
+- The six quick tools, each with a moving picture of its job, and the user's saved pipeline tools.
+- How Hexlode works on the device: images flow into the browser tab and out as a ZIP or a folder,
+  with three notes: no upload needed, modern formats and open source.
+- A closing call to open the Studio.
+
+The home page describes what Hexlode can do, not promises that a later cloud mode would break:
+it says the work can run on the device without uploading, never that nothing is ever uploaded or
+that there are no accounts. Animations run only while on screen, start from a still first frame
+rendered on the server, and stop when the system asks for reduced motion.
+
+Every page shares one frame that stays mounted while pages change. The top bar holds the name, a
+Tools menu that opens on click and lists the quick tools with a short line each, the Studio, a
+GitHub link and the colour mode. The bar is opaque. On pages that scroll it lines up with the
+1200-pixel column and folds into a floating dock once the page scrolls; on the Studio it spans the
+window, and moving between the two animates its width. On phones its links move into a menu
+button. The footer holds a line about Hexlode, the links to the tools, the Studio, the privacy
+page, the codec licences and the repository, and a large dotted wordmark.
+
+The colour mode is dark, light or the system's. Dark is the default and is pitch dark. The choice
+is kept in browser storage and applied before the page paints, so a light page never flashes dark.
 
 ## Quick tools
 
@@ -34,11 +63,23 @@ the five links once the user has some.
 | Convert | Change format: JPEG, PNG, WebP, AVIF, JPEG XL or QOI. |
 | Compress | Reduce file size by quality setting or by target size. |
 | Resize | Change dimensions by width, height, percent or longest edge. |
+| Crop | Cut to an aspect ratio such as 1:1, 4:5 or 16:9, from the centre or an edge. |
+| Rotate | Turn photos upright, rotate by quarter turns or flip them. |
 | Strip metadata | Remove all metadata, only location data, or everything except copyright. |
 
 Each quick tool is a fixed pipeline that runs on the same engine as the Studio. A quick tool page
-has a drop area, the settings for that job, a results list with before and after sizes, and a
-download button. A single result downloads as the file itself; several download as a ZIP.
+opens with a row of all six tools for switching, then the tool's name and one line, then two
+numbered panels, side by side on wide screens and stacked on phones. The first holds the
+drop area and the list of added images, with a thumbnail, a full-size preview and a remove button
+for each. The second holds the settings for that job and, under them, the run button, progress and
+the download button. The two panels are always the same height, and the drop area grows to fill
+its panel. A results list with before and after sizes follows the panels. Crop shows the chosen
+shape and position on a landscape and a portrait photo. The page renders on the server with the
+tool in place, so it never waits for scripts before showing the drop area and settings.
+
+Settings keep their place when options change, and the panels keep their height: a setting that
+does not apply is shown disabled with the reason, not hidden, and text or fields that change with
+an option keep the room of the longest version. A single result downloads as the file itself; several download as a ZIP.
 Compress by quality never returns a file larger than the original.
 
 A pipeline tool is a saved Studio pipeline opened as a quick tool page. The user builds the
@@ -51,13 +92,29 @@ quick tools.
 
 ### Layout
 
-- A sidebar lists every node type by category. The user drags a node onto the canvas or searches
-  for it by name.
+- A node library lists every node type by category, one line each. The user searches by name or
+  description, narrows the list to one category with the filter button beside the search box, and
+  rests the pointer on a node to read what it does and what it takes. A click adds the node;
+  dragging places it on the canvas. Ctrl K opens the same list as a search box. The library folds
+  into a rail of node icons to give the canvas more room.
+- The pipeline's name shows as plain text, with no icon, in the Studio's header. Clicking it makes
+  it editable.
 - The canvas holds the pipeline. Any output can connect to several nodes, so a pipeline branches
-  like a tree.
-- An inspector panel shows the full settings of the selected node.
-- A new Studio opens a template picker: Web-ready photos, Responsive image set, Watermark and
-  compress, Instagram carousel, and Blank.
+  like a tree. Nodes and connections can be selected and deleted with the Delete key.
+- Right-clicking a node, a connection or the empty canvas opens a menu: add a node after this one,
+  add an Output, duplicate, disconnect, delete, undo, redo and fit to screen. Shift and right-click
+  opens the browser's own menu.
+- An inspector panel opens when a node is selected. It shows the node's settings, its preview with
+  format, dimensions and size, and the last run as tiles (done, skipped, failed) with the size
+  before and after. Options most people never change sit under More options.
+- How the Studio works and its shortcuts are behind a help button, not always on screen.
+- A new Studio opens a template picker: Web-ready photos, Photos for email, Remove location, Square
+  thumbnails, WebP and AVIF, Responsive image set, Watermark and compress, Instagram carousel, and
+  Blank. The picker also imports a `.hexlode` file and opens saved pipelines.
+- The Studio keeps the open pipeline as a draft in browser storage, so a reload does not lose it.
+  Images are not kept; the user adds them again.
+- Run stays disabled until the pipeline has images and an Output node, and the canvas offers to add
+  the Output node.
 
 ### What the canvas shows
 

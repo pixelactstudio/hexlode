@@ -10,7 +10,11 @@ import {
 } from '#/features/engine/compatibility'
 import type { NodeRegistry, Pipeline, PipelineNode } from '#/features/engine/types'
 import type { NamedPipeline } from '#/features/pipelines/types'
-import { MAX_UNDO_STEPS, SETTINGS_UNDO_WINDOW_MS } from '#/features/studio/constants'
+import {
+  DUPLICATE_OFFSET,
+  MAX_UNDO_STEPS,
+  SETTINGS_UNDO_WINDOW_MS,
+} from '#/features/studio/constants'
 
 export interface StudioState {
   pipeline: Pipeline
@@ -89,7 +93,12 @@ export function createStudioStore(registry: NodeRegistry, now: () => number = ()
         listeners.delete(listener)
       }
     },
-    load({ name, pipeline }: NamedPipeline, savedId: string | null = null) {
+    /** Replaces the pipeline and clears undo. A restored draft with changes loads as dirty. */
+    load(
+      { name, pipeline }: NamedPipeline,
+      savedId: string | null = null,
+      { dirty = false }: { dirty?: boolean } = {},
+    ) {
       past = []
       future = []
       lastSettingsEdit = null
@@ -97,7 +106,7 @@ export function createStudioStore(registry: NodeRegistry, now: () => number = ()
         pipeline,
         name,
         savedId,
-        dirty: false,
+        dirty,
         selectedNodeId: null,
         checks: checksOf(pipeline),
       })
@@ -114,6 +123,54 @@ export function createStudioStore(registry: NodeRegistry, now: () => number = ()
       })
       emit({ selectedNodeId: id })
       return id
+    },
+    /** Copies a node and its settings next to it. Returns null for Files. */
+    duplicateNode(nodeId: string) {
+      const node = state.pipeline.nodes.find((candidate) => candidate.id === nodeId)
+      if (!node || isStart(node)) return null
+      const id = nextId(node.type)
+      const position = {
+        x: node.position.x + DUPLICATE_OFFSET,
+        y: node.position.y + DUPLICATE_OFFSET,
+      }
+      change({
+        ...state.pipeline,
+        nodes: [...state.pipeline.nodes, { ...node, id, settings: { ...node.settings }, position }],
+      })
+      emit({ selectedNodeId: id })
+      return id
+    },
+    /**
+     * Adds a node and connects the output of another node to it, as one step. The node stays
+     * unconnected when the connection is refused.
+     */
+    addNodeAfter(type: string, sourceId: string, position: { x: number; y: number }) {
+      const definition = registry.get(type)
+      if (!definition || !definition.hasInput) return null
+      const id = nextId(type)
+      const withNode = {
+        ...state.pipeline,
+        nodes: [...state.pipeline.nodes, { id, type, settings: {}, position }],
+      }
+      const candidate = { source: sourceId, sourcePort: 'out', target: id }
+      const check = checkConnection(withNode, registry, candidate)
+      change(
+        check.status === 'refused'
+          ? withNode
+          : {
+              ...withNode,
+              connections: [...withNode.connections, { id: `${sourceId}-out-${id}`, ...candidate }],
+            },
+      )
+      emit({ selectedNodeId: id })
+      return { id, check }
+    },
+    disconnectNode(nodeId: string) {
+      const kept = state.pipeline.connections.filter(
+        (connection) => connection.source !== nodeId && connection.target !== nodeId,
+      )
+      if (kept.length === state.pipeline.connections.length) return
+      change({ ...state.pipeline, connections: kept })
     },
     check(candidate: ConnectionCandidate) {
       return checkConnection(state.pipeline, registry, candidate)

@@ -1,11 +1,11 @@
 # Hexlode implementation plan
 
-> Updated: 2026-09-26
+> Updated: 2026-09-27
 > Product: [idea.md](./idea.md). Vocabulary: [CONTEXT.md](./CONTEXT.md). Decisions: [docs/adr/](./docs/adr/).
 
 ## Goal
 
-Version 1 is the complete local product: the home page, four quick tools, pipeline tools, and the
+Version 1 is the complete local product: the home page, six quick tools, pipeline tools, and the
 Studio with all 33 nodes from the catalogue in [idea.md](./idea.md). It ships in three phases. Phase 1
 builds the whole application and node batch 1. Phases 2 and 3 only add node batches 2 and 3. Each
 phase is deployable and passes its exit gate before the next phase starts.
@@ -44,9 +44,14 @@ Active phase: **Phase 1**.
 
 ### Application
 
-13. Home page and the four quick tools.
-14. Studio: sidebar with every node category, drag and search, inspector, template picker, live
-    previews, run statistics on nodes and connections, undo and redo, narrow-screen message.
+13. Home page and the six quick tools: Convert, Compress, Resize, Crop, Rotate, Strip metadata.
+    The home page animates with Motion (`motion/react`) and shows a Studio screenshot taken from a
+    real run. The site frame lives in the root route so the top bar animates between pages. The
+    Hexlode theme in `src/features/theme/`, with dark, light and system colour modes and a
+    self-hosted Figtree font.
+14. Studio: node library with every category, drag, search, category filter and a folded rail,
+    inspector, template picker, live previews, run statistics on nodes and connections, undo and
+    redo, right-click menus, a draft that survives a reload, narrow-screen message.
 15. Save in browser storage, `.hexlode` export and import, pipeline tools.
 
 ### Node batch 1
@@ -54,8 +59,8 @@ Active phase: **Phase 1**.
 16. Files, Filter, Inspect, Resize, Crop, Rotate / Flip, Strip metadata, Convert, Compress to size,
     Optimize PNG, Rename, Output, Compare.
 
-A template appears in the template picker once all its nodes exist. Phase 1 ships Web-ready photos
-and Blank.
+A template appears in the template picker once all its nodes exist. Phase 1 ships Web-ready photos,
+Photos for email, Remove location, Square thumbnails, WebP and AVIF, and Blank.
 
 ### Exit gate
 

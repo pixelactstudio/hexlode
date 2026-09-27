@@ -17,10 +17,11 @@ export function formatDuration(ms: number) {
   return `${minutes} min ${Math.round(seconds % 60)} s`
 }
 
-/** "−42%" when smaller, "+8%" when larger. */
+/** "−42%" when smaller, "+8%" when larger. Only an empty file reads −100%. */
 export function formatChange(before: number, after: number) {
   if (before === 0) return '—'
-  const change = Math.round(((after - before) / before) * 100)
+  const rounded = Math.round(((after - before) / before) * 100)
+  const change = rounded === -100 && after > 0 ? -99 : rounded
   if (change === 0) return '0%'
   return change < 0 ? `−${Math.abs(change)}%` : `+${change}%`
 }

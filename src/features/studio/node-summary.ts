@@ -1,4 +1,5 @@
 /** One line that tells what a node's settings do, shown on its card in the canvas. */
+import type { Pipeline } from '#/features/engine/types'
 import { FORMAT_NAMES } from '#/features/images/image-item'
 
 type Settings = Record<string, unknown>
@@ -88,4 +89,28 @@ export function summariseNode(type: string, settings: Settings): string {
     default:
       return ''
   }
+}
+
+/**
+ * The node types of a pipeline in the order items reach them, without the Files node every
+ * pipeline starts with. A type used on several branches is listed once with its count.
+ */
+export function pipelineSteps(pipeline: Pipeline) {
+  const children = new Map<string, string[]>()
+  for (const connection of pipeline.connections) {
+    children.set(connection.source, [...(children.get(connection.source) ?? []), connection.target])
+  }
+  const targets = new Set(pipeline.connections.map((connection) => connection.target))
+  const queue = pipeline.nodes.filter((node) => !targets.has(node.id)).map((node) => node.id)
+  const seen = new Set<string>()
+  const counts = new Map<string, number>()
+  while (queue.length > 0) {
+    const id = queue.shift() as string
+    if (seen.has(id)) continue
+    seen.add(id)
+    const type = pipeline.nodes.find((node) => node.id === id)?.type
+    if (type && type !== 'files') counts.set(type, (counts.get(type) ?? 0) + 1)
+    queue.push(...(children.get(id) ?? []))
+  }
+  return [...counts].map(([type, count]) => ({ type, count }))
 }

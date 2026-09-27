@@ -78,4 +78,29 @@ describe('quick tool pipelines', () => {
       ),
     ).toEqual({ mode: 'location', keepColourProfile: true })
   })
+
+  it('Crop and Rotate pass their settings to their nodes', () => {
+    expect(
+      settingsOf(
+        quickToolPipeline('crop', {
+          aspect: '4:5',
+          customWidth: 1,
+          customHeight: 1,
+          position: 'top',
+        }),
+        'crop',
+      ),
+    ).toEqual({ aspect: '4:5', customWidth: 1, customHeight: 1, position: 'top' })
+    expect(
+      settingsOf(
+        quickToolPipeline('rotate', {
+          auto: false,
+          rotate: 270,
+          flipHorizontal: true,
+          flipVertical: false,
+        }),
+        'rotate',
+      ),
+    ).toEqual({ auto: false, rotate: 270, flipHorizontal: true, flipVertical: false })
+  })
 })

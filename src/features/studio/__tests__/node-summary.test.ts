@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import { productRegistry } from '#/features/nodes/registry'
-import { summariseNode } from '#/features/studio/node-summary'
+import { TEMPLATES } from '#/features/pipelines/templates'
+import { pipelineSteps, summariseNode } from '#/features/studio/node-summary'
 
 function summary(type: string, settings: Record<string, unknown> = {}) {
   const definition = productRegistry.get(type)
@@ -48,5 +49,42 @@ describe('summariseNode', () => {
 
   it('returns nothing for nodes without settings', () => {
     expect(summary('files')).toBe('')
+  })
+})
+
+describe('pipelineSteps', () => {
+  it('lists node types in the order items reach them, without Files', () => {
+    const template = TEMPLATES.find((candidate) => candidate.id === 'web-ready-photos')
+    if (!template) throw new Error('missing template')
+    expect(pipelineSteps(template.pipeline)).toEqual([
+      { type: 'rotate', count: 1 },
+      { type: 'resize', count: 1 },
+      { type: 'strip-metadata', count: 1 },
+      { type: 'convert', count: 1 },
+      { type: 'output', count: 1 },
+    ])
+  })
+
+  it('counts a node type used on several branches once', () => {
+    const template = TEMPLATES.find((candidate) => candidate.id === 'webp-and-avif')
+    if (!template) throw new Error('missing template')
+    expect(pipelineSteps(template.pipeline)).toEqual([
+      { type: 'rotate', count: 1 },
+      { type: 'resize', count: 1 },
+      { type: 'convert', count: 2 },
+      { type: 'output', count: 2 },
+    ])
+  })
+
+  it('lists unconnected nodes too', () => {
+    expect(
+      pipelineSteps({
+        nodes: [
+          { id: 'files', type: 'files', settings: {}, position: { x: 0, y: 0 } },
+          { id: 'crop', type: 'crop', settings: {}, position: { x: 0, y: 0 } },
+        ],
+        connections: [],
+      }),
+    ).toEqual([{ type: 'crop', count: 1 }])
   })
 })

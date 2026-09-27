@@ -12,8 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CompressRouteImport } from './routes/compress'
 import { Route as ConvertRouteImport } from './routes/convert'
+import { Route as CropRouteImport } from './routes/crop'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResizeRouteImport } from './routes/resize'
+import { Route as RotateRouteImport } from './routes/rotate'
 import { Route as StripMetadataRouteImport } from './routes/strip-metadata'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as ToolsPipelineIdRouteImport } from './routes/tools.$pipelineId'
@@ -34,6 +36,11 @@ const ConvertRoute = ConvertRouteImport.update({
   path: '/convert',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CropRoute = CropRouteImport.update({
+  id: '/crop',
+  path: '/crop',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -42,6 +49,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const ResizeRoute = ResizeRouteImport.update({
   id: '/resize',
   path: '/resize',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RotateRoute = RotateRouteImport.update({
+  id: '/rotate',
+  path: '/rotate',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StripMetadataRoute = StripMetadataRouteImport.update({
@@ -69,8 +81,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/compress': typeof CompressRoute
   '/convert': typeof ConvertRoute
+  '/crop': typeof CropRoute
   '/privacy': typeof PrivacyRoute
   '/resize': typeof ResizeRoute
+  '/rotate': typeof RotateRoute
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
   '/tools/$pipelineId': typeof ToolsPipelineIdRoute
@@ -80,8 +94,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/compress': typeof CompressRoute
   '/convert': typeof ConvertRoute
+  '/crop': typeof CropRoute
   '/privacy': typeof PrivacyRoute
   '/resize': typeof ResizeRoute
+  '/rotate': typeof RotateRoute
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
   '/tools/$pipelineId': typeof ToolsPipelineIdRoute
@@ -92,8 +108,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/compress': typeof CompressRoute
   '/convert': typeof ConvertRoute
+  '/crop': typeof CropRoute
   '/privacy': typeof PrivacyRoute
   '/resize': typeof ResizeRoute
+  '/rotate': typeof RotateRoute
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
   '/tools/$pipelineId': typeof ToolsPipelineIdRoute
@@ -105,8 +123,10 @@ export interface FileRouteTypes {
     | '/'
     | '/compress'
     | '/convert'
+    | '/crop'
     | '/privacy'
     | '/resize'
+    | '/rotate'
     | '/strip-metadata'
     | '/studio'
     | '/tools/$pipelineId'
@@ -116,8 +136,10 @@ export interface FileRouteTypes {
     | '/'
     | '/compress'
     | '/convert'
+    | '/crop'
     | '/privacy'
     | '/resize'
+    | '/rotate'
     | '/strip-metadata'
     | '/studio'
     | '/tools/$pipelineId'
@@ -127,8 +149,10 @@ export interface FileRouteTypes {
     | '/'
     | '/compress'
     | '/convert'
+    | '/crop'
     | '/privacy'
     | '/resize'
+    | '/rotate'
     | '/strip-metadata'
     | '/studio'
     | '/tools/$pipelineId'
@@ -139,8 +163,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CompressRoute: typeof CompressRoute
   ConvertRoute: typeof ConvertRoute
+  CropRoute: typeof CropRoute
   PrivacyRoute: typeof PrivacyRoute
   ResizeRoute: typeof ResizeRoute
+  RotateRoute: typeof RotateRoute
   StripMetadataRoute: typeof StripMetadataRoute
   StudioRoute: typeof StudioRoute
   ToolsPipelineIdRoute: typeof ToolsPipelineIdRoute
@@ -170,6 +196,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConvertRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/crop': {
+      id: '/crop'
+      path: '/crop'
+      fullPath: '/crop'
+      preLoaderRoute: typeof CropRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
@@ -182,6 +215,13 @@ declare module '@tanstack/react-router' {
       path: '/resize'
       fullPath: '/resize'
       preLoaderRoute: typeof ResizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rotate': {
+      id: '/rotate'
+      path: '/rotate'
+      fullPath: '/rotate'
+      preLoaderRoute: typeof RotateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/strip-metadata': {
@@ -219,8 +259,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CompressRoute: CompressRoute,
   ConvertRoute: ConvertRoute,
+  CropRoute: CropRoute,
   PrivacyRoute: PrivacyRoute,
   ResizeRoute: ResizeRoute,
+  RotateRoute: RotateRoute,
   StripMetadataRoute: StripMetadataRoute,
   StudioRoute: StudioRoute,
   ToolsPipelineIdRoute: ToolsPipelineIdRoute,

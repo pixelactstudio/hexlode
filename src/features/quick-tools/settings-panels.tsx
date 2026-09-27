@@ -2,21 +2,37 @@ import { Grid } from '@astryxdesign/core/Grid'
 import { NumberInput } from '@astryxdesign/core/NumberInput'
 import { RadioList, RadioListItem } from '@astryxdesign/core/RadioList'
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl'
-import { SelectableCard } from '@astryxdesign/core/SelectableCard'
 import { Selector, SelectorOption } from '@astryxdesign/core/Selector'
 import { Slider } from '@astryxdesign/core/Slider'
-import { VStack } from '@astryxdesign/core/Stack'
+import { HStack, VStack } from '@astryxdesign/core/Stack'
 import { Switch } from '@astryxdesign/core/Switch'
 import { Text } from '@astryxdesign/core/Text'
+import { ToggleButton } from '@astryxdesign/core/ToggleButton'
+import {
+  ArrowDown,
+  ArrowDownLeft,
+  ArrowDownRight,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  ArrowUpLeft,
+  ArrowUpRight,
+  Dot,
+} from 'lucide-react'
+import type { ReactNode } from 'react'
 
+import { ASPECT_PRESETS } from '#/features/nodes/definitions/crop'
+import { AspectShape, CropDiagram } from '#/features/quick-tools/crop-diagram'
 import {
   type CompressToolSettings,
   type ConvertToolSettings,
+  type CropToolSettings,
   LOSSLESS_CAPABLE,
   QUALITY_FORMATS,
   type QuickTool,
   type QuickToolSettings,
   type ResizeToolSettings,
+  type RotateToolSettings,
   type StripToolSettings,
   type TargetFormat,
 } from '#/features/quick-tools/tools'
@@ -27,153 +43,223 @@ interface PanelProps<T> {
   isDisabled?: boolean
 }
 
-export const FORMAT_OPTIONS: { value: TargetFormat; label: string; hint: string }[] = [
-  { value: 'webp', label: 'WebP', hint: 'Small files. Opens in every browser.' },
-  { value: 'jpeg', label: 'JPEG', hint: 'Photos. Opens everywhere.' },
-  { value: 'avif', label: 'AVIF', hint: 'Smallest files. Slower to save.' },
-  { value: 'png', label: 'PNG', hint: 'Lossless, keeps transparency.' },
-  { value: 'jxl', label: 'JPEG XL', hint: 'Small files. Few apps open it yet.' },
-  { value: 'qoi', label: 'QOI', hint: 'Fast lossless. Rarely supported.' },
+export const FORMAT_OPTIONS: {
+  value: TargetFormat
+  label: string
+  /** Fits the format switch on narrow panels. */
+  short: string
+  hint: string
+}[] = [
+  { value: 'webp', label: 'WebP', short: 'WebP', hint: 'Small files that open in every browser.' },
+  { value: 'jpeg', label: 'JPEG', short: 'JPEG', hint: 'Photos that open everywhere.' },
+  { value: 'avif', label: 'AVIF', short: 'AVIF', hint: 'The smallest files. Slower to save.' },
+  { value: 'png', label: 'PNG', short: 'PNG', hint: 'Lossless and keeps transparency.' },
+  {
+    value: 'jxl',
+    label: 'JPEG XL',
+    short: 'JXL',
+    hint: 'JPEG XL: small files, but few apps open them yet.',
+  },
+  { value: 'qoi', label: 'QOI', short: 'QOI', hint: 'Fast and lossless, but rarely supported.' },
 ]
 
-export const QUALITY_HINT =
-  'Higher keeps more detail, lower makes smaller files. 75 to 85 suits most photos.'
+const QUALITY_HINT = '75 to 85 suits most photos.'
 
-/** A small grid of cards for picking one of a few options, each with a one-line hint. */
-export function ChoiceCards<T extends string>({
+/** A visible label over a control whose own label is only for screen readers. */
+export function Field({
   label,
-  value,
-  options,
-  onChange,
-  isDisabled,
-  columns = 3,
+  hint,
+  isFullWidth = false,
+  children,
 }: {
   label: string
-  value: T
-  options: { value: T; label: string; hint: string }[]
-  onChange: (value: T) => void
-  isDisabled?: boolean
-  columns?: number
+  hint?: ReactNode
+  /** The control fills the row instead of hugging its content. */
+  isFullWidth?: boolean
+  children: ReactNode
 }) {
   return (
-    <VStack gap={2} role="radiogroup" aria-label={label}>
+    <VStack gap={2}>
       <Text type="label">{label}</Text>
-      <Grid columns={columns} gap={2}>
-        {options.map((option) => (
-          <SelectableCard
-            key={option.value}
-            label={option.label}
-            isSelected={value === option.value}
-            onChange={() => onChange(option.value)}
-            isDisabled={isDisabled}
-            padding={3}
-          >
-            <VStack gap={0.5}>
-              <Text type="label" weight="semibold">
-                {option.label}
-              </Text>
-              <Text type="supporting">{option.hint}</Text>
-            </VStack>
-          </SelectableCard>
-        ))}
-      </Grid>
+      {isFullWidth ? children : <HStack>{children}</HStack>}
+      {typeof hint === 'string' ? <Text type="supporting">{hint}</Text> : hint}
     </VStack>
   )
 }
 
-function ConvertPanel({ value, onChange, isDisabled }: PanelProps<ConvertToolSettings>) {
-  const hasQuality = QUALITY_FORMATS.includes(value.format) && !value.lossless
+/**
+ * Shows the block for `active` while keeping room for the tallest of `blocks`, so a panel keeps
+ * its height when a setting changes what it shows. Hidden blocks cannot be focused or read.
+ */
+function Swap<K extends string>({ active, blocks }: { active: K; blocks: Record<K, ReactNode> }) {
   return (
-    <VStack gap={4}>
-      <ChoiceCards
-        label="Save as"
-        value={value.format}
-        options={FORMAT_OPTIONS}
-        onChange={(format) => onChange({ ...value, format })}
-        isDisabled={isDisabled}
+    <span className="grid">
+      {(Object.keys(blocks) as K[]).map((key) => (
+        <span
+          key={key}
+          className={`min-w-0 [grid-area:1/1] ${key === active ? '' : 'invisible'}`}
+          inert={key !== active}
+        >
+          {blocks[key]}
+        </span>
+      ))}
+    </span>
+  )
+}
+
+/** One of several hints, in the room of the longest. */
+function SwapHint<K extends string>({ active, hints }: { active: K; hints: Record<K, string> }) {
+  const blocks = Object.fromEntries(
+    Object.entries(hints).map(([key, hint]) => [
+      key,
+      <Text key={key} type="supporting">
+        {hint as string}
+      </Text>,
+    ]),
+  ) as Record<K, ReactNode>
+  return <Swap active={active} blocks={blocks} />
+}
+
+function ConvertPanel({ value, onChange, isDisabled }: PanelProps<ConvertToolSettings>) {
+  const format = FORMAT_OPTIONS.find((option) => option.value === value.format)
+  const canBeLossless = LOSSLESS_CAPABLE.includes(value.format)
+  const hasQuality = QUALITY_FORMATS.includes(value.format)
+  const lossless = value.lossless && canBeLossless
+  return (
+    <VStack gap={5}>
+      <Field
+        label="Format"
+        hint={
+          <SwapHint
+            active={value.format}
+            hints={
+              Object.fromEntries(
+                FORMAT_OPTIONS.map((option) => [option.value, option.hint]),
+              ) as Record<TargetFormat, string>
+            }
+          />
+        }
+        isFullWidth
+      >
+        <SegmentedControl
+          label="Format"
+          value={value.format}
+          layout="fill"
+          onChange={(next) => onChange({ ...value, format: next as TargetFormat })}
+          isDisabled={isDisabled}
+        >
+          {FORMAT_OPTIONS.map((option) => (
+            <SegmentedControlItem key={option.value} value={option.value} label={option.short} />
+          ))}
+        </SegmentedControl>
+      </Field>
+      <Slider
+        label="Quality"
+        description={QUALITY_HINT}
+        min={1}
+        max={100}
+        value={value.quality}
+        valueDisplay="text"
+        onChange={(quality: number) => onChange({ ...value, quality })}
+        isDisabled={isDisabled || !hasQuality || lossless}
+        disabledMessage={
+          !hasQuality
+            ? `${format?.label} is lossless, so it has no quality setting.`
+            : lossless
+              ? 'Lossless keeps every pixel, so quality does not apply.'
+              : undefined
+        }
       />
-      {LOSSLESS_CAPABLE.includes(value.format) ? (
-        <Switch
-          label="Lossless"
-          description="Keeps every pixel exactly. Files are larger."
-          value={value.lossless}
-          onChange={(lossless) => onChange({ ...value, lossless })}
-          isDisabled={isDisabled}
-        />
-      ) : null}
-      {hasQuality ? (
-        <Slider
-          label="Quality"
-          description={QUALITY_HINT}
-          min={1}
-          max={100}
-          value={value.quality}
-          valueDisplay="text"
-          onChange={(quality: number) => onChange({ ...value, quality })}
-          isDisabled={isDisabled}
-        />
-      ) : null}
+      <Switch
+        label="Lossless"
+        description="Keeps every pixel exactly. Files are larger."
+        value={canBeLossless ? value.lossless : !hasQuality}
+        onChange={(next) => onChange({ ...value, lossless: next })}
+        isDisabled={isDisabled || !canBeLossless}
+        disabledMessage={
+          canBeLossless
+            ? undefined
+            : hasQuality
+              ? `${format?.label} has no lossless mode.`
+              : `${format?.label} is always lossless.`
+        }
+      />
     </VStack>
   )
 }
 
 function CompressPanel({ value, onChange, isDisabled }: PanelProps<CompressToolSettings>) {
   return (
-    <VStack gap={4}>
-      <SegmentedControl
+    <VStack gap={5}>
+      <Field
         label="Compress by"
-        value={value.mode}
-        onChange={(mode) => onChange({ ...value, mode: mode as CompressToolSettings['mode'] })}
-        isDisabled={isDisabled}
+        hint={
+          <SwapHint
+            active={value.mode}
+            hints={{
+              quality:
+                'Saves each image again at a lower quality, in its own format. Images that would grow are kept as they are.',
+              target: 'Finds the highest quality that fits under the size you choose.',
+            }}
+          />
+        }
       >
-        <SegmentedControlItem value="quality" label="By quality" />
-        <SegmentedControlItem value="target" label="To a file size" />
-      </SegmentedControl>
-      <Text type="supporting">
-        {value.mode === 'quality'
-          ? 'Re-saves each image at the quality you choose. Images that would get bigger are kept as they are.'
-          : 'Finds the highest quality that fits under the size you choose.'}
-      </Text>
-      {value.mode === 'quality' ? (
-        <Slider
-          label="Quality"
-          description={`Each image keeps its format; PNG files are optimised without loss. ${QUALITY_HINT}`}
-          min={1}
-          max={100}
-          value={value.quality}
-          valueDisplay="text"
-          onChange={(quality: number) => onChange({ ...value, quality })}
+        <SegmentedControl
+          label="Compress by"
+          value={value.mode}
+          onChange={(mode) => onChange({ ...value, mode: mode as CompressToolSettings['mode'] })}
           isDisabled={isDisabled}
-        />
-      ) : (
-        <>
-          <NumberInput
-            label="Maximum file size"
-            description="Every image is made to fit under this size."
-            units="KB"
-            min={1}
-            value={value.targetKilobytes}
-            onChange={(targetKilobytes) => onChange({ ...value, targetKilobytes })}
-            isDisabled={isDisabled}
-          />
-          <Selector
-            label="Format"
-            description="Keeping the format works for JPEG, WebP, AVIF and JPEG XL files."
-            value={value.format}
-            onChange={(format) =>
-              onChange({ ...value, format: format as CompressToolSettings['format'] })
-            }
-            options={[
-              { value: 'original', label: 'Keep format' },
-              { value: 'jpeg', label: 'JPEG' },
-              { value: 'webp', label: 'WebP' },
-              { value: 'avif', label: 'AVIF' },
-              { value: 'jxl', label: 'JPEG XL' },
-            ]}
-            isDisabled={isDisabled}
-          />
-        </>
-      )}
+        >
+          <SegmentedControlItem value="quality" label="Quality" />
+          <SegmentedControlItem value="target" label="File size" />
+        </SegmentedControl>
+      </Field>
+      <Swap
+        active={value.mode}
+        blocks={{
+          quality: (
+            <Slider
+              label="Quality"
+              description={`PNG files are optimised without loss. ${QUALITY_HINT}`}
+              min={1}
+              max={100}
+              value={value.quality}
+              valueDisplay="text"
+              onChange={(quality: number) => onChange({ ...value, quality })}
+              isDisabled={isDisabled}
+            />
+          ),
+          target: (
+            <HStack gap={3} vAlign="start" wrap="wrap">
+              <NumberInput
+                label="Largest file size"
+                units="KB"
+                min={1}
+                width={180}
+                value={value.targetKilobytes}
+                onChange={(targetKilobytes) => onChange({ ...value, targetKilobytes })}
+                isDisabled={isDisabled}
+              />
+              <Selector
+                label="Format"
+                value={value.format}
+                width={180}
+                onChange={(format) =>
+                  onChange({ ...value, format: format as CompressToolSettings['format'] })
+                }
+                options={[
+                  { value: 'original', label: 'Keep format' },
+                  { value: 'jpeg', label: 'JPEG' },
+                  { value: 'webp', label: 'WebP' },
+                  { value: 'avif', label: 'AVIF' },
+                  { value: 'jxl', label: 'JPEG XL' },
+                ]}
+                isDisabled={isDisabled}
+              />
+            </HStack>
+          ),
+        }}
+      />
     </VStack>
   )
 }
@@ -182,7 +268,7 @@ const RESIZE_MODES: { value: ResizeToolSettings['mode']; label: string; hint: st
   {
     value: 'longestEdge',
     label: 'Longest edge',
-    hint: 'The longer side gets this size. Works for portrait and landscape alike.',
+    hint: 'The longer side gets this size, for portrait and landscape alike.',
   },
   { value: 'width', label: 'Width', hint: 'Sets the width. The height follows.' },
   { value: 'height', label: 'Height', hint: 'Sets the height. The width follows.' },
@@ -200,6 +286,7 @@ function ResizePanel({ value, onChange, isDisabled }: PanelProps<ResizeToolSetti
       label={label}
       units={units}
       min={1}
+      width={140}
       isIntegerOnly={key !== 'percent'}
       value={value[key]}
       onChange={(next) => onChange({ ...value, [key]: next })}
@@ -207,69 +294,231 @@ function ResizePanel({ value, onChange, isDisabled }: PanelProps<ResizeToolSetti
     />
   )
   return (
-    <VStack gap={4}>
-      <Selector
-        label="Resize by"
-        value={value.mode}
-        onChange={(mode) => onChange({ ...value, mode: mode as ResizeToolSettings['mode'] })}
-        options={RESIZE_MODES.map(({ value: mode, label }) => ({ value: mode, label }))}
-        renderOption={(option) => (
-          <SelectorOption
-            label={option.label}
-            description={RESIZE_MODES.find((mode) => mode.value === option.value)?.hint}
+    <VStack gap={5}>
+      <HStack gap={3} vAlign="start" wrap="wrap">
+        <Selector
+          label="Resize by"
+          value={value.mode}
+          width={200}
+          onChange={(mode) => onChange({ ...value, mode: mode as ResizeToolSettings['mode'] })}
+          options={RESIZE_MODES.map(({ value: mode, label }) => ({ value: mode, label }))}
+          renderOption={(option) => (
+            <SelectorOption
+              label={option.label}
+              description={RESIZE_MODES.find((mode) => mode.value === option.value)?.hint}
+            />
+          )}
+          isDisabled={isDisabled}
+        />
+        <Swap
+          active={value.mode}
+          blocks={{
+            longestEdge: number('longestEdge', 'Longest edge', 'px'),
+            width: number('width', 'Width', 'px'),
+            height: number('height', 'Height', 'px'),
+            percent: number('percent', 'Scale', '%'),
+            box: (
+              <HStack gap={3} vAlign="start">
+                {number('width', 'Width', 'px')}
+                {number('height', 'Height', 'px')}
+              </HStack>
+            ),
+          }}
+        />
+      </HStack>
+      <Field
+        label="Fit"
+        hint={
+          <SwapHint
+            active={value.mode === 'box' ? value.fit : 'unused'}
+            hints={{
+              fit: 'Fits inside the box and keeps the proportions.',
+              fill: 'Covers the box and crops what is outside it.',
+              exact: 'Stretches to exactly this size.',
+              unused: 'Only for resizing by width and height.',
+            }}
           />
-        )}
-        isDisabled={isDisabled}
-      />
-      {value.mode === 'longestEdge' ? number('longestEdge', 'Longest edge', 'px') : null}
-      {value.mode === 'width' || value.mode === 'box' ? number('width', 'Width', 'px') : null}
-      {value.mode === 'height' || value.mode === 'box' ? number('height', 'Height', 'px') : null}
-      {value.mode === 'percent' ? number('percent', 'Scale', '%') : null}
-      {value.mode === 'box' ? (
-        <RadioList
+        }
+      >
+        <SegmentedControl
           label="Fit"
           value={value.fit}
           onChange={(fit) => onChange({ ...value, fit: fit as ResizeToolSettings['fit'] })}
-          isDisabled={isDisabled}
+          isDisabled={isDisabled || value.mode !== 'box'}
         >
-          <RadioListItem
-            value="fit"
-            label="Fit"
-            description="Fits inside the box and keeps the proportions."
-          />
-          <RadioListItem
-            value="fill"
-            label="Fill"
-            description="Covers the box and crops what is outside it."
-          />
-          <RadioListItem
-            value="exact"
-            label="Exact"
-            description="Stretches to exactly this size."
-          />
-        </RadioList>
-      ) : null}
+          <SegmentedControlItem value="fit" label="Fit" />
+          <SegmentedControlItem value="fill" label="Fill" />
+          <SegmentedControlItem value="exact" label="Stretch" />
+        </SegmentedControl>
+      </Field>
+      <Switch
+        label="Allow enlarging"
+        description="When off, images smaller than the size are left as they are."
+        value={value.allowUpscale}
+        onChange={(allowUpscale) => onChange({ ...value, allowUpscale })}
+        isDisabled={isDisabled}
+      />
       <Selector
         label="Resampling"
         value={value.method}
+        width={260}
         onChange={(method) =>
           onChange({ ...value, method: method as ResizeToolSettings['method'] })
         }
         options={[
-          { value: 'lanczos3', label: 'Lanczos (sharpest, recommended)' },
+          { value: 'lanczos3', label: 'Lanczos (sharpest)' },
           { value: 'mitchell', label: 'Mitchell' },
           { value: 'catrom', label: 'Catmull-Rom' },
           { value: 'triangle', label: 'Bilinear (softest)' },
         ]}
         isDisabled={isDisabled}
       />
+    </VStack>
+  )
+}
+
+const POSITIONS: {
+  value: CropToolSettings['position']
+  label: string
+  icon: typeof ArrowUp
+}[] = [
+  { value: 'top-left', label: 'Top left', icon: ArrowUpLeft },
+  { value: 'top', label: 'Top', icon: ArrowUp },
+  { value: 'top-right', label: 'Top right', icon: ArrowUpRight },
+  { value: 'left', label: 'Left', icon: ArrowLeft },
+  { value: 'center', label: 'Centre', icon: Dot },
+  { value: 'right', label: 'Right', icon: ArrowRight },
+  { value: 'bottom-left', label: 'Bottom left', icon: ArrowDownLeft },
+  { value: 'bottom', label: 'Bottom', icon: ArrowDown },
+  { value: 'bottom-right', label: 'Bottom right', icon: ArrowDownRight },
+]
+
+const ASPECTS = [...ASPECT_PRESETS, 'custom'] as const
+
+function sidesOf(aspect: (typeof ASPECT_PRESETS)[number]) {
+  const [width, height] = aspect.split(':').map(Number)
+  return { width, height }
+}
+
+function ratioOf(aspect: (typeof ASPECT_PRESETS)[number]) {
+  const { width, height } = sidesOf(aspect)
+  return width / height
+}
+
+function CropPanel({ value, onChange, isDisabled }: PanelProps<CropToolSettings>) {
+  const position = POSITIONS.find((option) => option.value === value.position)
+  const isCustom = value.aspect === 'custom'
+  const preset = isCustom ? null : sidesOf(value.aspect as (typeof ASPECT_PRESETS)[number])
+  const choose = (aspect: (typeof ASPECTS)[number]) => {
+    if (aspect !== 'custom' || !preset) return onChange({ ...value, aspect })
+    // Custom starts from the shape that was chosen, so the fields do not jump.
+    onChange({ ...value, aspect, customWidth: preset.width, customHeight: preset.height })
+  }
+  return (
+    <VStack gap={5}>
+      <Field label="Shape" isFullWidth>
+        <Grid columns={{ minWidth: 76 }} gap={1}>
+          {ASPECTS.map((aspect) => (
+            <ToggleButton
+              key={aspect}
+              label={aspect === 'custom' ? 'Custom shape' : `Shape ${aspect}`}
+              size="sm"
+              icon={aspect === 'custom' ? undefined : <AspectShape ratio={ratioOf(aspect)} />}
+              isPressed={value.aspect === aspect}
+              onPressedChange={() => choose(aspect)}
+              isDisabled={isDisabled}
+            >
+              {aspect === 'custom' ? 'Custom' : aspect}
+            </ToggleButton>
+          ))}
+        </Grid>
+      </Field>
+      <HStack gap={2} vAlign="end">
+        <NumberInput
+          label="Width"
+          min={0.01}
+          width={96}
+          value={preset ? preset.width : value.customWidth}
+          onChange={(customWidth) => onChange({ ...value, customWidth })}
+          isDisabled={isDisabled || !isCustom}
+        />
+        <span className="pb-2">
+          <Text type="supporting">by</Text>
+        </span>
+        <NumberInput
+          label="Height"
+          min={0.01}
+          width={96}
+          value={preset ? preset.height : value.customHeight}
+          onChange={(customHeight) => onChange({ ...value, customHeight })}
+          isDisabled={isDisabled || !isCustom}
+        />
+      </HStack>
+      <Field
+        label="Keep"
+        hint={`${position?.label ?? ''}. Photos are turned upright before cropping.`}
+      >
+        <HStack gap={5} vAlign="center" wrap="wrap">
+          <Grid columns={3} gap={1} width={104}>
+            {POSITIONS.map((option) => (
+              <ToggleButton
+                key={option.value}
+                label={option.label}
+                icon={<option.icon size={16} />}
+                isIconOnly
+                size="sm"
+                isPressed={value.position === option.value}
+                onPressedChange={() => onChange({ ...value, position: option.value })}
+                isDisabled={isDisabled}
+              />
+            ))}
+          </Grid>
+          <CropDiagram settings={value} />
+        </HStack>
+      </Field>
+    </VStack>
+  )
+}
+
+function RotatePanel({ value, onChange, isDisabled }: PanelProps<RotateToolSettings>) {
+  return (
+    <VStack gap={5}>
       <Switch
-        label="Allow enlarging"
-        description="Off: images smaller than the size are left as they are."
-        value={value.allowUpscale}
-        onChange={(allowUpscale) => onChange({ ...value, allowUpscale })}
+        label="Turn upright"
+        description="Uses the orientation the camera saved with the photo."
+        value={value.auto}
+        onChange={(auto) => onChange({ ...value, auto })}
         isDisabled={isDisabled}
       />
+      <Field label="Then rotate clockwise">
+        <SegmentedControl
+          label="Rotate clockwise"
+          value={String(value.rotate)}
+          onChange={(rotate) =>
+            onChange({ ...value, rotate: Number(rotate) as RotateToolSettings['rotate'] })
+          }
+          isDisabled={isDisabled}
+        >
+          <SegmentedControlItem value="0" label="0°" />
+          <SegmentedControlItem value="90" label="90°" />
+          <SegmentedControlItem value="180" label="180°" />
+          <SegmentedControlItem value="270" label="270°" />
+        </SegmentedControl>
+      </Field>
+      <HStack gap={6} wrap="wrap">
+        <Switch
+          label="Flip horizontally"
+          value={value.flipHorizontal}
+          onChange={(flipHorizontal) => onChange({ ...value, flipHorizontal })}
+          isDisabled={isDisabled}
+        />
+        <Switch
+          label="Flip vertically"
+          value={value.flipVertical}
+          onChange={(flipVertical) => onChange({ ...value, flipVertical })}
+          isDisabled={isDisabled}
+        />
+      </HStack>
     </VStack>
   )
 }
@@ -278,23 +527,23 @@ export const STRIP_MODES = [
   {
     value: 'all',
     label: 'All metadata',
-    description: 'Removes EXIF and XMP: camera, dates, location, names.',
+    description: 'Camera, dates, location and names.',
   },
   {
     value: 'location',
     label: 'Only location',
-    description: 'Removes GPS and place names. Keeps the rest.',
+    description: 'GPS and place names. Keeps the rest.',
   },
   {
     value: 'copyright',
-    label: 'Everything except copyright',
+    label: 'All but copyright',
     description: 'Keeps only the copyright notice.',
   },
 ] as const
 
 function StripPanel({ value, onChange, isDisabled }: PanelProps<StripToolSettings>) {
   return (
-    <VStack gap={4}>
+    <VStack gap={5}>
       <RadioList
         label="Remove"
         value={value.mode}
@@ -312,7 +561,7 @@ function StripPanel({ value, onChange, isDisabled }: PanelProps<StripToolSetting
       </RadioList>
       <Switch
         label="Keep the colour profile"
-        description="The profile describes the colours; removing it can change how images look."
+        description="Removing it can change how colours look."
         value={value.keepColourProfile}
         onChange={(keepColourProfile) => onChange({ ...value, keepColourProfile })}
         isDisabled={isDisabled}
@@ -332,6 +581,10 @@ export function SettingsPanel<T extends QuickTool>({
       return <CompressPanel {...(props as unknown as PanelProps<CompressToolSettings>)} />
     case 'resize':
       return <ResizePanel {...(props as unknown as PanelProps<ResizeToolSettings>)} />
+    case 'crop':
+      return <CropPanel {...(props as unknown as PanelProps<CropToolSettings>)} />
+    case 'rotate':
+      return <RotatePanel {...(props as unknown as PanelProps<RotateToolSettings>)} />
     default:
       return <StripPanel {...(props as unknown as PanelProps<StripToolSettings>)} />
   }

@@ -45,7 +45,6 @@ function codecLicences(): Plugin {
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
-  ssr: { noExternal: ['@astryxdesign/theme-neutral'] },
   optimizeDeps: { exclude: JSQUASH_PACKAGES },
   worker: { format: 'es' },
   // The dev server is also opened from other devices on the tailnet, such as the T3 Code preview.

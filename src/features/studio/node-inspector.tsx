@@ -1,14 +1,16 @@
 import { AspectRatio } from '@astryxdesign/core/AspectRatio'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
-import { Divider } from '@astryxdesign/core/Divider'
-import { List, ListItem } from '@astryxdesign/core/List'
-import { MetadataList, MetadataListItem } from '@astryxdesign/core/MetadataList'
+import { Grid } from '@astryxdesign/core/Grid'
+import { Icon } from '@astryxdesign/core/Icon'
+import { IconButton } from '@astryxdesign/core/IconButton'
 import { Selector } from '@astryxdesign/core/Selector'
 import { Slider } from '@astryxdesign/core/Slider'
 import { HStack, VStack } from '@astryxdesign/core/Stack'
 import { pixel, proportional, Table } from '@astryxdesign/core/Table'
 import { Heading, Text } from '@astryxdesign/core/Text'
+import { Token } from '@astryxdesign/core/Token'
+import { Download, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 
 import { IconTile } from '#/features/app-shell/icon-tile'
@@ -17,68 +19,101 @@ import type { NodeRegistry, PipelineNode } from '#/features/engine/types'
 import { FORMAT_NAMES } from '#/features/images/image-item'
 import { FileDrop } from '#/features/runs/file-drop'
 import { downloadDelivery, type RunControllerState } from '#/features/runs/run-controller'
-import { NodeSettings } from '#/features/studio/node-settings'
+import type { NodeStats } from '#/features/runs/run-stats'
+import { SourceList } from '#/features/runs/source-list'
+import { NODE_TYPES_WITH_SETTINGS, NodeSettings } from '#/features/studio/node-settings'
 import { NODE_ICONS, toneOf } from '#/features/studio/node-ui'
 import type { PreviewState, PreviewView, StudioSession } from '#/features/studio/studio-session'
-import { formatBytes, formatCount, formatDuration } from '#/lib/format'
+import { formatBytes, formatChange, formatCount, formatDuration } from '#/lib/format'
 
-const MAX_LISTED_FILES = 50
-
-const GUIDE_STEPS = [
-  {
-    title: 'Add images',
-    description: 'Select the Files node and drop images, or drop them anywhere on the canvas.',
-  },
-  {
-    title: 'Adjust each step',
-    description:
-      'Select a node to change its settings. Each node previews its result on a sample image.',
-  },
-  {
-    title: 'Connect and add nodes',
-    description:
-      'Drag from a node’s right edge to another node’s left edge. Add nodes from the list on the left.',
-  },
-  {
-    title: 'Run',
-    description: 'Press Run. The Output node collects the results into a ZIP for you to download.',
-  },
-]
-
-/** Shown when no node is selected: how the Studio works, in four steps. */
-function StudioGuide() {
+/** A part of the inspector: a small uppercase title, then its content, under a divider. */
+function Section({
+  title,
+  end,
+  children,
+}: {
+  title: string
+  end?: React.ReactNode
+  children: React.ReactNode
+}) {
   return (
-    <VStack gap={5}>
-      <VStack gap={1}>
-        <Heading level={2}>How the Studio works</Heading>
-        <Text type="supporting">Images flow through the nodes from left to right.</Text>
+    <span className="block border-border border-t">
+      <VStack gap={3} padding={4}>
+        <HStack gap={2} vAlign="center" hAlign="between">
+          <span className="font-semibold text-secondary text-xs uppercase tracking-[0.08em]">
+            {title}
+          </span>
+          {end}
+        </HStack>
+        {children}
       </VStack>
-      <VStack gap={4}>
-        {GUIDE_STEPS.map((step, index) => (
-          <HStack key={step.title} gap={3} vAlign="start">
-            <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-accent-muted text-accent">
-              <Text type="supporting" weight="semibold" color="inherit">
-                {index + 1}
-              </Text>
-            </span>
-            <VStack gap={0.5}>
-              <Text type="label" weight="semibold">
-                {step.title}
-              </Text>
-              <Text type="supporting">{step.description}</Text>
-            </VStack>
-          </HStack>
-        ))}
-      </VStack>
-    </VStack>
+    </span>
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+/** One number over its name, in a tinted tile. */
+function Stat({ value, label, tone }: { value: string; label: string; tone?: 'error' }) {
+  return (
+    <span className="block rounded-lg bg-muted px-3 py-2">
+      <VStack gap={0}>
+        <span className={tone === 'error' ? 'text-red-vivid' : 'text-primary'}>
+          <Text type="large" color="inherit" hasTabularNumbers>
+            {value}
+          </Text>
+        </span>
+        <Text type="supporting">{label}</Text>
+      </VStack>
+    </span>
+  )
+}
+
+/** The size change as "−42%", coloured green when smaller and orange when larger. */
+function sizeChange(before: number, after: number) {
+  if (before <= 0) return null
+  return {
+    text: formatChange(before, after),
+    tone:
+      after < before ? 'text-green-vivid' : after > before ? 'text-orange-vivid' : 'text-secondary',
+  }
+}
+
+function RunStats({ stats }: { stats: NodeStats }) {
+  const done = stats.processed + stats.cached
+  const change = sizeChange(stats.bytesIn, stats.bytesOut)
+  const extra = [
+    stats.cached > 0 ? `${formatCount(stats.cached)} from the step cache` : null,
+    stats.warnings > 0
+      ? `${formatCount(stats.warnings)} warning${stats.warnings === 1 ? '' : 's'}`
+      : null,
+  ].filter(Boolean)
   return (
     <VStack gap={3}>
-      <Heading level={3}>{title}</Heading>
-      {children}
+      <Grid columns={3} gap={2}>
+        <Stat value={formatCount(done)} label="Done" />
+        <Stat value={formatCount(stats.skipped)} label="Skipped" />
+        <Stat
+          value={formatCount(stats.failed)}
+          label="Failed"
+          tone={stats.failed > 0 ? 'error' : undefined}
+        />
+      </Grid>
+      {stats.bytesIn > 0 || stats.bytesOut > 0 ? (
+        <HStack gap={2} vAlign="center" hAlign="between" wrap="wrap">
+          <Text type="body" hasTabularNumbers>
+            {stats.bytesIn > 0
+              ? `${formatBytes(stats.bytesIn)} → ${formatBytes(stats.bytesOut)}`
+              : `${formatBytes(stats.bytesOut)} passed on`}
+          </Text>
+          {change ? (
+            <span className={change.tone}>
+              <Text type="supporting" color="inherit" hasTabularNumbers>
+                {change.text}
+              </Text>
+            </span>
+          ) : null}
+        </HStack>
+      ) : null}
+      {extra.length > 0 ? <Text type="supporting">{extra.join(' · ')}</Text> : null}
     </VStack>
   )
 }
@@ -92,81 +127,70 @@ function FilesPanel({
   run: RunControllerState
   previews: PreviewState
 }) {
-  const { sources, refused, accepts } = run
+  const { sources, accepts } = run
   return (
-    <VStack gap={5}>
+    <VStack gap={4}>
       <FileDrop
         onFiles={(files) => void session.runs.addFiles(files)}
         isDisabled={run.running}
-        description="You can also drop images anywhere on the canvas."
+        description="Or drop them on the canvas"
         size="md"
       />
       <Text type="supporting">
         {accepts.size > 0
-          ? `This pipeline accepts ${describeTypes(accepts)}.`
-          : 'Connect Files to another node to choose what it accepts.'}
+          ? `This pipeline takes ${describeTypes(accepts)}.`
+          : 'Connect Files to another node to choose what it takes.'}
       </Text>
-      {refused.length > 0 ? (
-        <Banner
-          status="warning"
-          title={`${formatCount(refused.length)} file${refused.length === 1 ? '' : 's'} refused`}
-          description={refused[0].reason}
-        >
-          <List density="compact">
-            {refused.slice(0, MAX_LISTED_FILES).map((file) => (
-              <ListItem key={file.name} label={file.name} description={file.reason} />
-            ))}
-          </List>
-        </Banner>
-      ) : null}
-      {sources.length > 0 ? (
-        <Section title={`${formatCount(sources.length)} image${sources.length === 1 ? '' : 's'}`}>
-          <Selector
-            label="Sample image for previews"
-            value={previews.sampleFile?.name ?? ''}
-            hasSearch={sources.length > 8}
-            onChange={(name) => {
-              const source = sources.find((item) => item.meta.name === name)
-              if (source?.file instanceof File) void session.setSample(source.file)
-            }}
-            options={sources
-              .slice(0, 500)
-              .map((source) => ({ value: source.meta.name, label: source.meta.name }))}
-          />
-          <List density="compact" hasDividers>
-            {sources.slice(0, MAX_LISTED_FILES).map((source) => (
-              <ListItem
-                key={source.key}
-                label={source.meta.name}
-                description={`${FORMAT_NAMES[source.meta.format as keyof typeof FORMAT_NAMES]} · ${source.meta.width}×${source.meta.height} · ${formatBytes(source.meta.size ?? 0)}`}
-              />
-            ))}
-          </List>
-          {sources.length > MAX_LISTED_FILES ? (
-            <Text type="supporting">and {formatCount(sources.length - MAX_LISTED_FILES)} more</Text>
-          ) : null}
-          <HStack>
-            <Button
-              label="Remove all images"
-              variant="ghost"
-              size="sm"
-              onClick={() => void session.runs.clearFiles()}
-              isDisabled={run.running}
-            />
-          </HStack>
-        </Section>
+      <SourceList controller={session.runs} state={run} />
+      {sources.length > 1 ? (
+        <Selector
+          label="Sample for previews"
+          description="Every node previews its result on this image."
+          size="sm"
+          value={previews.sampleFile?.name ?? ''}
+          hasSearch={sources.length > 8}
+          onChange={(name) => {
+            const source = sources.find((item) => item.meta.name === name)
+            if (source?.file instanceof File) void session.setSample(source.file)
+          }}
+          options={sources
+            .slice(0, 500)
+            .map((source) => ({ value: source.meta.name, label: source.meta.name }))}
+        />
       ) : null}
     </VStack>
   )
 }
 
 function PreviewSection({ preview }: { preview: PreviewView }) {
+  const format = preview.format
+    ? (FORMAT_NAMES[preview.format as keyof typeof FORMAT_NAMES] ?? preview.format)
+    : null
   return (
     <Section title="Preview">
       {preview.thumbnail ? (
-        <AspectRatio ratio={4 / 3} fit="contain">
-          <img src={preview.thumbnail} alt="Node preview" className="rounded-md bg-muted" />
-        </AspectRatio>
+        <span className="flex h-56 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
+          <img
+            src={preview.thumbnail}
+            alt="The sample after this node"
+            className="max-h-full max-w-full object-contain"
+          />
+        </span>
+      ) : null}
+      {format ? (
+        <HStack gap={2} vAlign="center" hAlign="between">
+          <HStack gap={2} vAlign="center">
+            <Token label={format} size="sm" />
+            {preview.width && preview.height ? (
+              <Text type="supporting" hasTabularNumbers>
+                {`${preview.width} × ${preview.height}`}
+              </Text>
+            ) : null}
+          </HStack>
+          <Text type="supporting" hasTabularNumbers>
+            {preview.size !== undefined ? formatBytes(preview.size) : 'Size set at Output'}
+          </Text>
+        </HStack>
       ) : null}
       {preview.status === 'skipped' ? (
         <Text type="supporting">
@@ -175,17 +199,6 @@ function PreviewSection({ preview }: { preview: PreviewView }) {
       ) : null}
       {preview.status === 'failed' ? (
         <Banner status="error" title="The sample failed here" description={preview.error} />
-      ) : null}
-      {preview.format ? (
-        <MetadataList columns={2}>
-          <MetadataListItem label="Format">
-            {FORMAT_NAMES[preview.format as keyof typeof FORMAT_NAMES] ?? preview.format}
-          </MetadataListItem>
-          <MetadataListItem label="Size">
-            {preview.size !== undefined ? formatBytes(preview.size) : 'Encoded at Output'}
-          </MetadataListItem>
-          <MetadataListItem label="Dimensions">{`${preview.width}×${preview.height}`}</MetadataListItem>
-        </MetadataList>
       ) : null}
       {preview.warnings.map((warning) => (
         <Banner key={warning} status="warning" title={warning} />
@@ -271,14 +284,15 @@ export function NodeInspector({
   node,
   run,
   previews,
+  onClose,
 }: {
   session: StudioSession
   registry: NodeRegistry
-  node: PipelineNode | undefined
+  node: PipelineNode
   run: RunControllerState
   previews: PreviewState
+  onClose: () => void
 }) {
-  if (!node) return <StudioGuide />
   const definition = registry.get(node.type)
   if (!definition) return null
   let settings: Record<string, unknown> = {}
@@ -296,38 +310,54 @@ export function NodeInspector({
   }))
   const delivery = run.stats.deliveries[node.id]
   const icon = NODE_ICONS[node.type]
+  const hasSettings = NODE_TYPES_WITH_SETTINGS.has(node.type)
 
   return (
-    <VStack gap={5}>
-      <VStack gap={2}>
+    <VStack gap={0}>
+      <VStack gap={2} padding={4}>
         <HStack gap={2} vAlign="center" hAlign="between">
           <HStack gap={2} vAlign="center">
-            {icon ? <IconTile icon={icon} tone={toneOf(definition.category)} /> : null}
-            <Heading level={2}>{definition.label}</Heading>
+            {icon ? <IconTile icon={icon} tone={toneOf(definition.category)} size="sm" /> : null}
+            <Heading level={3}>{definition.label}</Heading>
           </HStack>
-          {definition.hasInput ? (
-            <Button
-              label="Delete"
+          <HStack gap={1} vAlign="center">
+            {definition.hasInput ? (
+              <IconButton
+                label="Delete node"
+                tooltip="Delete node"
+                icon={<Trash2 size={16} />}
+                size="sm"
+                variant="ghost"
+                onClick={() => session.store.removeNodes([node.id])}
+                isDisabled={run.running}
+              />
+            ) : null}
+            <IconButton
+              label="Close"
+              tooltip="Close"
+              icon={<X size={16} />}
               size="sm"
               variant="ghost"
-              onClick={() => session.store.removeNodes([node.id])}
-              isDisabled={run.running}
+              onClick={onClose}
             />
-          ) : null}
+          </HStack>
         </HStack>
         <Text type="supporting">{definition.description}</Text>
       </VStack>
-      <Divider />
       {node.type === 'files' ? (
-        <FilesPanel session={session} run={run} previews={previews} />
-      ) : (
-        <NodeSettings
-          definition={definition}
-          settings={settings}
-          onChange={(changes) => session.store.updateSettings(node.id, changes)}
-          isDisabled={run.running}
-        />
-      )}
+        <Section title="Images">
+          <FilesPanel session={session} run={run} previews={previews} />
+        </Section>
+      ) : hasSettings ? (
+        <Section title="Settings">
+          <NodeSettings
+            definition={definition}
+            settings={settings}
+            onChange={(changes) => session.store.updateSettings(node.id, changes)}
+            isDisabled={run.running}
+          />
+        </Section>
+      ) : null}
       {preview && node.type !== 'files' ? <PreviewSection preview={preview} /> : null}
       {node.type === 'compare' && preview?.before && preview.after ? (
         <Section title="Before and after">
@@ -336,34 +366,36 @@ export function NodeInspector({
       ) : null}
       {delivery ? (
         <Section title="Delivery">
-          <Text type="body">
-            {`${formatCount(delivery.files.length)} file${delivery.files.length === 1 ? '' : 's'}, ${formatBytes(delivery.bytes)}`}
-          </Text>
-          {delivery.archive ? (
-            <HStack>
+          <HStack gap={3} vAlign="center" hAlign="between">
+            <Text type="body" hasTabularNumbers>
+              {`${formatCount(delivery.files.length)} file${delivery.files.length === 1 ? '' : 's'} · ${formatBytes(delivery.bytes)}`}
+            </Text>
+            {delivery.archive ? (
               <Button
                 label="Download ZIP"
                 variant="primary"
+                size="sm"
+                icon={<Icon icon={Download} size="sm" />}
                 onClick={() => downloadDelivery(delivery, 'studio')}
               />
-            </HStack>
-          ) : (
-            <Text type="supporting">Saved to the folder you chose.</Text>
-          )}
+            ) : (
+              <Text type="supporting">Saved to the folder you chose.</Text>
+            )}
+          </HStack>
         </Section>
       ) : null}
       {stats ? (
-        <Section title="Last run">
-          <MetadataList columns={2}>
-            <MetadataListItem label="Processed">{formatCount(stats.processed)}</MetadataListItem>
-            <MetadataListItem label="From step cache">{formatCount(stats.cached)}</MetadataListItem>
-            <MetadataListItem label="Skipped">{formatCount(stats.skipped)}</MetadataListItem>
-            <MetadataListItem label="Failed">{formatCount(stats.failed)}</MetadataListItem>
-            <MetadataListItem label="Bytes in">{formatBytes(stats.bytesIn)}</MetadataListItem>
-            <MetadataListItem label="Bytes out">{formatBytes(stats.bytesOut)}</MetadataListItem>
-            <MetadataListItem label="Time">{formatDuration(stats.ms)}</MetadataListItem>
-            <MetadataListItem label="Warnings">{formatCount(stats.warnings)}</MetadataListItem>
-          </MetadataList>
+        <Section
+          title="Last run"
+          end={
+            stats.ms > 0 ? (
+              <Text type="supporting" hasTabularNumbers>
+                {formatDuration(stats.ms)}
+              </Text>
+            ) : undefined
+          }
+        >
+          <RunStats stats={stats} />
         </Section>
       ) : null}
       {node.type === 'inspect' && records.length > 0 ? (

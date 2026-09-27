@@ -1,14 +1,18 @@
 import { Button } from '@astryxdesign/core/Button'
-import { ClickableCard } from '@astryxdesign/core/ClickableCard'
+import { CommandPalette } from '@astryxdesign/core/CommandPalette'
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
+import { Divider } from '@astryxdesign/core/Divider'
 import { EmptyState } from '@astryxdesign/core/EmptyState'
-import { Grid } from '@astryxdesign/core/Grid'
+import { Icon } from '@astryxdesign/core/Icon'
+import { Kbd } from '@astryxdesign/core/Kbd'
 import { List, ListItem } from '@astryxdesign/core/List'
 import { MetadataList, MetadataListItem } from '@astryxdesign/core/MetadataList'
 import { NumberInput } from '@astryxdesign/core/NumberInput'
 import { HStack, VStack } from '@astryxdesign/core/Stack'
 import { Heading, Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
+import { createStaticSource, type SearchableItem } from '@astryxdesign/core/Typeahead'
+import { FilePlus, FolderOpen, Upload } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { IconTile } from '#/features/app-shell/icon-tile'
 import { GIGABYTE } from '#/features/engine/constants'
@@ -19,7 +23,8 @@ import type { SavedPipeline, Template } from '#/features/pipelines/types'
 import { engineRuntime } from '#/features/runs/engine-runtime'
 import { MAX_STEP_CACHE_GIGABYTES, MIN_STEP_CACHE_GIGABYTES } from '#/features/settings/constants'
 import { readSettings, writeSettings } from '#/features/settings/settings'
-import { NODE_ICONS, toneOf } from '#/features/studio/node-ui'
+import { CATEGORIES, NODE_ICONS, toneOf } from '#/features/studio/node-ui'
+import { PipelineSteps } from '#/features/studio/pipeline-steps'
 import { track } from '#/features/usage/usage'
 import { formatBytes } from '#/lib/format'
 
@@ -27,61 +32,191 @@ export function TemplatePicker({
   isOpen,
   onOpenChange,
   registry,
+  hasSaved,
+  onChoose,
+  onImport,
+  onOpenSaved,
+}: {
+  isOpen: boolean
+  onOpenChange: (open: boolean) => void
+  registry: NodeRegistry
+  /** The browser has saved pipelines to open. */
+  hasSaved: boolean
+  onChoose: (template: Template) => void
+  onImport: () => void
+  onOpenSaved: () => void
+}) {
+  const templates = availableTemplates(registry)
+  const blank = templates.find((template) => template.id === 'blank')
+  return (
+    <Dialog isOpen={isOpen} onOpenChange={onOpenChange} width={640}>
+      <DialogHeader
+        title="Start a pipeline"
+        subtitle="Pick a template to begin with. You can change every step afterwards."
+        onOpenChange={onOpenChange}
+      />
+      <VStack gap={4} padding={4}>
+        <List hasDividers>
+          {templates
+            .filter((template) => template.id !== 'blank')
+            .map((template) => (
+              <ListItem
+                key={template.id}
+                label={template.name}
+                description={
+                  <VStack gap={2} paddingBlock={1}>
+                    <Text type="supporting">{template.description}</Text>
+                    <PipelineSteps pipeline={template.pipeline} registry={registry} />
+                  </VStack>
+                }
+                onClick={() => onChoose(template)}
+              />
+            ))}
+        </List>
+        <HStack gap={2} vAlign="center" wrap="wrap">
+          {blank ? (
+            <Button
+              label="Start blank"
+              icon={<Icon icon={FilePlus} size="sm" />}
+              onClick={() => onChoose(blank)}
+            />
+          ) : null}
+          <Button
+            label="Import a .hexlode file"
+            variant="ghost"
+            icon={<Icon icon={Upload} size="sm" />}
+            onClick={onImport}
+          />
+          {hasSaved ? (
+            <Button
+              label="Open a saved pipeline"
+              variant="ghost"
+              icon={<Icon icon={FolderOpen} size="sm" />}
+              onClick={onOpenSaved}
+            />
+          ) : null}
+        </HStack>
+      </VStack>
+    </Dialog>
+  )
+}
+
+interface NodeChoice extends SearchableItem<{ group: string; description: string }> {}
+
+/** A searchable list of node types, for adding a node from the keyboard or the canvas menu. */
+export function NodePicker({
+  isOpen,
+  onOpenChange,
+  registry,
+  hasFiles,
   onChoose,
 }: {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
   registry: NodeRegistry
-  onChoose: (template: Template) => void
+  hasFiles: boolean
+  onChoose: (type: string) => void
 }) {
+  const choices: NodeChoice[] = registry
+    .list()
+    .filter((node) => !(node.type === 'files' && hasFiles))
+    .map((node) => ({
+      id: node.type,
+      label: node.label,
+      auxiliaryData: {
+        group: CATEGORIES.find((category) => category.id === node.category)?.label ?? '',
+        description: node.description,
+      },
+    }))
   return (
-    <Dialog isOpen={isOpen} onOpenChange={onOpenChange} width={720}>
-      <DialogHeader
-        title="Start a pipeline"
-        subtitle="Pick a starting point. You can change, add or remove every node afterwards."
-        onOpenChange={onOpenChange}
-      />
-      <VStack padding={6}>
-        <Grid columns={{ minWidth: 260, max: 2 }} gap={3}>
-          {availableTemplates(registry).map((template) => (
-            <ClickableCard
-              key={template.id}
-              label={template.name}
-              elevation="low"
-              padding={5}
-              height="100%"
-              onClick={() => onChoose(template)}
-            >
-              <VStack gap={3}>
-                <HStack gap={1} wrap="wrap">
-                  {template.pipeline.nodes.map((node) => {
-                    const definition = registry.get(node.type)
-                    const icon = NODE_ICONS[node.type]
-                    return icon ? (
-                      <IconTile
-                        key={node.id}
-                        icon={icon}
-                        tone={toneOf(definition?.category)}
-                        size="sm"
-                      />
-                    ) : null
-                  })}
-                </HStack>
-                <VStack gap={1}>
-                  <Heading level={3}>{template.name}</Heading>
-                  <Text type="supporting">{template.description}</Text>
-                </VStack>
-                <Text type="supporting" color="primary">
-                  {template.pipeline.nodes
-                    .map((node) => registry.get(node.type)?.label ?? node.type)
-                    .join(' → ')}
-                </Text>
-              </VStack>
-            </ClickableCard>
-          ))}
-        </Grid>
+    <CommandPalette<NodeChoice>
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
+      label="Add a node"
+      width={520}
+      maxHeight={600}
+      searchSource={createStaticSource(choices, {
+        keywords: (item) => [item.auxiliaryData?.description ?? ''],
+      })}
+      emptyBootstrapText="Type to find a node"
+      onValueChange={(type) => {
+        onChoose(type)
+        onOpenChange(false)
+      }}
+      renderItem={(item) => {
+        const icon = NODE_ICONS[item.id]
+        const definition = registry.get(item.id)
+        return (
+          <span className="flex w-full min-w-0 items-center gap-3 overflow-hidden">
+            {icon ? <IconTile icon={icon} tone={toneOf(definition?.category)} size="sm" /> : null}
+            <span className="min-w-0 flex-1 overflow-hidden">
+              <Text type="label" maxLines={1}>
+                {item.label}
+              </Text>
+              <Text type="supporting" maxLines={1} hasTruncateTooltip={false}>
+                {item.auxiliaryData?.description}
+              </Text>
+            </span>
+          </span>
+        )
+      }}
+    />
+  )
+}
+
+const GUIDE_STEPS = [
+  ['Add images', 'Drop images on the canvas, or select the Files node.'],
+  ['Connect steps', 'Drag from the right edge of a node to the left edge of the next one.'],
+  ['Adjust', 'Select a node to change its settings. Each node previews the first image.'],
+  ['Run', 'Press Run. Every Output node collects its results into a ZIP.'],
+] as const
+
+const SHORTCUTS = [
+  ['Add a node', 'mod+k'],
+  ['Duplicate the selected node', 'mod+d'],
+  ['Delete the selection', 'delete'],
+  ['Undo', 'mod+z'],
+  ['Redo', 'mod+shift+z'],
+  ['Save', 'mod+s'],
+] as const
+
+/** How the Studio works, in four steps, and its shortcuts. */
+export function StudioHelp() {
+  return (
+    <VStack gap={4} padding={4} width={340}>
+      <VStack gap={3}>
+        <Text type="label" weight="semibold">
+          How the Studio works
+        </Text>
+        {GUIDE_STEPS.map(([title, description], index) => (
+          <HStack key={title} gap={3} vAlign="start">
+            <Text type="supporting" weight="semibold" hasTabularNumbers>
+              {index + 1}
+            </Text>
+            <VStack gap={0.5}>
+              <Text type="label">{title}</Text>
+              <Text type="supporting">{description}</Text>
+            </VStack>
+          </HStack>
+        ))}
       </VStack>
-    </Dialog>
+      <Divider />
+      <VStack gap={2}>
+        <Text type="label" weight="semibold">
+          Shortcuts
+        </Text>
+        {SHORTCUTS.map(([action, keys]) => (
+          <HStack key={action} gap={3} hAlign="between" vAlign="center">
+            <Text type="supporting">{action}</Text>
+            <Kbd keys={keys} />
+          </HStack>
+        ))}
+        <Text type="supporting">
+          Right-click a node, a connection or the canvas for more. Hold Shift to get the
+          browser&apos;s own menu.
+        </Text>
+      </VStack>
+    </VStack>
   )
 }
 

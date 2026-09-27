@@ -20,3 +20,7 @@ export const PREVIEW_SAMPLE_EDGE = 1024
 export const PREVIEW_THUMBNAIL_EDGE = 192
 /** Compare nodes show a larger before and after pair. */
 export const PREVIEW_COMPARE_EDGE = 640
+
+/** Shown when an engine worker fails without a message, which is how a script load failure looks. */
+export const ENGINE_LOAD_FAILED_MESSAGE =
+  'Hexlode could not start its image engine. Check your connection and reload the page.'

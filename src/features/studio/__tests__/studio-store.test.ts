@@ -6,7 +6,9 @@ import { createStudioStore } from '#/features/studio/studio-store'
 
 function blank() {
   const store = createStudioStore(productRegistry)
-  store.load({ name: 'Untitled pipeline', pipeline: TEMPLATES[1].pipeline })
+  const template = TEMPLATES.find((candidate) => candidate.id === 'blank')
+  if (!template) throw new Error('missing template')
+  store.load({ name: 'Untitled pipeline', pipeline: template.pipeline })
   return store
 }
 
@@ -97,5 +99,65 @@ describe('studio store', () => {
     expect(store.getState().dirty).toBe(true)
     store.markSaved('id-1', 'Mine')
     expect(store.getState()).toMatchObject({ dirty: false, savedId: 'id-1', name: 'Mine' })
+  })
+
+  it('duplicates a node with its settings as one undo step, but never Files', () => {
+    const store = blank()
+    const resize = store.addNode('resize', { x: 100, y: 40 }) as string
+    store.updateSettings(resize, { mode: 'percent', percent: 25 })
+    const copy = store.duplicateNode(resize) as string
+    const node = store.getState().pipeline.nodes.find((candidate) => candidate.id === copy)
+    expect(node).toMatchObject({
+      type: 'resize',
+      settings: { mode: 'percent', percent: 25 },
+      position: { x: 140, y: 80 },
+    })
+    expect(store.getState().selectedNodeId).toBe(copy)
+    store.undo()
+    expect(store.getState().pipeline.nodes.map((candidate) => candidate.id)).toEqual([
+      'files',
+      resize,
+    ])
+    expect(store.duplicateNode('files')).toBeNull()
+  })
+
+  it('adds a node connected after another as one undo step', () => {
+    const store = blank()
+    const output = store.addNodeAfter('output', 'files', { x: 300, y: 0 })
+    expect(output).toMatchObject({ check: { status: 'ok' } })
+    expect(store.getState().pipeline.connections).toEqual([
+      { id: `files-out-${output?.id}`, source: 'files', sourcePort: 'out', target: output?.id },
+    ])
+    store.undo()
+    expect(store.getState().pipeline.nodes.map((node) => node.type)).toEqual(['files'])
+    expect(store.getState().pipeline.connections).toEqual([])
+  })
+
+  it('keeps a node added after another unconnected when the connection is refused', () => {
+    const store = blank()
+    const convert = store.addNode('convert', at) as string
+    store.updateSettings(convert, { format: 'webp' })
+    const optimize = store.addNodeAfter('optimize-png', convert, at)
+    expect(optimize).toMatchObject({ check: { status: 'refused' } })
+    expect(store.getState().pipeline.nodes.map((node) => node.type)).toContain('optimize-png')
+    expect(store.getState().pipeline.connections).toEqual([])
+  })
+
+  it('disconnects every connection of a node', () => {
+    const store = blank()
+    const resize = store.addNode('resize', at) as string
+    const output = store.addNode('output', at) as string
+    store.connect({ source: 'files', sourcePort: 'out', target: resize })
+    store.connect({ source: resize, sourcePort: 'out', target: output })
+    store.disconnectNode(resize)
+    expect(store.getState().pipeline.connections).toEqual([])
+    store.undo()
+    expect(store.getState().pipeline.connections).toHaveLength(2)
+  })
+
+  it('loads a pipeline as unsaved when asked, so a restored draft shows it has changes', () => {
+    const store = blank()
+    store.load({ name: 'Shop', pipeline: store.getState().pipeline }, 'saved-1', { dirty: true })
+    expect(store.getState()).toMatchObject({ savedId: 'saved-1', dirty: true, canUndo: false })
   })
 })

@@ -8,7 +8,8 @@ building branching pipelines.
 ### Surfaces
 
 **Quick tool**:
-A single-purpose page (Convert, Compress, Resize, Strip metadata) that runs a fixed pipeline.
+A single-purpose page (Convert, Compress, Resize, Crop, Rotate, Strip metadata) that runs a fixed
+pipeline.
 _Avoid_: converter, feature page
 
 **Pipeline tool**:
@@ -18,6 +19,10 @@ _Avoid_: custom tool, app
 **Studio**:
 The desktop editor where users build pipelines on a canvas.
 _Avoid_: canvas (as the product name), workspace, editor
+
+**Colour mode**:
+Dark, light or the system's; which of the theme's two palettes a page uses.
+_Avoid_: theme (the theme is the whole design: colours, type and shapes), dark mode toggle
 
 ### Pipelines
 
@@ -40,6 +45,11 @@ _Avoid_: route, lane
 **Template**:
 A ready-made pipeline offered when the Studio opens.
 _Avoid_: preset, example
+
+**Draft**:
+The pipeline open in the Studio, kept in browser storage so a reload does not lose it. It holds
+nodes, settings and the name, never images.
+_Avoid_: autosave, backup
 
 **Pipeline file**:
 A pipeline exported as a `.hexlode` file.

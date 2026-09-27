@@ -21,11 +21,14 @@ const MESSAGES = {
   },
 }
 
-/** Renders its children only in a browser that can run the engine; explains why otherwise. */
+/**
+ * Renders its children, and swaps them for an explanation once the browser turns out unable to
+ * run the engine. The server and the first paint show the children, so the page never waits for
+ * the check.
+ */
 export function EngineGate({ children }: { children: ReactNode }) {
-  const [problem, setProblem] = useState<ReturnType<typeof engineProblem> | undefined>()
+  const [problem, setProblem] = useState<ReturnType<typeof engineProblem>>(null)
   useEffect(() => setProblem(engineProblem()), [])
-  if (problem === undefined) return null
   if (problem === null) return children
   const message = MESSAGES[problem]
   return (
