@@ -1,5 +1,8 @@
 # Hexlode
 
+[![CI](https://github.com/pixelactstudio/hexlode/actions/workflows/ci.yml/badge.svg)](https://github.com/pixelactstudio/hexlode/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/pixelactstudio/hexlode/actions/workflows/codeql.yml/badge.svg)](https://github.com/pixelactstudio/hexlode/actions/workflows/codeql.yml)
+
 Open-source image processing in the browser: quick tools for converting, compressing, resizing, cropping,
 rotating and stripping metadata, and a node-based Studio for batch pipelines. Images never leave your device.
 

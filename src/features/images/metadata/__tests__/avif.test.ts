@@ -67,6 +67,54 @@ function avifWithMetadata(exif: Uint8Array, xmp: string) {
   return Uint8Array.from([...withOffsets, ...box('mdat', [...exifPayload, ...xmpPayload])])
 }
 
+type Layout = 'split' | 'idat' | 'other-item'
+
+/**
+ * An AVIF whose Exif and XMP items use iloc version 1 layouts: split into two extents in mdat,
+ * stored in the meta box's idat, or built from another item (construction method 2).
+ */
+function avifWithLayout(layout: Layout, exif: Uint8Array, xmp: string) {
+  const payloads = [[...u32(0), ...exif], ascii(xmp)]
+  const infe = (id: number, type: string, extra: number[] = []) =>
+    fullBox('infe', 2, [...u16(id), ...u16(0), ...ascii(type), 0, ...extra])
+  const iinf = fullBox('iinf', 0, [
+    ...u16(2),
+    ...infe(1, 'Exif'),
+    ...infe(2, 'mime', [...ascii('application/rdf+xml'), 0]),
+  ])
+  const ftyp = box('ftyp', [...ascii('avif'), ...u32(0), ...ascii('avifmif1')])
+  const hdlr = fullBox('hdlr', 0, [...u32(0), ...ascii('pict'), ...u32(0), ...u32(0), ...u32(0), 0])
+  const data = [...payloads[0], ...payloads[1]]
+  const construction = layout === 'split' ? 0 : layout === 'idat' ? 1 : 2
+  const build = (dataStart: number) => {
+    let at = layout === 'split' ? dataStart : 0
+    const entries = payloads.flatMap((payload, index) => {
+      const half = Math.floor(payload.length / 2)
+      const extents =
+        layout === 'split'
+          ? [
+              [at, half],
+              [at + half, payload.length - half],
+            ]
+          : [[at, payload.length]]
+      at += payload.length
+      return [
+        ...u16(index + 1),
+        ...u16(construction),
+        ...u16(0),
+        ...u16(extents.length),
+        ...extents.flatMap(([offset, length]) => [...u32(offset), ...u32(length)]),
+      ]
+    })
+    const iloc = fullBox('iloc', 1, [0x44, 0x00, ...u16(2), ...entries])
+    const idat = layout === 'idat' ? box('idat', data) : []
+    return [...ftyp, ...fullBox('meta', 0, [...hdlr, ...iinf, ...iloc, ...idat])]
+  }
+  const head = build(0)
+  if (layout !== 'split') return Uint8Array.from([...head, ...box('mdat', [])])
+  return Uint8Array.from([...build(head.length + 8), ...box('mdat', data)])
+}
+
 const XMP =
   '<x:xmpmeta><rdf:Description exif:GPSLatitude="51,30N"><dc:rights>(c) Ada</dc:rights></rdf:Description></x:xmpmeta>'
 
@@ -102,5 +150,28 @@ describe('AVIF metadata', () => {
     expect(parseExif(read.exif)).toMatchObject({ copyright: '(c) 2026 Ada Example', hasGps: false })
     expect(read.xmp).not.toContain('GPS')
     expect(read.xmp).toContain('(c) Ada')
+  })
+
+  it.each(['split', 'idat'] as const)('reads and removes metadata stored as %s', async (layout) => {
+    const file = avifWithLayout(layout, tiff, XMP)
+    const metadata = await readMetadata('avif', file)
+    expect(parseExif(metadata.exif)).toMatchObject({ copyright: '(c) 2026 Ada Example' })
+    expect(metadata.xmp).toBe(XMP)
+    const stripped = stripMetadata(metadata, { mode: 'location', keepColourProfile: true })
+    const { bytes, dropped } = await writeMetadata('avif', file, stripped)
+    expect(dropped).toEqual([])
+    const read = await readMetadata('avif', bytes)
+    expect(parseExif(read.exif)).toMatchObject({ copyright: '(c) 2026 Ada Example', hasGps: false })
+    const bare = await writeMetadata('avif', file, {})
+    expect(await readMetadata('avif', bare.bytes)).toEqual({})
+    expect(new TextDecoder('latin1').decode(bare.bytes)).not.toContain('Ada Example')
+  })
+
+  it('loads files whose metadata it cannot edit, and refuses to rewrite that metadata', async () => {
+    const file = avifWithLayout('other-item', tiff, XMP)
+    expect(await readMetadata('avif', file)).toEqual({})
+    expect(await writeMetadata('avif', file, {}).catch((reason: Error) => reason.message)).toBe(
+      'This AVIF file stores metadata in a way Hexlode cannot edit.',
+    )
   })
 })

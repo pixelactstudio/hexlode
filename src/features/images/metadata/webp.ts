@@ -43,7 +43,21 @@ export function readWebpMetadata(bytes: Uint8Array): ImageMetadata {
   return metadata
 }
 
-function canvasOf(image: Chunk[]) {
+const ALPHA_FLAG = 0x10
+const ANIMATION_FLAG = 0x02
+
+function canvasOf(all: Chunk[], image: Chunk[]) {
+  // Animated files keep their frames in ANMF chunks; the canvas is only in VP8X.
+  const vp8x = all.find(({ type }) => type === 'VP8X')
+  if (vp8x) {
+    const data = vp8x.data
+    return {
+      width: (data[4] | (data[5] << 8) | (data[6] << 16)) + 1,
+      height: (data[7] | (data[8] << 8) | (data[9] << 16)) + 1,
+      alpha: (data[0] & ALPHA_FLAG) !== 0,
+      animated: (data[0] & ANIMATION_FLAG) !== 0,
+    }
+  }
   const vp8l = image.find(({ type }) => type === 'VP8L')
   if (vp8l) {
     const bits = viewOf(vp8l.data).getUint32(1, true)
@@ -51,6 +65,7 @@ function canvasOf(image: Chunk[]) {
       width: (bits & 0x3fff) + 1,
       height: ((bits >>> 14) & 0x3fff) + 1,
       alpha: ((bits >>> 28) & 1) === 1,
+      animated: false,
     }
   }
   const vp8 = image.find(({ type }) => type === 'VP8 ')
@@ -60,6 +75,7 @@ function canvasOf(image: Chunk[]) {
     width: view.getUint16(6, true) & 0x3fff,
     height: view.getUint16(8, true) & 0x3fff,
     alpha: image.some(({ type }) => type === 'ALPH'),
+    animated: false,
   }
 }
 
@@ -67,16 +83,17 @@ export function writeWebpMetadata(bytes: Uint8Array, metadata: ImageMetadata) {
   const all = chunks(bytes)
   const image = all.filter(({ type }) => !['VP8X', 'ICCP', 'EXIF', 'XMP '].includes(type))
   const hasMetadata = Boolean(metadata.exif || metadata.xmp || metadata.icc)
-  const canvas = canvasOf(image)
-  const needsExtended = hasMetadata || image.some(({ type }) => type === 'ALPH')
+  const canvas = canvasOf(all, image)
+  const needsExtended = hasMetadata || canvas.animated || image.some(({ type }) => type === 'ALPH')
   const body: Uint8Array[] = []
   if (needsExtended) {
     const header = new Uint8Array(10)
     header[0] =
       (metadata.icc ? 0x20 : 0) |
-      (canvas.alpha ? 0x10 : 0) |
+      (canvas.alpha ? ALPHA_FLAG : 0) |
       (metadata.exif ? 0x08 : 0) |
-      (metadata.xmp ? 0x04 : 0)
+      (metadata.xmp ? 0x04 : 0) |
+      (canvas.animated ? ANIMATION_FLAG : 0)
     const view = viewOf(header)
     view.setUint16(4, (canvas.width - 1) & 0xffff, true)
     header[6] = (canvas.width - 1) >> 16

@@ -9,6 +9,7 @@ import {
   clearRuns,
   createOpfsOutputStore,
   type FolderTarget,
+  holdRun,
 } from '#/features/engine/opfs/run-stores'
 import type { StepCacheIndex } from '#/features/engine/opfs/step-cache'
 import type { RunHost } from '#/features/engine/runner'
@@ -53,6 +54,8 @@ export function createWorkerPoolHost(options: PoolHostOptions): RunHost & { disp
     | (OutputStore & { record: ReturnType<typeof createOpfsOutputStore>['record'] })
     | undefined
   let beginMessage: WorkerRequest | undefined
+  /** Releases this host's hold on its latest run, whose deliveries may still be downloaded. */
+  let releaseRun: (() => void) | undefined
 
   const onMessage = (event: MessageEvent<unknown>) => {
     const parsed = workerResponseSchema.safeParse(event.data)
@@ -153,6 +156,8 @@ export function createWorkerPoolHost(options: PoolHostOptions): RunHost & { disp
     concurrency: options.size,
     async begin({ runId, pipeline }) {
       const root = options.root ?? (await appDirectory())
+      releaseRun?.()
+      releaseRun = await holdRun(runId)
       await clearRuns(root, runId)
       output = createOpfsOutputStore(root, runId, {
         folders: options.folders,
@@ -191,6 +196,10 @@ export function createWorkerPoolHost(options: PoolHostOptions): RunHost & { disp
     async end() {
       await options.index?.persist()
     },
-    dispose: terminateAll,
+    dispose() {
+      terminateAll()
+      releaseRun?.()
+      releaseRun = undefined
+    },
   }
 }

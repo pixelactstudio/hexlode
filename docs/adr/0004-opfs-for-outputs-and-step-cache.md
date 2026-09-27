@@ -8,6 +8,8 @@ browser receives it as a file backed by OPFS.
 ## Consequences
 
 - Temporary run files are deleted after delivery, when a new run starts, and on the next visit.
+  Each tab holds a Web Lock for its latest run until it starts another run or closes, and
+  clearing skips locked runs, so one tab never deletes files another tab is still using.
 - Storage in OPFS is strictly necessary for the run the user started, so it needs no consent under
   the EU ePrivacy rules.
 - The step cache has a 5 GB default budget and deletes the least recently used results when full.

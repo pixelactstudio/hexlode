@@ -1,5 +1,10 @@
 import type { ImageFormat, ItemKindHandler, ItemMeta, NodeContext } from '#/features/engine/types'
-import { IMAGE_EXTENSIONS, inspectImageHeader } from '#/features/image-input/validators'
+import { HEADER_READ_BYTES } from '#/features/image-input/constants'
+import {
+  IMAGE_EXTENSIONS,
+  ImageValidationError,
+  inspectImageHeader,
+} from '#/features/image-input/validators'
 import { readMetadata, writeMetadata } from '#/features/images/metadata/containers'
 import { parseExif } from '#/features/images/metadata/exif'
 import { isEmptyMetadata } from '#/features/images/metadata/strip'
@@ -152,13 +157,21 @@ export async function fileBytesOf(
   return result.payload.encoded as Uint8Array
 }
 
+/** Reads format and dimensions, reading past the first part only when the header needs it. */
+function inspectHeader(bytes: Uint8Array) {
+  try {
+    return inspectImageHeader(bytes.slice(0, HEADER_READ_BYTES).buffer, '', bytes.length)
+  } catch (reason) {
+    // Some JPEGs keep large thumbnails before the frame header, as file intake allows.
+    const truncated = reason instanceof ImageValidationError && bytes.length > HEADER_READ_BYTES
+    if (!truncated || reason.code !== 'unsupported_format') throw reason
+    return inspectImageHeader(bytes.slice().buffer, '', bytes.length)
+  }
+}
+
 /** Builds an image item from a file's bytes. Throws ImageValidationError for unusable files. */
 export async function loadImageItem(bytes: Uint8Array, name: string): Promise<ImageItem> {
-  const info = inspectImageHeader(
-    bytes.slice(0, Math.min(bytes.length, 1024 * 1024)).buffer,
-    '',
-    bytes.length,
-  )
+  const info = inspectHeader(bytes)
   const metadata = await readMetadata(info.format, bytes)
   return {
     meta: {

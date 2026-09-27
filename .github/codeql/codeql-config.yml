@@ -1,0 +1,7 @@
+name: hexlode
+paths-ignore:
+  - '**/__tests__/**'
+  - tests
+  - src/routeTree.gen.ts
+  - src/features/theme/hexlode.js
+  - drizzle

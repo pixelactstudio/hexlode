@@ -270,7 +270,7 @@ function Studio({
         return
       }
     }
-    await runs.start({ folders })
+    await session.start({ folders })
   }
 
   const save = (name: string) => {

@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { estimateRun } from '#/features/engine/estimate'
 import { fileKey } from '#/features/engine/keys'
-import { appDirectory, listNames } from '#/features/engine/opfs/files'
+import { appDirectory, directoryAt, listNames } from '#/features/engine/opfs/files'
+import { clearRuns } from '#/features/engine/opfs/run-stores'
 import { createStepCacheIndex } from '#/features/engine/opfs/step-cache'
 import { createWorkerPoolHost } from '#/features/engine/pool-host'
 import { runPipeline, type SourceItem } from '#/features/engine/runner'
@@ -158,6 +159,59 @@ describe('worker pool', () => {
     expect(result.status).toBe('cancelled')
     expect(result.deliveries[0].files.length).toBeGreaterThanOrEqual(1)
     expect(result.deliveries[0].files.length).toBeLessThan(6)
+  })
+
+  it('fails work with the reason when a worker cannot set up the run', async () => {
+    const host = createWorkerPoolHost({ size: 1, createWorker, index: null })
+    await host.begin({
+      runId: 'unknown-node',
+      pipeline: chain(['no-such-node']),
+      plan: undefined as never,
+    })
+    const [source] = await sources(['photo.jpg'])
+    const outcome = await settlesWithin(
+      host.runSource(source, () => {}, new AbortController().signal),
+    )
+    host.dispose()
+    expect(outcome).toMatchObject({
+      settled: 'rejected',
+      reason: new Error('Unknown node type: no-such-node'),
+    })
+  })
+
+  it('keeps the files of a run still going in another tab', async () => {
+    const pipeline = chain(['convert', { format: 'png' }])
+    const [source] = await sources(['photo.jpg'])
+    const otherTab = createWorkerPoolHost({ size: 1, createWorker, index: null })
+    await otherTab.begin({ runId: 'other-tab', pipeline, plan: undefined as never })
+    await otherTab.runSource(source, () => {}, new AbortController().signal)
+    const thisTab = createWorkerPoolHost({ size: 1, createWorker, index: null })
+    await thisTab.begin({ runId: 'this-tab', pipeline, plan: undefined as never })
+    await clearRuns(await appDirectory())
+    const outcome = await settlesWithin(otherTab.deliver('out'))
+    otherTab.dispose()
+    thisTab.dispose()
+    expect(outcome.settled).toBe('resolved')
+    if (outcome.settled !== 'resolved') return
+    const [entry] = await unzip(outcome.value.archive as Blob)
+    expect(await decodeFile(entry.bytes)).toMatchObject({ format: 'png', width: 48, height: 32 })
+  })
+
+  it('clears a run once the tab that ran it moves on or closes', async () => {
+    const pipeline = chain(['convert', { format: 'png' }])
+    const root = await appDirectory()
+    const runs = async () =>
+      listNames((await directoryAt(root, ['runs'])) as FileSystemDirectoryHandle)
+    const host = createWorkerPoolHost({ size: 1, createWorker, index: null })
+    await host.begin({ runId: 'first', pipeline, plan: undefined as never })
+    await directoryAt(root, ['runs', 'first'])
+    await host.begin({ runId: 'second', pipeline, plan: undefined as never })
+    await directoryAt(root, ['runs', 'second'])
+    await clearRuns(root)
+    expect(await runs()).toEqual(['second'])
+    host.dispose()
+    await clearRuns(root)
+    expect(await runs()).toEqual([])
   })
 
   it('rejects work sent to a worker whose script failed to load', async () => {

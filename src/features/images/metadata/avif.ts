@@ -1,15 +1,18 @@
 /**
- * AVIF metadata lives in items of the `meta` box. We can read EXIF and XMP items and remove or
- * shrink them in place, but not add new ones.
+ * AVIF metadata lives in items of the `meta` box, stored in the file or in the box's `idat`, in
+ * one or more extents. We can read EXIF and XMP items and remove or shrink them in place, but not
+ * add new ones.
  */
 import { ascii, viewOf } from '#/features/images/metadata/bytes'
 import type { ImageMetadata, MetadataPart } from '#/features/images/metadata/types'
 
 interface MetadataItem {
   part: 'exif' | 'xmp'
-  offset: number
-  length: number
+  /** Where the item's bytes are, in order; null when they are built from other items. */
+  ranges: { offset: number; length: number }[] | null
 }
+
+const CANNOT_EDIT = 'This AVIF file stores metadata in a way Hexlode cannot edit.'
 
 function childBoxes(bytes: Uint8Array, start: number, end: number) {
   const view = viewOf(bytes)
@@ -41,6 +44,7 @@ function metadataItems(bytes: Uint8Array): MetadataItem[] {
   const children = childBoxes(bytes, meta.start + 4, meta.end)
   const iinf = children.find(({ type }) => type === 'iinf')
   const iloc = children.find(({ type }) => type === 'iloc')
+  const idat = children.find(({ type }) => type === 'idat')
   if (!iinf || !iloc) return []
 
   const types = new Map<number, 'exif' | 'xmp'>()
@@ -87,28 +91,47 @@ function metadataItems(bytes: Uint8Array): MetadataItem[] {
     at += baseOffsetSize
     const extentCount = view.getUint16(at)
     at += 2
+    const ranges: { offset: number; length: number }[] = []
     for (let extent = 0; extent < extentCount; extent += 1) {
       at += indexSize
       const offset = readSized(view, at, offsetSize)
       at += offsetSize
       const length = readSized(view, at, lengthSize)
       at += lengthSize
-      const part = types.get(id)
-      if (!part) continue
-      if (construction !== 0 || extentCount !== 1) {
-        throw new Error('This AVIF file stores metadata in a way Hexlode cannot edit.')
-      }
-      items.push({ part, offset: base + offset, length })
+      ranges.push({ offset, length })
     }
+    const part = types.get(id)
+    if (!part) continue
+    // Construction method 0 points into the file, 1 into idat, 2 into other items.
+    const start = construction === 0 ? base : construction === 1 && idat ? idat.start + base : null
+    items.push({
+      part,
+      ranges:
+        start === null
+          ? null
+          : ranges.map(({ offset, length }) => ({ offset: start + offset, length })),
+    })
   }
   return items
+}
+
+function bytesOf(bytes: Uint8Array, ranges: NonNullable<MetadataItem['ranges']>) {
+  const data = new Uint8Array(ranges.reduce((total, { length }) => total + length, 0))
+  let at = 0
+  for (const { offset, length } of ranges) {
+    data.set(bytes.subarray(offset, offset + length), at)
+    at += length
+  }
+  return data
 }
 
 export function readAvifMetadata(bytes: Uint8Array): ImageMetadata {
   const metadata: ImageMetadata = {}
   for (const item of metadataItems(bytes)) {
-    const data = bytes.subarray(item.offset, item.offset + item.length)
+    if (!item.ranges) continue
+    const data = bytesOf(bytes, item.ranges)
     if (item.part === 'exif') {
+      if (data.length < 4) continue
       const exif = data.slice(4 + viewOf(data).getUint32(0))
       // Items blanked by an earlier strip hold zeros, not a TIFF block.
       if (exif[0] === 0x49 || exif[0] === 0x4d) metadata.exif = exif
@@ -120,24 +143,48 @@ export function readAvifMetadata(bytes: Uint8Array): ImageMetadata {
   return metadata
 }
 
+/** Writes `data` across the item's ranges in order and fills the rest. */
+function fillItem(
+  output: Uint8Array,
+  ranges: NonNullable<MetadataItem['ranges']>,
+  data: Uint8Array,
+  filler: number,
+) {
+  let written = 0
+  for (const { offset, length } of ranges) {
+    const piece = data.subarray(written, written + length)
+    output.set(piece, offset)
+    output.fill(filler, offset + piece.length, offset + length)
+    written += piece.length
+  }
+}
+
 export function writeAvifMetadata(bytes: Uint8Array, metadata: ImageMetadata) {
   const output = bytes.slice()
   const items = metadataItems(output)
+  if (items.some(({ ranges }) => !ranges)) throw new Error(CANNOT_EDIT)
   const dropped: MetadataPart[] = []
   if (metadata.icc) dropped.push('icc')
   for (const part of ['exif', 'xmp'] as const) {
     const existing = items.filter((item) => item.part === part)
-    for (const item of existing)
-      output.fill(part === 'xmp' ? 0x20 : 0, item.offset, item.offset + item.length)
     const value = metadata[part]
-    if (!value) continue
-    const encoded =
-      part === 'exif'
+    const encoded = !value
+      ? new Uint8Array(0)
+      : part === 'exif'
         ? Uint8Array.from([0, 0, 0, 0, ...(value as Uint8Array)])
         : new TextEncoder().encode(value as string)
-    const target = existing.find((item) => item.length >= encoded.length)
-    if (target) output.set(encoded, target.offset)
-    else dropped.push(part)
+    const capacity = (item: MetadataItem) =>
+      (item.ranges ?? []).reduce((total, { length }) => total + length, 0)
+    const target = value ? existing.find((item) => capacity(item) >= encoded.length) : undefined
+    if (value && !target) dropped.push(part)
+    for (const item of existing) {
+      fillItem(
+        output,
+        item.ranges ?? [],
+        item === target ? encoded : new Uint8Array(0),
+        part === 'xmp' ? 0x20 : 0,
+      )
+    }
   }
   return { bytes: output, dropped }
 }

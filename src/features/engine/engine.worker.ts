@@ -22,11 +22,27 @@ const post = (message: WorkerResponse) => scope.postMessage(message)
 const kinds = { image: imageKind }
 
 let current: Omit<FlowDeps, 'emit' | 'signal'> | undefined
+/** Why the current run could not be set up. Each task of the run fails with it. */
+let beginFailure: Error | undefined
 let queue = Promise.resolve()
 
 async function begin(runId: string, pipeline: Pipeline, stepCache: boolean) {
+  current = undefined
+  beginFailure = undefined
+  try {
+    current = await setUp(runId, pipeline, stepCache)
+  } catch (reason) {
+    beginFailure = reason instanceof Error ? reason : new Error('The run could not start.')
+  }
+}
+
+async function setUp(
+  runId: string,
+  pipeline: Pipeline,
+  stepCache: boolean,
+): Promise<Omit<FlowDeps, 'emit' | 'signal'>> {
   const root = await appDirectory()
-  current = {
+  return {
     plan: createFlowPlan(pipeline, productRegistry),
     services: {
       codecs: jsquashCodecs,
@@ -46,6 +62,7 @@ async function begin(runId: string, pipeline: Pipeline, stepCache: boolean) {
 }
 
 function depsFor(taskId: string): FlowDeps {
+  if (beginFailure) throw beginFailure
   if (!current) throw new Error('The run has not started.')
   return {
     ...current,

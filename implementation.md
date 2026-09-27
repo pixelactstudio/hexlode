@@ -134,13 +134,23 @@ removed.
   every input format, transparency, EXIF orientation, location metadata and a malformed file.
 - The node pair matrix connects every pair of node types and checks that the Studio's accept or
   refuse decision matches what the engine does when it runs that pair.
-- Worker, OPFS, codec and ZIP tests run in real Chromium through Vitest browser mode. Locally they
-  use `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`; CI installs Chromium with Playwright.
+- Worker, OPFS, codec and ZIP tests run in real browsers through Vitest browser mode. Locally they
+  run in Chromium with `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`; `VITEST_BROWSERS=firefox` or
+  `webkit` picks another engine. CI runs Chromium, Firefox and WebKit. Playwright's WebKit has no
+  working OPFS, so WebKit skips the OPFS suites listed in `vitest.config.ts`.
+- `pnpm test:coverage` runs the unit and browser tests with coverage. The floors in
+  `vitest.config.ts` sit a few points under current coverage; raise them as coverage grows.
 - Test-only node types with data and document items, one-to-many and many-to-one behaviour prove
   what batches 2 and 3 need. They join the node pair matrix but never the product registry.
 - The batch of 500 images of 12 megapixels runs with `pnpm test:scale`. It takes minutes, so it is
   outside `pnpm validate`; run it before closing a phase.
 - `pnpm validate` passes before every commit.
+- CI (`.github/workflows/`) runs on every push to `main` and `dev` and on every pull request:
+  Biome, types, commit messages, the generated theme and route tree, actionlint and hadolint;
+  unit tests on Linux, macOS and Windows; browser tests in three engines; coverage; the build with
+  a smoke test of the server; and the Docker image with a smoke test of the container. CodeQL,
+  `pnpm audit`, dependency review and PR titles run in their own workflows, and the scale test runs
+  weekly or on demand.
 
 ## Analytics
 

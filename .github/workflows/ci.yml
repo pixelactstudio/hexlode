@@ -2,27 +2,182 @@ name: CI
 
 on:
   push:
+    branches: [main, dev]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
+env:
+  HUSKY: '0'
+  SKIP_ENV_VALIDATION: '1'
+
 jobs:
-  checks:
+  lint:
+    name: lint
     runs-on: ubuntu-latest
-    env:
-      SKIP_ENV_VALIDATION: '1'
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          version: 11.3.0
-      - uses: actions/setup-node@v7
+          fetch-depth: 0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Worker, OPFS and codec tests run in Chromium through Vitest browser mode.
+
+      - name: Format and lint
+        run: pnpm exec biome ci .
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Commit messages
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: pnpm exec commitlint --from "$BASE" --to "$HEAD" --verbose
+
+      - name: The theme matches its source
+        run: |
+          pnpm theme:build
+          # The build stamps the time it ran; everything else must match.
+          if ! git diff --exit-code -I '^ \* Generated:' -- src/features/theme; then
+            echo "::error::The theme is out of date: run pnpm theme:build and commit the result."
+            exit 1
+          fi
+
+      - name: Workflows
+        uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2.2.0
+
+      - name: Dockerfile
+        run: docker run --rm -i hadolint/hadolint:v2.14.0 hadolint --failure-threshold warning - < Dockerfile
+
+  unit:
+    name: unit (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:unit
+
+  browser:
+    name: browser (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Workers, OPFS and the codecs run in each engine through Vitest browser mode.
+        # WebKit skips the suites that need OPFS; vitest.config.ts says why.
+        browser: [chromium, firefox, webkit]
+    env:
+      VITEST_BROWSERS: ${{ matrix.browser }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps "$VITEST_BROWSERS"
+      - run: pnpm test:browser
+
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm validate
-      - run: docker build -t hexlode:ci .
+
+      - name: Unit and browser tests with coverage
+        run: pnpm test:coverage
+
+      - name: Summary
+        if: ${{ !cancelled() }}
+        run: node scripts/coverage-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage
+          path: coverage
+          retention-days: 14
+
+      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          use_oidc: true
+          files: coverage/lcov.info
+          fail_ci_if_error: false
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      - name: The route tree matches the routes
+        run: |
+          if ! git diff --exit-code -- src/routeTree.gen.ts; then
+            echo "::error::src/routeTree.gen.ts is out of date: run pnpm build or pnpm dev and commit it."
+            exit 1
+          fi
+
+      - name: The server starts and serves the app
+        run: |
+          PORT=3000 pnpm start > server.log 2>&1 &
+          bash scripts/smoke.sh http://localhost:3000 || { cat server.log; exit 1; }
+
+  docker:
+    name: docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          tags: hexlode:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: The container starts and serves the app
+        run: |
+          docker run -d --name hexlode -p 3000:3000 hexlode:ci
+          bash scripts/smoke.sh http://localhost:3000 || { docker logs hexlode; exit 1; }
+
+      - name: Image size
+        run: docker image ls hexlode:ci --format '| hexlode:ci | {{.Size}} |' | sed '1i | Image | Size |\n| --- | --- |' >> "$GITHUB_STEP_SUMMARY"

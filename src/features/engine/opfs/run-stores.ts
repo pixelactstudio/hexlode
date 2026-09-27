@@ -1,5 +1,6 @@
 import { downloadZip } from 'client-zip'
 
+import { RUN_LOCK_PREFIX } from '#/features/engine/constants'
 import { createNameResolver } from '#/features/engine/delivery-names'
 import {
   directoryAt,
@@ -20,12 +21,42 @@ export function runPath(runId: string) {
   return [...RUNS_PATH, runId]
 }
 
-/** Deletes files of earlier runs. Called when a run starts and on each visit. */
+/**
+ * Marks a run as in use until the returned function is called, so other tabs keep its files. The
+ * browser releases the mark when the tab closes.
+ */
+export function holdRun(runId: string): Promise<() => void> {
+  const locks = typeof navigator === 'undefined' ? undefined : navigator.locks
+  if (!locks) return Promise.resolve(() => {})
+  return new Promise((held) => {
+    void locks.request(
+      `${RUN_LOCK_PREFIX}${runId}`,
+      () => new Promise<void>((release) => held(() => release())),
+    )
+  })
+}
+
+async function heldRuns() {
+  const locks = typeof navigator === 'undefined' ? undefined : navigator.locks
+  if (!locks) return new Set<string>()
+  const { held = [] } = await locks.query()
+  return new Set(
+    held.flatMap(({ name }) =>
+      name?.startsWith(RUN_LOCK_PREFIX) ? [name.slice(RUN_LOCK_PREFIX.length)] : [],
+    ),
+  )
+}
+
+/**
+ * Deletes files of earlier runs. Called when a run starts and on each visit. Keeps runs a tab
+ * still holds with `holdRun`.
+ */
 export async function clearRuns(root: FileSystemDirectoryHandle, keep?: string) {
   const runs = await directoryAt(root, RUNS_PATH)
   if (!runs) return
+  const held = await heldRuns()
   for (const name of await listNames(runs)) {
-    if (name !== keep) await removeEntry(runs, name, true)
+    if (name !== keep && !held.has(name)) await removeEntry(runs, name, true)
   }
 }
 

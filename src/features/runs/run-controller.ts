@@ -152,81 +152,27 @@ export function createRunController(options: {
       await prepare()
     },
     async clearFiles() {
-      set({ files: [], sources: [], refused: [], estimate: null })
+      // Drops the result of any preparation still reading the cleared files.
+      preparation += 1
+      set({ files: [], sources: [], refused: [], estimate: null, preparing: false })
       stats.reset()
     },
     async start(startOptions: StartOptions = {}) {
       if (!pipeline || state.running || state.sources.length === 0) return undefined
-      const runPipelineNow = pipeline
-      const { index } = await engineRuntime()
-      controller = new AbortController()
-      host?.dispose()
-      host = createWorkerPoolHost({
-        size: state.workers,
-        createWorker: createEngineWorker,
-        index,
-        folders: startOptions.folders,
-        singleFileAsIs: startOptions.singleFileAsIs,
-        archiveNames: new Map(
-          runPipelineNow.nodes
-            .filter((node) => node.type === 'output')
-            .map((node) => [node.id, String(node.settings.archiveName ?? 'hexlode')]),
-        ),
-      })
-      const estimate = state.estimate
       set({ running: true, error: null })
-      track('run_started', {
-        surface,
-        tool,
-        itemCount: state.sources.length,
-        workers: state.workers,
-        estimatedEncodes: estimate?.encodes ?? 0,
-        estimatedSeconds: Math.round(estimate?.seconds ?? 0),
-        pipeline: pipelineShape(runPipelineNow, registry),
-      })
-      const autoDownload = new Set(
-        runPipelineNow.nodes
-          .filter((node) => node.type === 'output' && node.settings.autoDownload === true)
-          .map((node) => node.id),
-      )
-      const result = await runPipeline({
-        pipeline: runPipelineNow,
-        registry,
-        sources: state.sources,
-        host,
-        signal: controller.signal,
-        onEvent: (event) => {
-          stats.apply(event)
-          if (event.type === 'delivery-ready' && autoDownload.has(event.nodeId)) {
-            void deliver(event.delivery, true)
-          }
-        },
-      })
-      const snapshot = stats.snapshot()
-      const totals = Object.values(snapshot.nodes)
-      const outputs = runPipelineNow.nodes.filter((node) => node.type === 'output')
-      const outputStats = outputs.map((node) => snapshot.nodes[node.id]).filter(Boolean)
-      if (result.status === 'complete' && estimate) {
-        recordRunSpeed(estimate.seconds, result.ms / 1000)
+      try {
+        const result = await execute(pipeline, startOptions)
+        set({ running: false, error: result.error ?? null })
+        return result
+      } catch (reason) {
+        set({
+          running: false,
+          error: reason instanceof Error ? reason.message : 'The run failed.',
+        })
+        return undefined
+      } finally {
+        void prepare()
       }
-      track('run_finished', {
-        surface,
-        tool,
-        status: result.status,
-        itemCount: state.sources.length,
-        processed: outputStats.reduce((sum, node) => sum + node.processed, 0),
-        skipped: totals.reduce((sum, node) => sum + node.skipped, 0),
-        failed: totals.reduce((sum, node) => sum + node.failed, 0),
-        cached: totals.reduce((sum, node) => sum + node.cached, 0),
-        durationMs: Math.round(result.ms),
-        inputBytes: state.sources.reduce((sum, source) => sum + (source.meta.size ?? 0), 0),
-        outputBytes: result.deliveries.reduce((sum, delivery) => sum + delivery.bytes, 0),
-        failureCodes: result.error ? ['run_error'] : [],
-        warningCodes: snapshot.warningCodes,
-      })
-      set({ running: false, error: result.error ?? null })
-      void prepare()
-      return result
     },
     cancel() {
       controller?.abort()
@@ -237,6 +183,75 @@ export function createRunController(options: {
       host?.dispose()
       host = undefined
     },
+  }
+
+  async function execute(runPipelineNow: Pipeline, startOptions: StartOptions) {
+    const { index } = await engineRuntime()
+    controller = new AbortController()
+    host?.dispose()
+    host = createWorkerPoolHost({
+      size: state.workers,
+      createWorker: createEngineWorker,
+      index,
+      folders: startOptions.folders,
+      singleFileAsIs: startOptions.singleFileAsIs,
+      archiveNames: new Map(
+        runPipelineNow.nodes
+          .filter((node) => node.type === 'output')
+          .map((node) => [node.id, String(node.settings.archiveName ?? 'hexlode')]),
+      ),
+    })
+    const estimate = state.estimate
+    track('run_started', {
+      surface,
+      tool,
+      itemCount: state.sources.length,
+      workers: state.workers,
+      estimatedEncodes: estimate?.encodes ?? 0,
+      estimatedSeconds: Math.round(estimate?.seconds ?? 0),
+      pipeline: pipelineShape(runPipelineNow, registry),
+    })
+    const autoDownload = new Set(
+      runPipelineNow.nodes
+        .filter((node) => node.type === 'output' && node.settings.autoDownload === true)
+        .map((node) => node.id),
+    )
+    const result = await runPipeline({
+      pipeline: runPipelineNow,
+      registry,
+      sources: state.sources,
+      host,
+      signal: controller.signal,
+      onEvent: (event) => {
+        stats.apply(event)
+        if (event.type === 'delivery-ready' && autoDownload.has(event.nodeId)) {
+          void deliver(event.delivery, true)
+        }
+      },
+    })
+    const snapshot = stats.snapshot()
+    const totals = Object.values(snapshot.nodes)
+    const outputs = runPipelineNow.nodes.filter((node) => node.type === 'output')
+    const outputStats = outputs.map((node) => snapshot.nodes[node.id]).filter(Boolean)
+    if (result.status === 'complete' && estimate) {
+      recordRunSpeed(estimate.seconds, result.ms / 1000)
+    }
+    track('run_finished', {
+      surface,
+      tool,
+      status: result.status,
+      itemCount: state.sources.length,
+      processed: outputStats.reduce((sum, node) => sum + node.processed, 0),
+      skipped: totals.reduce((sum, node) => sum + node.skipped, 0),
+      failed: totals.reduce((sum, node) => sum + node.failed, 0),
+      cached: totals.reduce((sum, node) => sum + node.cached, 0),
+      durationMs: Math.round(result.ms),
+      inputBytes: state.sources.reduce((sum, source) => sum + (source.meta.size ?? 0), 0),
+      outputBytes: result.deliveries.reduce((sum, delivery) => sum + delivery.bytes, 0),
+      failureCodes: result.error ? ['run_error'] : [],
+      warningCodes: snapshot.warningCodes,
+    })
+    return result
   }
 
   async function deliver(delivery: Delivery, automatic: boolean) {

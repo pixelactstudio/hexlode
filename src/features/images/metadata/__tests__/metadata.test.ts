@@ -26,6 +26,66 @@ function jpegScan(bytes: Uint8Array) {
   throw new Error('No scan')
 }
 
+/** RIFF chunks of a WebP file, as [type, data]. */
+function webpChunks(bytes: Uint8Array) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  const found: [string, Uint8Array][] = []
+  for (let offset = 12; offset + 8 <= bytes.length; ) {
+    const length = view.getUint32(offset + 4, true)
+    found.push([
+      String.fromCharCode(...bytes.subarray(offset, offset + 4)),
+      bytes.slice(offset + 8, offset + 8 + length),
+    ])
+    offset += 8 + length + (length % 2)
+  }
+  return found
+}
+
+function riff(chunks: [string, Uint8Array][]) {
+  const parts = chunks.flatMap(([type, data]) => {
+    const head = new Uint8Array(8)
+    head.set([...type].map((c) => c.charCodeAt(0)))
+    new DataView(head.buffer).setUint32(4, data.length, true)
+    return [head, data, new Uint8Array(data.length % 2)]
+  })
+  const body = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 4))
+  body.set([0x57, 0x45, 0x42, 0x50])
+  let at = 4
+  for (const part of parts) {
+    body.set(part, at)
+    at += part.length
+  }
+  const file = new Uint8Array(8 + body.length)
+  file.set([0x52, 0x49, 0x46, 0x46])
+  new DataView(file.buffer).setUint32(4, body.length, true)
+  file.set(body, 8)
+  return file
+}
+
+const u24 = (value: number) => [value & 0xff, (value >> 8) & 0xff, value >> 16]
+
+/** A two-frame animated WebP of the 48 × 32 fixture, with EXIF. */
+function animatedWebp(exif: Uint8Array) {
+  const [[, vp8]] = webpChunks(fixture('photo.webp'))
+  const frameChunk = riff([['VP8 ', vp8]]).subarray(12)
+  const frame = Uint8Array.from([
+    ...u24(0),
+    ...u24(0),
+    ...u24(47),
+    ...u24(31),
+    ...u24(100),
+    0,
+    ...frameChunk,
+  ])
+  return riff([
+    ['VP8X', Uint8Array.from([0x02 | 0x08, 0, 0, 0, ...u24(47), ...u24(31)])],
+    ['ANIM', Uint8Array.from([0, 0, 0, 0, 0, 0])],
+    ['ANMF', frame],
+    ['ANMF', frame],
+    ['EXIF', exif],
+  ])
+}
+
 describe('readMetadata', () => {
   it('reads EXIF fields and location from a JPEG', async () => {
     const metadata = await readMetadata('jpeg', fixture('photo.jpg'))
@@ -137,6 +197,26 @@ describe('writeMetadata', () => {
       width: 48,
       height: 32,
     })
+  })
+
+  it('rewrites metadata on an animated WebP and keeps its frames', async () => {
+    const exif = (await readMetadata('jpeg', fixture('photo.jpg'))).exif as Uint8Array
+    const animated = animatedWebp(exif)
+    const frames = webpChunks(animated).filter(([type]) => type === 'ANMF')
+    const stripped = await writeMetadata('webp', animated, {})
+    expect(await readMetadata('webp', stripped.bytes)).toEqual({})
+    const chunks = webpChunks(stripped.bytes)
+    expect(chunks.map(([type]) => type)).toEqual(['VP8X', 'ANIM', 'ANMF', 'ANMF'])
+    expect(chunks[0][1][0]).toBe(0x02)
+    expect(chunks.filter(([type]) => type === 'ANMF')).toEqual(frames)
+    expect(inspectImageHeader(stripped.bytes.slice().buffer)).toMatchObject({
+      format: 'webp',
+      width: 48,
+      height: 32,
+    })
+    const tagged = await writeMetadata('webp', stripped.bytes, { exif })
+    expect(parseExif((await readMetadata('webp', tagged.bytes)).exif)).toMatchObject(EXPECTED)
+    expect(webpChunks(tagged.bytes)[0][1][0]).toBe(0x02 | 0x08)
   })
 
   it('reports what AVIF and QOI cannot keep', async () => {

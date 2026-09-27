@@ -3,7 +3,7 @@
  * and live previews on the sample image. Plain TypeScript; the page subscribes.
  */
 
-import type { NodeRegistry } from '#/features/engine/types'
+import type { NodeRegistry, Pipeline } from '#/features/engine/types'
 import {
   createPreviewer,
   type NodePreview,
@@ -11,7 +11,7 @@ import {
   type SampleInfo,
 } from '#/features/previews/previewer'
 import { createPreviewWorker } from '#/features/runs/engine-runtime'
-import { createRunController } from '#/features/runs/run-controller'
+import { createRunController, type StartOptions } from '#/features/runs/run-controller'
 import { PREVIEW_DEBOUNCE_MS } from '#/features/studio/constants'
 import { createStudioStore } from '#/features/studio/studio-store'
 import { track } from '#/features/usage/usage'
@@ -91,12 +91,19 @@ export function createStudioSession(registry: NodeRegistry) {
     }
   }
 
+  /** The pipeline last given to the run controller. */
+  let sentPipeline: Pipeline | undefined
+
+  const sendPipeline = () => {
+    clearTimeout(timer)
+    sentPipeline = store.getState().pipeline
+    void render()
+    return runs.setPipeline(sentPipeline)
+  }
+
   const schedule = () => {
     clearTimeout(timer)
-    timer = setTimeout(() => {
-      void runs.setPipeline(store.getState().pipeline)
-      void render()
-    }, PREVIEW_DEBOUNCE_MS)
+    timer = setTimeout(() => void sendPipeline(), PREVIEW_DEBOUNCE_MS)
   }
 
   let lastPipeline = store.getState().pipeline
@@ -140,6 +147,11 @@ export function createStudioSession(registry: NodeRegistry) {
     },
     setSample: (file: File) => setSample(file, 'picked'),
     refresh: schedule,
+    /** Runs the pipeline as it is now, sending edits still waiting for the debounce first. */
+    async start(options?: StartOptions) {
+      if (store.getState().pipeline !== sentPipeline) await sendPipeline()
+      return runs.start(options)
+    },
     /** Releases workers. The session stays usable, so remounting a component works. */
     dispose() {
       clearTimeout(timer)

@@ -24,3 +24,6 @@ export const PREVIEW_COMPARE_EDGE = 640
 /** Shown when an engine worker fails without a message, which is how a script load failure looks. */
 export const ENGINE_LOAD_FAILED_MESSAGE =
   'Hexlode could not start its image engine. Check your connection and reload the page.'
+
+/** Tabs hold a Web Lock with this prefix and the run ID while they may still read that run's files. */
+export const RUN_LOCK_PREFIX = 'hexlode-run:'
