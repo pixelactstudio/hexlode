@@ -49,6 +49,13 @@ runs with analytics and error reports off.
 The `VITE_*` values are public: they reach every visitor's browser. Never put a secret in a
 variable that starts with `VITE_`. A change takes effect on the next deploy or restart.
 
+Hexlode sends PostHog cookieless events, so in the PostHog project turn on **cookieless server
+hash mode** and **Discard client IP data**. Without the first, PostHog accepts the events and then
+drops them. The app sends only its own named events, such as `page_viewed`, and no `$pageview`, so
+look for them under **Activity → Events**; the Web analytics dashboard stays empty. PostHog's
+onboarding snippet `posthog.capture(…)` does not work in the console, because the app does not put
+PostHog on `window`.
+
 ### 4. Add the domain
 
 On the **Domains** tab, add your host with path `/`, container port `3000`, and HTTPS on with a

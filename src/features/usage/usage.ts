@@ -5,11 +5,6 @@
 import { type AnalyticsEventName, EVENTS, type EventProperties } from '#/features/usage/events'
 import type { PublicConfig } from '#/features/usage/types'
 
-interface CaptureEvent {
-  event: string
-  properties: Record<string, unknown>
-}
-
 export interface PostHogLike {
   init(key: string, options: Record<string, unknown>): unknown
   capture(event: string, properties: Record<string, unknown>): unknown
@@ -35,9 +30,6 @@ export const POSTHOG_OPTIONS = {
   disable_external_dependency_loading: true,
   advanced_disable_flags: true,
   mask_personal_data_properties: true,
-  /** Clears the IP address. The PostHog project also discards client IP data. */
-  before_send: (event: CaptureEvent | null) =>
-    event ? { ...event, properties: { ...event.properties, $ip: null } } : null,
 } as const
 
 export interface AnalyticsOptions {
