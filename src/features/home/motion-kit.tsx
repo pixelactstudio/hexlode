@@ -1,4 +1,4 @@
-import { motion, useInView, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion, useInView, useReducedMotion } from 'motion/react'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 /**
@@ -145,5 +145,48 @@ export function Crosshair({ side }: { side: 'start' | 'end' }) {
         side === 'start' ? '-left-[5px]' : '-right-[5px]'
       }`}
     />
+  )
+}
+
+/**
+ * The pointer that acts out a scene: `clickOn` in scene.ts moves it and presses. It starts hidden
+ * at the top left of its positioned parent, with its tip on that corner.
+ */
+export function SceneCursor() {
+  return (
+    <svg
+      aria-hidden="true"
+      data-cursor=""
+      viewBox="0 0 16 20"
+      className="pointer-events-none invisible absolute top-0 left-0 z-20 w-4 origin-top-left text-primary opacity-0 drop-shadow-md"
+    >
+      <path
+        d="M1 1v15.5l4.2-4 2.9 6.5 2.6-1.2-2.9-6.3H13z"
+        fill="currentColor"
+        className="stroke-body"
+        strokeWidth={1.2}
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+/** A label that slides to its next value. */
+export function Rolling({ value }: { value: string }) {
+  return (
+    <span className="relative inline-flex overflow-hidden">
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={value}
+          initial={{ y: '100%', opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: '-100%', opacity: 0 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="inline-block"
+        >
+          {value}
+        </motion.span>
+      </AnimatePresence>
+    </span>
   )
 }

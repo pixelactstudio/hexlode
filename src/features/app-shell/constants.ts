@@ -1,5 +1,13 @@
 export const REPOSITORY_URL = 'https://github.com/pixelactstudio/hexlode'
 
+/** Damn Labs, Pixelact Studio's lab for experimental software, which makes Hexlode. */
+export const DAMN_LABS_URL = 'https://damnlabs.com'
+
+export const PIXELACT_STUDIO_URL = 'https://pixelactstudio.com'
+
+/** EnvSift, Damn Labs' first product. */
+export const ENVSIFT_URL = 'https://envsift.damnlabs.com'
+
 /** The widest a page's content gets. The top bar lines up with it on every page but the Studio. */
 export const PAGE_WIDTH = 1200
 

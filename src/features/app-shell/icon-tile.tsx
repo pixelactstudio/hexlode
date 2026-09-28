@@ -13,7 +13,7 @@ const TONES: Record<Tone, string> = {
   gray: 'bg-gray-subtle text-gray-vivid',
 }
 
-const SIZES = { sm: 'size-7 rounded-md', md: 'size-9 rounded-lg', lg: 'size-12 rounded-xl' }
+const SIZES = { sm: 'size-7 rounded-sm', md: 'size-9 rounded-md', lg: 'size-12 rounded-lg' }
 
 /** An icon on a tinted square, used to tell tools and node categories apart at a glance. */
 export function IconTile({
