@@ -26,6 +26,9 @@ processed on your device, without uploading them.
 - Make the Studio canvas show real work: progress, results and errors.
 - Never send image bytes, filenames, thumbnails or metadata to analytics.
 
+Use it at [hexlode.damnlabs.com](https://hexlode.damnlabs.com). Hexlode is made by [Damn Labs](https://damnlabs.com),
+a [Pixelact Studio](https://pixelactstudio.com) product.
+
 ## Run locally
 
 Requires Node.js 24 and pnpm 11.
