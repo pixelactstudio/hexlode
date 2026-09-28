@@ -46,8 +46,9 @@ Active phase: **Phase 1**.
 ### Application
 
 13. Home page and the six quick tools: Convert, Compress, Resize, Crop, Rotate, Strip metadata.
-    The home page animates with Motion (`motion/react`) and shows a Studio screenshot taken from a
-    real run. The site frame lives in the root route so the top bar animates between pages. The
+    The home page shows a Studio screenshot taken from a real run. Its Studio scenes are GSAP
+    timelines started by ScrollTrigger (`useScene` in `src/features/home/scene.ts`); interface
+    motion elsewhere uses Motion (`motion/react`). See ADR 0009. The site frame lives in the root route so the top bar animates between pages. The
     Hexlode theme in `src/features/theme/`, with dark, light and system colour modes and a
     self-hosted Figtree font.
 14. Studio: node library with every category, drag, search, category filter and a folded rail,

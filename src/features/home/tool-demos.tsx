@@ -3,7 +3,7 @@ import { Aperture, CalendarClock, Camera, Check, MapPin, RotateCw } from 'lucide
 import { AnimatePresence, motion, useSpring, useTransform } from 'motion/react'
 import { useEffect } from 'react'
 
-import { useLoop } from '#/features/home/motion-kit'
+import { Rolling, useLoop } from '#/features/home/motion-kit'
 import type { QuickTool } from '#/features/quick-tools/tools'
 
 /*
@@ -24,26 +24,6 @@ function Photo({ name = 'dusk' }: { name?: 'dusk' | 'dawn' | 'desert' }) {
   )
 }
 
-/** A label that slides to its next value. */
-function Rolling({ value }: { value: string }) {
-  return (
-    <span className="relative inline-flex overflow-hidden">
-      <AnimatePresence mode="popLayout" initial={false}>
-        <motion.span
-          key={value}
-          initial={{ y: '100%', opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: '-100%', opacity: 0 }}
-          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="inline-block"
-        >
-          {value}
-        </motion.span>
-      </AnimatePresence>
-    </span>
-  )
-}
-
 function FileTile({
   format,
   size,
@@ -55,13 +35,13 @@ function FileTile({
 }) {
   return (
     <div
-      className={`flex w-32 flex-col gap-2 rounded-xl border bg-card p-2 shadow-sm ${
+      className={`flex w-32 flex-col gap-2 rounded-lg border bg-card p-2 shadow-sm ${
         isResult
           ? 'border-red-vivid/40 shadow-[0_0_40px_-12px_var(--color-red-vivid)]'
           : 'border-border'
       }`}
     >
-      <div className="aspect-[4/3] overflow-hidden rounded-md">
+      <div className="aspect-[4/3] overflow-hidden rounded">
         <Photo />
       </div>
       <div className="flex items-center justify-between gap-1 px-0.5 text-[11px] tabular-nums">
@@ -123,7 +103,7 @@ function CompressDemo() {
   return (
     <div
       ref={ref}
-      className="flex w-72 flex-col gap-5 rounded-xl border border-border bg-card p-5 shadow-sm"
+      className="flex w-72 flex-col gap-5 rounded-lg border border-border bg-card p-5 shadow-sm"
     >
       <div className="flex flex-col gap-2">
         <div className="flex justify-between text-secondary text-xs">
@@ -174,7 +154,7 @@ function ResizeDemo() {
         <Photo name="dawn" />
         <span className="absolute right-1 bottom-1 size-2 rounded-[2px] border border-on-dark bg-red-vivid" />
       </motion.div>
-      <span className="absolute right-2 bottom-2 rounded-md border border-border bg-card px-2 py-1 font-medium text-primary text-xs tabular-nums shadow-sm">
+      <span className="absolute right-2 bottom-2 rounded-sm border border-border bg-card px-2 py-1 font-medium text-primary text-xs tabular-nums shadow-sm">
         <Rolling value={small ? '1600 × 1200' : '4032 × 3024'} />
       </span>
     </div>
@@ -231,7 +211,7 @@ function RotateDemo() {
       >
         <Photo name="desert" />
       </motion.div>
-      <span className="absolute right-0 bottom-0 inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1 font-medium text-primary text-xs tabular-nums shadow-sm">
+      <span className="absolute right-0 bottom-0 inline-flex items-center gap-1.5 rounded-sm border border-border bg-card px-2 py-1 font-medium text-primary text-xs tabular-nums shadow-sm">
         <Icon icon={RotateCw} size="xsm" color="secondary" />
         <Rolling value={`${angle % 360}°`} />
       </span>
@@ -254,10 +234,10 @@ function StripDemo() {
   return (
     <div
       ref={ref}
-      className="flex w-72 flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-sm"
+      className="flex w-72 flex-col gap-3 rounded-lg border border-border bg-card p-3 shadow-sm"
     >
       <div className="flex items-center gap-2.5">
-        <span className="block size-9 overflow-hidden rounded-md">
+        <span className="block size-9 overflow-hidden rounded">
           <Photo name="desert" />
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
@@ -276,7 +256,7 @@ function StripDemo() {
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, x: 24, transition: { duration: 0.3 } }}
-              className="flex items-center gap-2 rounded-md bg-muted px-2 py-1.5 text-xs"
+              className="flex items-center gap-2 rounded bg-muted px-2 py-1.5 text-xs"
             >
               <Icon icon={field.icon} size="xsm" color="secondary" />
               <span className="text-secondary">{field.label}</span>

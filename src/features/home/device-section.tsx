@@ -73,11 +73,7 @@ function InputChip({
 }) {
   return (
     <div className={`${CHIP_CLASS} ${className}`} style={style}>
-      <img
-        src={`/home/photo-${input.photo}.webp`}
-        alt=""
-        className="size-8 rounded-md object-cover"
-      />
+      <img src={`/home/photo-${input.photo}.webp`} alt="" className="size-8 rounded object-cover" />
       <span className="flex flex-col">
         <span className="font-medium text-[13px] text-primary">{input.name}</span>
         <span className="text-[11px] text-secondary">{input.size}</span>
@@ -97,7 +93,7 @@ function OutputChip({
 }) {
   return (
     <div className={`${CHIP_CLASS} ${className}`} style={style}>
-      <span className="inline-flex size-8 items-center justify-center rounded-md bg-green-subtle text-green-vivid">
+      <span className="inline-flex size-8 items-center justify-center rounded bg-green-subtle text-green-vivid">
         <Icon icon={output.icon} size="sm" color="inherit" />
       </span>
       <span className="flex flex-col">
@@ -117,7 +113,7 @@ function BrowserTab({
 }) {
   return (
     <div
-      className={`flex flex-col gap-3 rounded-xl border border-red-ring/50 bg-card p-4 shadow-[0_0_60px_-20px_var(--color-border-red)] ${className}`}
+      className={`flex flex-col gap-3 rounded-lg border border-red-ring/50 bg-card p-4 shadow-[0_0_60px_-20px_var(--color-border-red)] ${className}`}
       style={style}
     >
       <span className="flex items-center gap-2">
@@ -128,7 +124,7 @@ function BrowserTab({
         {['Decode', 'Edit', 'Encode'].map((stage) => (
           <span
             key={stage}
-            className="flex items-center justify-between rounded-md bg-muted px-2.5 py-1.5 text-primary text-xs"
+            className="flex items-center justify-between rounded bg-muted px-2.5 py-1.5 text-primary text-xs"
           >
             {stage}
             <Icon icon={Cpu} size="xsm" color="secondary" />
@@ -311,7 +307,7 @@ export function ClosingCall() {
           className="pointer-events-none absolute -bottom-64 left-1/2 h-[480px] w-[min(900px,100%)] -translate-x-1/2 rounded-full bg-linear-to-r from-orange-ring/25 via-red-ring/30 to-pink-ring/25 blur-[120px]"
         />
         <Reveal className="relative flex flex-col items-center gap-6">
-          <span className="inline-flex size-16 items-center justify-center rounded-2xl border border-border bg-card shadow-[0_0_60px_-12px_var(--color-border-red)]">
+          <span className="inline-flex size-16 items-center justify-center rounded-lg border border-border bg-card shadow-[0_0_60px_-12px_var(--color-border-red)]">
             <HexlodeMark size="lg" />
           </span>
           <Heading level={2} type="display-1">

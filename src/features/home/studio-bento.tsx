@@ -1,20 +1,33 @@
 import { Button } from '@astryxdesign/core/Button'
 import { Icon } from '@astryxdesign/core/Icon'
-import { ArrowRight, Bookmark, Check, LoaderCircle, Workflow } from 'lucide-react'
-import { AnimatePresence, motion, useInView } from 'motion/react'
-import { type ReactNode, useRef } from 'react'
+import { gsap } from 'gsap'
+import {
+  ArrowRight,
+  Bookmark,
+  Check,
+  CornerDownLeft,
+  LoaderCircle,
+  Play,
+  Workflow,
+} from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import { type ReactNode, useState } from 'react'
 
 import { IconTile, type Tone } from '#/features/app-shell/icon-tile'
-import { Drop, FitDrawing, useLoop } from '#/features/home/motion-kit'
+import { BATCH_SIZE, BEAT, COLUMN_DELAY, EASE, STAGGER } from '#/features/home/constants'
+import { FitDrawing, Rolling, SceneCursor } from '#/features/home/motion-kit'
+import { clickOn, useScene } from '#/features/home/scene'
 import { Cell, Section, SectionHeader } from '#/features/home/section'
+import { planWorkers } from '#/features/home/worker-plan'
 import { TEMPLATES } from '#/features/pipelines/templates'
 import { NODE_ICONS } from '#/features/studio/node-ui'
 import { RouterLink } from '#/lib/router-link'
 
 /*
- * The Studio's features, each with a small moving picture drawn in HTML with the Studio's own
- * node icons and colours. Every claim matches idea.md: previews per node, workers per core, the
- * step cache, and saving a pipeline as a tool.
+ * The Studio's features, each a short directed scene drawn in HTML with the Studio's own node
+ * icons and colours. Every scene follows the same batch of 240 photos, has one thing moving at a
+ * time, and rests on its last frame before it plays again. Every claim matches idea.md: previews
+ * per node, workers per core, the step cache, and saving a pipeline as a tool.
  */
 
 const TONES: Record<string, Tone> = {
@@ -31,17 +44,36 @@ function NodeIcon({ type }: { type: string }) {
   return icon ? <IconTile icon={icon} tone={TONES[type] ?? 'gray'} size="sm" /> : null
 }
 
+/** A card that holds a scene: a 12px corner, so the 4px corners inside sit 8px in. */
+const CARD = 'relative rounded-lg border border-border bg-card shadow-sm'
+
 // ─── Chain steps ────────────────────────────────────────────────────────────
 
 const NODE_WIDTH = 176
 const NODE_HEIGHT = 52
 const GRAPH_WIDTH = 800
 const GRAPH_HEIGHT = 240
-/** Seconds for one pass of items through the whole graph. */
-const PERIOD = 3.6
+/** Seconds between one stage of the graph lighting up and the next. */
+const STAGE_GAP = 0.75
+const LAST_STAGE = 3
+/**
+ * The beam is a dash a sixth of an edge long, with a gap longer than any edge. It waits just
+ * before the start, where its round cap cannot show, and runs until it is just past the end.
+ */
+const BEAM = 0.16
+const BEAM_START = BEAM + 0.05
+const BEAM_END = -1.05
 
 const GRAPH_NODES = [
-  { id: 'files', type: 'files', title: 'Files', detail: '240 images', x: 0, y: 94, stage: 0 },
+  {
+    id: 'files',
+    type: 'files',
+    title: 'Files',
+    detail: `${BATCH_SIZE} images`,
+    x: 0,
+    y: 94,
+    stage: 0,
+  },
   {
     id: 'resize',
     type: 'resize',
@@ -98,48 +130,42 @@ function edgePath(sourceId: string, targetId: string) {
 
 type GraphNode = (typeof GRAPH_NODES)[number]
 
-/** A node drawn like the Studio's, with a dot that lights up as items pass through. */
+/** A node drawn like the Studio's, with a lamp that lights as the batch passes through. */
 function GraphNodeCard({
   node,
-  isLit,
   className = '',
   style,
 }: {
   node: GraphNode
-  isLit: boolean
   className?: string
   style?: React.CSSProperties
 }) {
   return (
     <div
+      data-stage={node.stage}
       className={`flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 shadow-sm ${className}`}
       style={style}
     >
+      <span
+        data-glow=""
+        className="pointer-events-none absolute -inset-px rounded-[inherit] border border-red-vivid/70 opacity-0 shadow-[0_0_28px_-8px_var(--color-red-vivid)]"
+      />
       <NodeIcon type={node.type} />
       <span className="flex min-w-0 flex-col">
         <span className="font-semibold text-[13px] text-primary leading-tight">{node.title}</span>
         <span className="truncate text-[11px] text-secondary">{node.detail}</span>
       </span>
       <span className="absolute top-2 right-2 size-1.5 rounded-full bg-border-strong" />
-      {isLit ? (
-        <motion.span
-          className="absolute top-2 right-2 size-1.5 rounded-full bg-green-vivid"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 1, 1, 0] }}
-          transition={{
-            duration: PERIOD,
-            times: [0, 0.08, 0.7, 1],
-            delay: node.stage * 0.8 + 0.6,
-            repeat: Number.POSITIVE_INFINITY,
-          }}
-        />
-      ) : null}
+      <span
+        data-lamp=""
+        className="absolute top-2 right-2 size-1.5 rounded-full bg-green-vivid opacity-0 shadow-[0_0_8px_var(--color-green-vivid)]"
+      />
     </div>
   )
 }
 
-/** The graph on wider screens: nodes in columns with beams running along the edges. */
-function PipelineGraph({ isLit }: { isLit: boolean }) {
+/** The graph on wider screens: nodes in columns, joined by curves the batch runs along. */
+function PipelineGraph() {
   return (
     <FitDrawing width={GRAPH_WIDTH} height={GRAPH_HEIGHT}>
       <svg
@@ -152,40 +178,35 @@ function PipelineGraph({ isLit }: { isLit: boolean }) {
         {GRAPH_EDGES.map(([source, target]) => (
           <path
             key={`${source}-${target}`}
+            data-edge=""
+            data-to={nodeById(target).stage}
             d={edgePath(source, target)}
+            pathLength={1}
+            strokeDasharray="1"
             className="stroke-border-strong"
             strokeWidth={1.5}
           />
         ))}
-        {isLit
-          ? GRAPH_EDGES.map(([source, target]) => (
-              <motion.path
-                key={`beam-${source}-${target}`}
-                d={edgePath(source, target)}
-                pathLength={1}
-                className="text-red-vivid"
-                stroke="currentColor"
-                strokeWidth={2.5}
-                strokeLinecap="round"
-                strokeDasharray="0.3 1"
-                initial={{ strokeDashoffset: 0.3 }}
-                animate={{ strokeDashoffset: -1 }}
-                transition={{
-                  duration: 0.9,
-                  delay: nodeById(source).stage * 0.8,
-                  ease: 'easeInOut',
-                  repeat: Number.POSITIVE_INFINITY,
-                  repeatDelay: PERIOD - 0.9,
-                }}
-              />
-            ))
-          : null}
+        {GRAPH_EDGES.map(([source, target]) => (
+          <path
+            key={`beam-${source}-${target}`}
+            data-beam=""
+            data-from={nodeById(source).stage}
+            d={edgePath(source, target)}
+            pathLength={1}
+            className="text-red-vivid"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeDasharray={`${BEAM} 2`}
+            strokeDashoffset={BEAM_START}
+          />
+        ))}
       </svg>
       {GRAPH_NODES.map((node) => (
         <GraphNodeCard
           key={node.id}
           node={node}
-          isLit={isLit}
           className="absolute"
           style={{ left: node.x, top: node.y, width: NODE_WIDTH, height: NODE_HEIGHT }}
         />
@@ -194,19 +215,33 @@ function PipelineGraph({ isLit }: { isLit: boolean }) {
   )
 }
 
-/** The same graph on phones, stacked from top to bottom. */
-function PipelineStack({ isLit }: { isLit: boolean }) {
-  const [files, resize, webp, avif, web, thumbs] = GRAPH_NODES
-  const card = (node: GraphNode) => (
-    <GraphNodeCard node={node} isLit={isLit} className="relative h-12 w-full" />
+/** A short vertical line between stacked steps on phones, drawn in as the next step arrives. */
+function Link({ to }: { to: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      data-link=""
+      data-to={to}
+      className="block h-6 w-px origin-top bg-border-strong"
+    />
   )
+}
+
+/** The same graph on phones, stacked from top to bottom. */
+function PipelineStack() {
+  const [files, resize, webp, avif, web, thumbs] = GRAPH_NODES
+  const card = (node: GraphNode) => <GraphNodeCard node={node} className="relative h-12 w-full" />
   return (
     <div className="flex w-full max-w-[340px] flex-col items-center">
       <span className="block w-44">{card(files)}</span>
-      <Drop />
+      <Link to={1} />
       <span className="block w-44">{card(resize)}</span>
-      <Drop delay={0.4} />
-      <span className="block h-3 w-1/2 rounded-t-md border-border-strong border-x border-t" />
+      <Link to={2} />
+      <span
+        data-link=""
+        data-to={2}
+        className="block h-3 w-1/2 origin-top rounded-t-sm border-border-strong border-x border-t"
+      />
       <span className="grid w-full grid-cols-2 gap-3">
         {[
           [webp, web],
@@ -214,7 +249,7 @@ function PipelineStack({ isLit }: { isLit: boolean }) {
         ].map(([convert, output]) => (
           <span key={convert.id} className="flex flex-col items-center">
             {card(convert)}
-            <Drop delay={0.8} />
+            <Link to={3} />
             {card(output)}
           </span>
         ))}
@@ -223,16 +258,65 @@ function PipelineStack({ isLit }: { isLit: boolean }) {
   )
 }
 
+/**
+ * Builds the pipeline stage by stage, drawing each edge before the step it leads to, then runs
+ * the batch through it again and again: each stage lights up as the batch reaches it.
+ */
 function PipelineDemo() {
-  const ref = useRef<HTMLDivElement>(null)
-  const inView = useInView(ref, { margin: '-10% 0px' })
+  const ref = useScene((timeline, q) => {
+    for (let stage = 0; stage <= LAST_STAGE; stage++) {
+      if (stage > 0) {
+        timeline
+          .fromTo(
+            q(`[data-edge][data-to="${stage}"]`),
+            { attr: { 'stroke-dashoffset': 1 } },
+            { attr: { 'stroke-dashoffset': 0 }, duration: BEAT.base, ease: EASE.move },
+          )
+          .fromTo(
+            q(`[data-link][data-to="${stage}"]`),
+            { scaleY: 0 },
+            { scaleY: 1, duration: BEAT.base, ease: EASE.move },
+            '<',
+          )
+      }
+      timeline.from(
+        q(`[data-stage="${stage}"]`),
+        { autoAlpha: 0, y: 10, duration: BEAT.base, ease: EASE.enter, stagger: STAGGER },
+        stage === 0 ? 0 : '-=0.15',
+      )
+    }
+    timeline.addLabel('poster')
+
+    const run = gsap.timeline({ repeat: -1, repeatDelay: BEAT.read })
+    for (let stage = 0; stage <= LAST_STAGE; stage++) {
+      const at = stage * STAGE_GAP
+      run
+        .to(q(`[data-stage="${stage}"] [data-lamp]`), { autoAlpha: 1, duration: BEAT.quick }, at)
+        .fromTo(
+          q(`[data-stage="${stage}"] [data-glow]`),
+          { autoAlpha: 1 },
+          { autoAlpha: 0, duration: 1, ease: 'power1.out', immediateRender: false },
+          at,
+        )
+      if (stage < LAST_STAGE) {
+        run.fromTo(
+          q(`[data-beam][data-from="${stage}"]`),
+          { attr: { 'stroke-dashoffset': BEAM_START } },
+          { attr: { 'stroke-dashoffset': BEAM_END }, duration: STAGE_GAP + 0.1, ease: EASE.move },
+          at,
+        )
+      }
+    }
+    run.to(q('[data-lamp]'), { autoAlpha: 0, duration: BEAT.base }, `+=${BEAT.rest}`)
+    timeline.add(run, '+=0.4')
+  })
   return (
     <div ref={ref} className="flex size-full items-center justify-center px-6">
       <span className="hidden w-full sm:block">
-        <PipelineGraph isLit={inView} />
+        <PipelineGraph />
       </span>
       <span className="flex w-full justify-center sm:hidden">
-        <PipelineStack isLit={inView} />
+        <PipelineStack />
       </span>
     </div>
   )
@@ -246,102 +330,211 @@ const PREVIEW_SHAPES = [
   { label: '16:9', detail: '16:9 from the centre', width: 200, height: 112, size: '1536 × 864' },
 ]
 
+/** The pointer picks each shape in turn, and the sample photo reframes to match. */
 function PreviewDemo() {
-  const { ref, step } = useLoop(PREVIEW_SHAPES.length, 2000)
+  const [step, setStep] = useState(0)
   const shape = PREVIEW_SHAPES[step]
+  const ref = useScene(
+    (timeline, q, root) => {
+      const chips = q('[data-chip]')
+      const cursor = q('[data-cursor]')
+      timeline.addLabel('poster', 0).set(cursor, { x: 230, y: 200 })
+      for (const index of [1, 2, 0]) {
+        const chip = chips[index] as HTMLElement
+        const next = PREVIEW_SHAPES[index]
+        clickOn(timeline, cursor, chip, root)
+          .call(setStep, [index])
+          .to(
+            q('[data-highlight]'),
+            { x: chip.offsetLeft, duration: BEAT.base, ease: EASE.enter },
+            '<',
+          )
+          .to(
+            q('[data-frame]'),
+            { width: next.width, height: next.height, duration: BEAT.move, ease: EASE.move },
+            '<',
+          )
+          .to({}, { duration: BEAT.read })
+      }
+      timeline.to(cursor, { autoAlpha: 0, duration: BEAT.base })
+    },
+    { delay: COLUMN_DELAY, repeat: -1, repeatDelay: BEAT.base },
+  )
   return (
-    <div
-      ref={ref}
-      className="flex w-[264px] flex-col gap-2.5 rounded-xl border border-border bg-card p-3 shadow-sm"
-    >
+    <div ref={ref} className={`${CARD} flex w-[264px] flex-col gap-2.5 p-3`}>
       <div className="flex items-center gap-2">
         <NodeIcon type="crop" />
         <span className="flex min-w-0 flex-col">
           <span className="font-semibold text-[13px] text-primary leading-tight">Crop</span>
-          <span className="text-[11px] text-secondary">{shape.detail}</span>
+          <span className="text-[11px] text-secondary">
+            <Rolling value={shape.detail} />
+          </span>
         </span>
       </div>
-      <div className="flex gap-1">
+      <div className="relative flex gap-1">
+        <span
+          data-highlight=""
+          className="absolute inset-y-0 left-0 w-[calc((100%-8px)/3)] rounded bg-muted ring-1 ring-border"
+        />
         {PREVIEW_SHAPES.map((entry) => (
           <span
             key={entry.label}
-            className="relative flex-1 rounded-md py-1 text-center font-medium text-[11px] text-secondary"
+            data-chip=""
+            className={`relative flex-1 rounded py-1 text-center font-medium text-[11px] transition-colors ${
+              entry.label === shape.label ? 'text-primary' : 'text-secondary'
+            }`}
           >
-            {entry.label === shape.label ? (
-              <motion.span
-                layoutId="preview-shape"
-                className="absolute inset-0 rounded-md bg-muted ring-1 ring-border"
-                transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-              />
-            ) : null}
-            <span className={`relative ${entry.label === shape.label ? 'text-primary' : ''}`}>
-              {entry.label}
-            </span>
+            {entry.label}
           </span>
         ))}
       </div>
-      <div className="flex h-[128px] items-center justify-center rounded-lg bg-muted">
-        <motion.div
-          className="overflow-hidden rounded-md shadow-md"
-          initial={false}
-          animate={{ width: shape.width, height: shape.height }}
-          transition={{ type: 'spring', stiffness: 160, damping: 22 }}
-        >
+      <div className="flex h-[128px] items-center justify-center rounded bg-muted">
+        <div data-frame="" className="size-[112px] overflow-hidden rounded-sm shadow-md">
           <img
             src="/home/photo-dusk.webp"
             alt=""
             draggable={false}
             className="block size-full object-cover"
           />
-        </motion.div>
+        </div>
       </div>
-      <span className="text-[11px] text-secondary tabular-nums">JPEG · {shape.size}</span>
+      <span className="text-[11px] text-secondary tabular-nums">
+        JPEG · <Rolling value={shape.size} />
+      </span>
+      <SceneCursor />
     </div>
   )
 }
 
 // ─── Every core ─────────────────────────────────────────────────────────────
 
-const LANES = [1.3, 1.75, 1.1, 1.5]
-const BATCH = 240
+const WORKERS = 4
+/** The last stretch of the batch: how long each of its images takes to convert, in seconds. */
+const JOB_SECONDS = [2.2, 2.8, 1.9, 2.5, 2.1, 2.6, 1.8, 2.4, 2.3, 2.0, 2.7, 1.9]
+const JOBS = planWorkers(JOB_SECONDS, WORKERS)
+const FIRST_DONE = BATCH_SIZE - JOBS.length
+/** The gap between a worker finishing one image and picking up the next. */
+const HANDOFF = 0.25
+const PHOTOS = ['dusk', 'dawn', 'desert'] as const
 
+type Lane = { job: number; isDone: boolean } | null
+
+/**
+ * The last twelve images of the batch shared over four workers. Each worker shows the image it is
+ * on and its progress; the next image goes to whichever worker frees up first, and the count goes
+ * up by one each time an image is done, until the batch is finished.
+ */
 function WorkersDemo() {
-  const { ref, tick } = useLoop(1, 220)
-  const done = 60 + ((tick * 3) % (BATCH - 60))
-  const inView = useInView(ref, { margin: '-10% 0px' })
+  const [lanes, setLanes] = useState<Lane[]>(() => Array.from({ length: WORKERS }, () => null))
+  const [done, setDone] = useState(FIRST_DONE)
+  const ref = useScene(
+    (timeline, q) => {
+      const bars = q('[data-bar]')
+      const setLane = (worker: number, lane: Lane) =>
+        setLanes((current) => current.map((entry, index) => (index === worker ? lane : entry)))
+      timeline
+        .call(() => {
+          setDone(FIRST_DONE)
+          setLanes(Array.from({ length: WORKERS }, () => null))
+        })
+        .set(bars, { scaleX: 0 })
+        .set(q('[data-total]'), { scaleX: FIRST_DONE / BATCH_SIZE })
+      const start = BEAT.base
+      const finishes = [...JOBS].sort((a, b) => a.end - b.end)
+      for (const job of JOBS) {
+        const at = start + job.start
+        timeline
+          .call(setLane, [job.worker, { job: job.index, isDone: false }], at)
+          .fromTo(
+            bars[job.worker],
+            { scaleX: 0 },
+            { scaleX: 1, duration: job.end - job.start - HANDOFF, ease: 'power1.inOut' },
+            at,
+          )
+      }
+      finishes.forEach((job, order) => {
+        const at = start + job.end - HANDOFF
+        timeline
+          .call(setLane, [job.worker, { job: job.index, isDone: true }], at)
+          .call(setDone, [FIRST_DONE + order + 1], at)
+          .to(
+            q('[data-total]'),
+            { scaleX: (FIRST_DONE + order + 1) / BATCH_SIZE, duration: 0.3, ease: EASE.enter },
+            at,
+          )
+      })
+      timeline.addLabel('poster').to({}, { duration: BEAT.rest })
+    },
+    { repeat: -1, repeatDelay: 0.4 },
+  )
+  const isFinished = done === BATCH_SIZE
   return (
-    <div
-      ref={ref}
-      className="flex w-72 flex-col gap-3.5 rounded-xl border border-border bg-card p-4 shadow-sm"
-    >
+    <div ref={ref} className={`${CARD} flex w-[296px] flex-col gap-3 p-4`}>
       <div className="flex items-baseline justify-between">
-        <span className="font-medium text-primary text-sm">Converting</span>
+        <span className="inline-flex items-center gap-1.5 font-medium text-primary text-sm">
+          <Rolling value={isFinished ? 'Batch done' : 'Converting to WebP'} />
+        </span>
         <span className="text-secondary text-xs tabular-nums">
-          <span className="font-semibold text-primary">{done}</span> of {BATCH}
+          <span className="font-semibold text-primary">
+            <Rolling value={String(done)} />
+          </span>{' '}
+          of {BATCH_SIZE}
         </span>
       </div>
-      {LANES.map((duration, index) => (
-        <div key={duration} className="flex items-center gap-3">
-          <span className="w-16 text-[11px] text-secondary">Worker {index + 1}</span>
-          <span className="block h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-            <motion.span
-              className="block h-full origin-left rounded-full bg-linear-to-r from-red-vivid to-pink-vivid"
-              initial={{ scaleX: 0.35 + index * 0.15 }}
-              animate={inView ? { scaleX: [0, 1] } : undefined}
-              transition={{
-                duration,
-                repeat: Number.POSITIVE_INFINITY,
-                ease: 'easeInOut',
-                delay: index * 0.2,
-              }}
-            />
+      {lanes.map((lane, worker) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: the four workers never reorder
+        <div key={worker} className="flex items-center gap-2.5">
+          <span className="relative size-7 shrink-0 overflow-hidden rounded bg-muted">
+            <AnimatePresence initial={false}>
+              {lane ? (
+                <motion.img
+                  key={lane.job}
+                  src={`/home/photo-${PHOTOS[lane.job % PHOTOS.length]}.webp`}
+                  alt=""
+                  className="absolute inset-0 size-full object-cover"
+                  initial={{ opacity: 0, scale: 1.2 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: BEAT.base }}
+                />
+              ) : null}
+            </AnimatePresence>
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <span className="flex items-center justify-between text-[11px]">
+              <span className="text-secondary">
+                Worker {worker + 1}
+                {lane ? (
+                  <span className="text-primary">
+                    {' · '}
+                    <Rolling value={`IMG_${2229 + lane.job}.jpg`} />
+                  </span>
+                ) : null}
+              </span>
+              <span
+                className={`inline-flex text-green-vivid transition-opacity duration-200 ${
+                  lane?.isDone ? 'opacity-100' : 'opacity-0'
+                }`}
+              >
+                <Icon icon={Check} size="xsm" color="inherit" />
+              </span>
+            </span>
+            <span className="block h-1 overflow-hidden rounded-full bg-muted">
+              <span
+                data-bar=""
+                className="block h-full origin-left scale-x-0 rounded-full bg-linear-to-r from-red-vivid to-pink-vivid"
+              />
+            </span>
           </span>
         </div>
       ))}
-      <span className="block h-1 overflow-hidden rounded-full bg-muted">
+      <span className="mt-1 block h-1 overflow-hidden rounded-full bg-muted">
         <span
-          className="block h-full origin-left rounded-full bg-border-strong transition-transform duration-200"
-          style={{ transform: `scaleX(${done / BATCH})` }}
+          data-total=""
+          className={`block h-full origin-left rounded-full transition-colors duration-500 ${
+            isFinished ? 'bg-green-vivid' : 'bg-border-strong'
+          }`}
+          style={{ transform: `scaleX(${FIRST_DONE / BATCH_SIZE})` }}
         />
       </span>
     </div>
@@ -352,6 +545,7 @@ function WorkersDemo() {
 
 type RowState = 'done' | 'changed' | 'cached' | 'running' | 'processed'
 
+/** Each step's state in each beat: as run, after the edit, then through the rerun. */
 const CACHE_STEPS: { type: string; title: string; states: RowState[] }[] = [
   { type: 'rotate', title: 'Rotate', states: ['done', 'done', 'cached', 'cached', 'cached'] },
   { type: 'resize', title: 'Resize', states: ['done', 'done', 'cached', 'cached', 'cached'] },
@@ -405,39 +599,111 @@ function StateBadge({ state }: { state: RowState }) {
   )
 }
 
+/**
+ * The pointer lowers Convert's quality, which marks Convert and the step after it as changed, then
+ * presses Run: the two steps before come from the step cache at once, and only the changed ones
+ * run.
+ */
 function CacheDemo() {
-  const { ref, step } = useLoop(6, 1100)
-  const phase = Math.min(step, 4)
+  const [phase, setPhase] = useState(0)
+  const ref = useScene(
+    (timeline, q, root) => {
+      const cursor = q('[data-cursor]')
+      timeline
+        .call(setPhase, [0])
+        .set(cursor, { x: 250, y: 230 })
+        .addLabel('poster')
+        .to({}, { duration: BEAT.read })
+      clickOn(timeline, cursor, q('[data-quality]')[0], root)
+        .call(setPhase, [1])
+        .to(q('[data-ring]'), { autoAlpha: 1, duration: BEAT.quick }, '<')
+        .to({}, { duration: BEAT.read })
+      clickOn(timeline, cursor, q('[data-run]')[0], root)
+        .to(q('[data-ring]'), { autoAlpha: 0, duration: BEAT.base })
+        .call(setPhase, [2], '<')
+        .fromTo(
+          q('[data-cached]'),
+          { autoAlpha: 1 },
+          {
+            autoAlpha: 0,
+            duration: 0.9,
+            ease: 'power1.out',
+            stagger: STAGGER,
+            immediateRender: false,
+          },
+          '<',
+        )
+        .fromTo(
+          q('[data-progress]'),
+          { scaleX: 0, autoAlpha: 1 },
+          { scaleX: 1, duration: 1.6, ease: 'power1.inOut', immediateRender: false },
+          '<',
+        )
+        .to(q('[data-progress]'), { autoAlpha: 0, duration: BEAT.quick })
+        .call(setPhase, [3], '<')
+        .to({}, { duration: 0.9 })
+        .call(setPhase, [4])
+        .to(cursor, { autoAlpha: 0, duration: BEAT.base }, `+=${BEAT.rest}`)
+    },
+    { delay: COLUMN_DELAY, repeat: -1, repeatDelay: BEAT.base },
+  )
   return (
-    <div
-      ref={ref}
-      className="flex w-72 flex-col gap-1.5 rounded-xl border border-border bg-card p-3 shadow-sm"
-    >
+    <div ref={ref} className={`${CARD} flex w-72 flex-col gap-1 p-2`}>
+      <div className="flex items-center justify-between px-2 pt-1 pb-1.5">
+        <span className="text-[11px] text-secondary">Pipeline · {BATCH_SIZE} images</span>
+        <span
+          data-run=""
+          className="inline-flex items-center gap-1 rounded bg-primary px-2 py-0.5 font-semibold text-[11px] text-on-accent"
+        >
+          <Icon icon={Play} size="xsm" color="inherit" />
+          Run
+        </span>
+      </div>
       {CACHE_STEPS.map((row) => {
         const state = row.states[phase]
-        const isEdited = row.type === 'convert' && phase === 1
         return (
-          <div
-            key={row.type}
-            className={`flex items-center gap-2.5 rounded-lg px-2 py-2 transition-colors ${
-              isEdited ? 'bg-muted ring-1 ring-orange-vivid/50' : ''
-            }`}
-          >
-            <NodeIcon type={row.type} />
-            <span className="flex min-w-0 flex-col">
-              <span className="font-semibold text-[13px] text-primary leading-tight">
-                {row.title}
-              </span>
-              {row.type === 'convert' ? (
-                <span className="text-[11px] text-secondary tabular-nums">
-                  WebP, quality {phase >= 1 ? 60 : 80}
+          <div key={row.type} className="relative flex items-center gap-2.5 rounded px-2 py-2">
+            {row.type === 'rotate' || row.type === 'resize' ? (
+              <span data-cached="" className="absolute inset-0 rounded bg-blue-subtle opacity-0" />
+            ) : null}
+            {row.type === 'convert' ? (
+              <>
+                <span
+                  data-ring=""
+                  className="absolute inset-0 rounded bg-muted opacity-0 ring-1 ring-orange-vivid/50"
+                />
+                <span
+                  data-progress=""
+                  className="absolute inset-x-2 bottom-0 h-0.5 origin-left scale-x-0 rounded-full bg-linear-to-r from-red-vivid to-pink-vivid"
+                />
+              </>
+            ) : null}
+            <span className="relative flex items-center gap-2.5">
+              <NodeIcon type={row.type} />
+              <span className="flex min-w-0 flex-col">
+                <span className="font-semibold text-[13px] text-primary leading-tight">
+                  {row.title}
                 </span>
-              ) : null}
+                {row.type === 'convert' ? (
+                  <span className="text-[11px] text-secondary">
+                    WebP, quality{' '}
+                    <span
+                      data-quality=""
+                      className="inline-flex rounded bg-muted px-1 text-primary tabular-nums ring-1 ring-border"
+                    >
+                      <Rolling value={phase >= 1 ? '60' : '80'} />
+                    </span>
+                  </span>
+                ) : null}
+              </span>
             </span>
-            <StateBadge state={state} />
+            <span className="relative ms-auto">
+              <StateBadge state={state} />
+            </span>
           </div>
         )
       })}
+      <SceneCursor />
     </div>
   )
 }
@@ -445,62 +711,114 @@ function CacheDemo() {
 // ─── Save as a tool ─────────────────────────────────────────────────────────
 
 const SAVED = ['Photos for email', 'Square thumbnails']
+const NEW_TOOL = 'Shop photos'
 
+/**
+ * The pointer presses Save, types a name, and the pipeline joins the list of saved tools, where
+ * the pointer opens it.
+ */
 function SaveDemo() {
-  const { ref, step } = useLoop(5, 1200)
-  const pressed = step === 1
-  const added = step >= 2
+  const [typed, setTyped] = useState('')
+  const ref = useScene(
+    (timeline, q, root) => {
+      const cursor = q('[data-cursor]')
+      const field = q('[data-field]')
+      const row = q('[data-new-row]')
+      timeline
+        .call(setTyped, [''])
+        .set(cursor, { x: 250, y: 210 })
+        .set(field, { height: 0, autoAlpha: 0 })
+        .set(row, { height: 0, autoAlpha: 0 })
+        .to({}, { duration: BEAT.base })
+      clickOn(timeline, cursor, q('[data-save]')[0], root).to(field, {
+        height: 'auto',
+        autoAlpha: 1,
+        duration: BEAT.base,
+        ease: EASE.enter,
+      })
+      for (let length = 1; length <= NEW_TOOL.length; length++) {
+        timeline.call(setTyped, [NEW_TOOL.slice(0, length)], `+=${length === 1 ? 0.2 : 0.07}`)
+      }
+      timeline
+        .fromTo(
+          q('[data-enter]'),
+          { scale: 1 },
+          { scale: 0.85, duration: 0.1, yoyo: true, repeat: 1 },
+          `+=${BEAT.base}`,
+        )
+        .to(field, { height: 0, autoAlpha: 0, duration: BEAT.base, ease: EASE.move })
+        .to(row, { height: 'auto', autoAlpha: 1, duration: BEAT.base, ease: EASE.enter }, '<0.15')
+        .fromTo(
+          q('[data-new-ring]'),
+          { autoAlpha: 1 },
+          { autoAlpha: 0, duration: 2, immediateRender: false },
+        )
+        .addLabel('poster', '<')
+      clickOn(timeline, cursor, q('[data-new-name]')[0], root, '<0.4')
+        .to({}, { duration: BEAT.rest })
+        .to(cursor, { autoAlpha: 0, duration: BEAT.base })
+        .to(row, { height: 0, autoAlpha: 0, duration: BEAT.base, ease: EASE.move }, '<')
+    },
+    { delay: COLUMN_DELAY * 2, repeat: -1, repeatDelay: BEAT.base },
+  )
   return (
-    <div ref={ref} className="flex w-72 flex-col gap-3">
-      <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-2.5 shadow-sm">
-        {['files', 'resize', 'convert', 'output'].map((type, index) => (
-          <span key={type} className="flex items-center gap-2">
-            {index > 0 ? <span className="h-px w-2.5 bg-border-strong" /> : null}
-            <NodeIcon type={type} />
+    <div ref={ref} className="relative flex w-72 flex-col gap-2">
+      <div className={`${CARD} flex flex-col p-2`}>
+        <div className="flex items-center gap-2">
+          {['files', 'resize', 'convert', 'output'].map((type, index) => (
+            <span key={type} className="flex items-center gap-2">
+              {index > 0 ? <span className="h-px w-2.5 bg-border-strong" /> : null}
+              <NodeIcon type={type} />
+            </span>
+          ))}
+          <span
+            data-save=""
+            className="ms-auto rounded bg-primary px-2.5 py-1 font-semibold text-[11px] text-on-accent"
+          >
+            Save
           </span>
-        ))}
-        <motion.span
-          className="ms-auto rounded-md bg-primary px-2.5 py-1 font-semibold text-[11px] text-on-accent"
-          animate={{ scale: pressed ? 0.9 : 1 }}
-          transition={{ type: 'spring', stiffness: 500, damping: 20 }}
-        >
-          Save
-        </motion.span>
+        </div>
+        <div data-field="" className="h-0 overflow-hidden opacity-0">
+          <span className="mt-2 flex items-center gap-2 rounded border border-border bg-muted px-2 py-1.5 text-[13px]">
+            <span className="text-primary">{typed}</span>
+            <span className="-ms-1.5 h-3.5 w-px animate-pulse bg-primary" />
+            <span
+              data-enter=""
+              className="ms-auto inline-flex rounded-sm border border-border px-1 text-secondary"
+            >
+              <Icon icon={CornerDownLeft} size="xsm" color="inherit" />
+            </span>
+          </span>
+        </div>
       </div>
-      <div className="flex flex-col gap-1 rounded-xl border border-border bg-card p-2 shadow-sm">
-        <span className="flex items-center gap-1.5 px-1.5 pt-0.5 pb-1 text-[11px] text-secondary">
+      <div className={`${CARD} flex flex-col p-2`}>
+        <span className="flex items-center gap-1.5 px-1.5 pt-0.5 pb-1.5 text-[11px] text-secondary">
           <Icon icon={Bookmark} size="xsm" color="inherit" />
           Your tools
         </span>
-        <AnimatePresence initial={false}>
-          {added ? (
-            <motion.span
-              key="new"
-              layout
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 26 }}
-              className="block overflow-hidden"
-            >
-              <span className="flex items-center justify-between rounded-md bg-red-vivid/10 px-2 py-1.5 font-medium text-[13px] text-primary ring-1 ring-red-vivid/30">
-                Shop photos
-                <Icon icon={ArrowRight} size="xsm" color="secondary" />
-              </span>
-            </motion.span>
-          ) : null}
-          {SAVED.map((name) => (
-            <motion.span
-              key={name}
-              layout
-              className="flex items-center justify-between rounded-md px-2 py-1.5 text-[13px] text-secondary"
-            >
-              {name}
-              <Icon icon={ArrowRight} size="xsm" color="secondary" />
-            </motion.span>
-          ))}
-        </AnimatePresence>
+        <span data-new-row="" className="block overflow-hidden">
+          <span className="relative mb-0.5 flex items-center justify-between rounded bg-muted px-2 py-1.5 font-medium text-[13px] text-primary">
+            <span
+              data-new-ring=""
+              className="absolute inset-0 rounded bg-red-vivid/10 opacity-0 ring-1 ring-red-vivid/40"
+            />
+            <span data-new-name="" className="relative">
+              {NEW_TOOL}
+            </span>
+            <Icon icon={ArrowRight} size="xsm" color="secondary" />
+          </span>
+        </span>
+        {SAVED.map((name) => (
+          <span
+            key={name}
+            className="flex items-center justify-between rounded px-2 py-1.5 text-[13px] text-secondary"
+          >
+            {name}
+            <Icon icon={ArrowRight} size="xsm" color="secondary" />
+          </span>
+        ))}
       </div>
+      <SceneCursor />
     </div>
   )
 }

@@ -16,7 +16,7 @@ When the user changes a decision, update the document that owns it in the same c
 
 ## Stack
 
-TanStack Start (React 19, Vite, Nitro), TypeScript, React Flow, Astryx with Tailwind, Motion, jSquash
+TanStack Start (React 19, Vite, Nitro), TypeScript, React Flow, Astryx with Tailwind, Motion, GSAP, jSquash
 codecs in Web Workers, OPFS, PostHog and Sentry. Drizzle, PostgreSQL and Better Auth are dormant
 until cloud work: keep them compiling and build version 1 features without them.
 
@@ -64,6 +64,11 @@ Tailwind utilities such as `bg-surface`, `text-primary` and `rounded-lg`.
 - Set colours, type and other tokens in `src/features/theme/hexlode-theme.ts`, then run
   `pnpm theme:build`. Every colour needs a light and a dark value.
 - Style the Studio canvas with the same tokens and hide the React Flow attribution.
+- Nest corners: an inner corner is the outer corner minus the padding between them, such as a
+  `rounded-lg` (12px) card with 8px padding around `rounded` (4px) images. Astryx maps `rounded-xl`
+  to the 28px page radius, so keep it off cards.
+- Animate interface elements with Motion. Direct home page scenes with GSAP through `useScene`
+  and the timings in `src/features/home/constants.ts` (ADR 0009).
 
 ## Commits
 
