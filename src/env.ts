@@ -15,6 +15,7 @@ export const env = createEnv({
     SENTRY_ORG: z.string().min(1).optional(),
     SENTRY_PROJECT: z.string().min(1).optional(),
     HEXLODE_VERSION: z.string().min(1).optional(),
+    HEXLODE_ENVIRONMENT: z.string().min(1).optional(),
   },
   clientPrefix: 'VITE_',
   client: {

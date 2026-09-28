@@ -33,7 +33,7 @@ export async function startErrorReporting(config: PublicConfig) {
   Sentry.init({
     dsn,
     release: config.appVersion,
-    environment: import.meta.env?.PROD ? 'production' : 'development',
+    environment: config.environment ?? (import.meta.env?.PROD ? 'production' : 'development'),
     sendDefaultPii: false,
     enableLogs: true,
     tracesSampleRate: TRACES_SAMPLE_RATE,

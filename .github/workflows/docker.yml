@@ -1,10 +1,10 @@
 name: Docker image
 
-# Publishes ghcr.io/<owner>/hexlode. Every merge to `main` updates the `main` tag. A release, the
-# `v1.2.3` tag Release Please starts this workflow for, publishes `latest`, `1.2.3` and `1.2`, then
-# calls the Dokploy deploy webhook, since Dokploy runs `latest`. Every image also gets a
-# `sha-<commit>` tag to roll back to. With the Sentry secret and variables set, the build uploads
-# source maps. See DEPLOY.md.
+# Publishes ghcr.io/<owner>/hexlode. Every merge to `main` updates the `main` tag and deploys
+# staging, which runs `main`. A release, the `v1.2.3` tag Release Please starts this workflow for,
+# publishes `latest`, `1.2.3` and `1.2` and deploys production, which runs `latest`. Every image also
+# gets a `sha-<commit>` tag to roll back to. With the Sentry secret and variables set, the build
+# uploads source maps. See DEPLOY.md.
 on:
   push:
     branches: [main]
@@ -139,22 +139,41 @@ jobs:
             while read -r tag; do echo "- \`$tag\`"; done <<< "$TAGS"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  deploy:
-    name: deploy to Dokploy
+  # Each deploy calls its Dokploy application's webhook, and is skipped until that secret is set.
+  deploy-staging:
+    name: deploy staging
     needs: image
-    # Only releases deploy, and only once the webhook secret is set (see DEPLOY.md).
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Call the staging deploy webhook
+        env:
+          WEBHOOK_URL: ${{ secrets.DOKPLOY_STAGING_WEBHOOK_URL }}
+        run: |
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "::notice::DOKPLOY_STAGING_WEBHOOK_URL is not set, so staging was not deployed."
+            exit 0
+          fi
+          curl -fsS --retry 3 --retry-all-errors -X POST "$WEBHOOK_URL"
+          echo
+          echo "Dokploy is deploying the main image to staging."
+
+  deploy-production:
+    name: deploy production
+    needs: image
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Call the deploy webhook
+      - name: Call the production deploy webhook
         env:
-          DOKPLOY_WEBHOOK_URL: ${{ secrets.DOKPLOY_WEBHOOK_URL }}
+          WEBHOOK_URL: ${{ secrets.DOKPLOY_WEBHOOK_URL }}
         run: |
-          if [ -z "$DOKPLOY_WEBHOOK_URL" ]; then
-            echo "::notice::DOKPLOY_WEBHOOK_URL is not set, so Dokploy was not asked to deploy."
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "::notice::DOKPLOY_WEBHOOK_URL is not set, so production was not deployed."
             exit 0
           fi
-          curl -fsS --retry 3 --retry-all-errors -X POST "$DOKPLOY_WEBHOOK_URL"
+          curl -fsS --retry 3 --retry-all-errors -X POST "$WEBHOOK_URL"
           echo
-          echo "Dokploy is deploying the new image."
+          echo "Dokploy is deploying the release to production."

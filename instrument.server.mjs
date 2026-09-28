@@ -6,7 +6,12 @@ if (sentryDsn) {
   Sentry.init({
     dsn: sentryDsn,
     release: process.env.HEXLODE_VERSION,
-    environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+    // Matches the environment src/features/usage/validators.ts hands the browser.
+    environment: /^[a-z][a-z0-9-]{0,31}$/.test(process.env.HEXLODE_ENVIRONMENT ?? '')
+      ? process.env.HEXLODE_ENVIRONMENT
+      : process.env.NODE_ENV === 'production'
+        ? 'production'
+        : 'development',
     sendDefaultPii: false,
     dataCollection: {
       userInfo: false,

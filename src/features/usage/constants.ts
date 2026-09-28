@@ -4,6 +4,9 @@ export const PUBLIC_CONFIG_META = 'hexlode-config'
 /** PostHog's recommended defaults as of this date, as its TanStack Start guide sets them. */
 export const POSTHOG_DEFAULTS = '2026-05-30'
 
+/** An environment name such as `staging`: lowercase letters, digits and dashes. */
+export const ENVIRONMENT_PATTERN = /^[a-z][a-z0-9-]{0,31}$/
+
 export const DEFAULT_POSTHOG_HOST = 'https://us.i.posthog.com'
 
 /**

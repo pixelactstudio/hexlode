@@ -9,4 +9,9 @@ export interface PublicConfig {
   sentryDsn?: string
   /** The running image's version, from `HEXLODE_VERSION`. Labels events and error reports. */
   appVersion?: string
+  /**
+   * `production`, `staging` or `development`, from `HEXLODE_ENVIRONMENT`. Sentry files reports under
+   * it and PostHog labels events with it, so staging stays out of production numbers.
+   */
+  environment?: string
 }

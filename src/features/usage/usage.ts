@@ -32,14 +32,18 @@ export interface AnalyticsOptions {
   key?: string
   host?: string
   appVersion?: string
+  environment?: string
   posthog: PostHogLike
 }
 
-export function createAnalytics({ key, host, appVersion, posthog }: AnalyticsOptions) {
+export function createAnalytics({ key, host, appVersion, environment, posthog }: AnalyticsOptions) {
   const enabled = Boolean(key)
   if (key) {
     posthog.init(key, { ...POSTHOG_OPTIONS, api_host: host || DEFAULT_POSTHOG_HOST })
-    if (appVersion) posthog.register({ app_version: appVersion })
+    // PostHog's test account filter hides every environment but production from dashboards.
+    const labels = { app_version: appVersion, environment }
+    const defined = Object.fromEntries(Object.entries(labels).filter(([, value]) => value))
+    if (Object.keys(defined).length > 0) posthog.register(defined)
   }
   return {
     track<E extends AnalyticsEventName>(event: E, properties: EventProperties<E>) {
@@ -73,6 +77,7 @@ export function startAnalytics(config: PublicConfig) {
           key,
           host: config.posthogHost,
           appVersion: config.appVersion,
+          environment: config.environment,
           posthog: posthog as unknown as PostHogLike,
         })
       } catch {
