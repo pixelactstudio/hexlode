@@ -61,7 +61,8 @@ Browser tests use the Chromium at `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`, or the 
 
 ## Docker
 
-CI publishes `ghcr.io/pixelactstudio/hexlode` for x86 and ARM on every push to `main`.
+CI publishes `ghcr.io/pixelactstudio/hexlode` for x86 and ARM: `main` on every merge to `main`,
+and `latest` with the version tags on every release.
 
 ```bash
 docker run -p 3000:3000 ghcr.io/pixelactstudio/hexlode:latest
@@ -70,11 +71,6 @@ docker run -p 3000:3000 ghcr.io/pixelactstudio/hexlode:latest
 Settings come from the container's environment, for example `-e VITE_POSTHOG_KEY=…` and
 `-e VITE_SENTRY_DSN=…` to enable analytics and error reports. [DEPLOY.md](./DEPLOY.md) covers
 Dokploy, every variable, zero-downtime updates and deploying on each push.
-
-## Documents
-
-[idea.md](./idea.md) describes the product, [implementation.md](./implementation.md) the plan and
-engine, [CONTEXT.md](./CONTEXT.md) the vocabulary and [docs/adr/](./docs/adr/) the decisions.
 
 ## License
 

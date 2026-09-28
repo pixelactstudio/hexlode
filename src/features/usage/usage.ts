@@ -1,47 +1,45 @@
 /**
- * The only way the app sends product analytics. PostHog runs cookieless, without person profiles,
- * autocapture or session replay. Each event is checked against its schema before it is sent.
+ * The only way the app sends product analytics. PostHog starts as its TanStack Start guide shows,
+ * in cookieless mode and without person profiles. It captures pageviews, page leaves, clicks,
+ * heatmaps and web vitals by itself, with element text and attributes masked because file names are
+ * shown on screen. Session replay stays off. The app's own events are checked against their schema
+ * before they are sent.
  */
+import { DEFAULT_POSTHOG_HOST, POSTHOG_DEFAULTS } from '#/features/usage/constants'
 import { type AnalyticsEventName, EVENTS, type EventProperties } from '#/features/usage/events'
 import type { PublicConfig } from '#/features/usage/types'
 
 export interface PostHogLike {
   init(key: string, options: Record<string, unknown>): unknown
   capture(event: string, properties: Record<string, unknown>): unknown
+  register(properties: Record<string, unknown>): unknown
 }
 
 export const POSTHOG_OPTIONS = {
+  defaults: POSTHOG_DEFAULTS,
   cookieless_mode: 'always',
   person_profiles: 'never',
-  persistence: 'memory',
-  disable_persistence: true,
-  autocapture: false,
-  capture_pageview: false,
-  capture_pageleave: false,
-  capture_heatmaps: false,
-  capture_dead_clicks: false,
+  mask_all_text: true,
+  mask_all_element_attributes: true,
+  capture_heatmaps: true,
+  capture_performance: { web_vitals: true },
+  // Sentry reports errors, with file names removed first.
   capture_exceptions: false,
-  capture_performance: false,
-  rageclick: false,
   disable_session_recording: true,
-  disable_surveys: true,
-  disable_product_tours: true,
-  disable_web_experiments: true,
-  disable_external_dependency_loading: true,
-  advanced_disable_flags: true,
-  mask_personal_data_properties: true,
 } as const
 
 export interface AnalyticsOptions {
   key?: string
   host?: string
+  appVersion?: string
   posthog: PostHogLike
 }
 
-export function createAnalytics({ key, host, posthog }: AnalyticsOptions) {
+export function createAnalytics({ key, host, appVersion, posthog }: AnalyticsOptions) {
   const enabled = Boolean(key)
   if (key) {
-    posthog.init(key, { ...POSTHOG_OPTIONS, api_host: host || 'https://us.i.posthog.com' })
+    posthog.init(key, { ...POSTHOG_OPTIONS, api_host: host || DEFAULT_POSTHOG_HOST })
+    if (appVersion) posthog.register({ app_version: appVersion })
   }
   return {
     track<E extends AnalyticsEventName>(event: E, properties: EventProperties<E>) {
@@ -74,6 +72,7 @@ export function startAnalytics(config: PublicConfig) {
         instance = createAnalytics({
           key,
           host: config.posthogHost,
+          appVersion: config.appVersion,
           posthog: posthog as unknown as PostHogLike,
         })
       } catch {

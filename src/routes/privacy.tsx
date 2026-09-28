@@ -42,7 +42,7 @@ function Privacy() {
             />
             <ListItem
               label="The pipeline open in the Studio"
-              description="Its nodes, settings and name, so a reload does not lose your work. Never your images. Clearing site data deletes it."
+              description="Its nodes, settings and name, so a reload does not lose your work, kept for that tab only. Unsaved changes are also kept for a day, so a new tab can offer them back. Never your images. Clearing site data deletes it."
             />
             <ListItem
               label="Your colour mode"
@@ -57,9 +57,11 @@ function Privacy() {
           <Heading level={2}>What Hexlode measures</Heading>
           <Text type="body" as="p">
             Product analytics run without cookies and without identifying you. Your IP address is
-            turned into an anonymous ID that changes daily, then discarded. Events contain only
-            counts, timings, node types, settings and error codes. They never contain file names,
-            paths, pixels, image metadata or text you type.
+            turned into an anonymous ID that changes daily, then discarded. Pages you open, where
+            you click and how fast pages load are recorded, with the text on screen left out, and
+            there is no screen recording. The events below contain only counts, timings, node types,
+            settings and error codes. They never contain file names, paths, pixels, image metadata
+            or text you type.
           </Text>
           <List listStyle="disc">
             {Object.entries(EVENTS).map(([name, event]) => (
@@ -70,8 +72,9 @@ function Privacy() {
         <VStack gap={3}>
           <Heading level={2}>Error reports</Heading>
           <Text type="body" as="p">
-            When something breaks, an error report with the technical cause is sent. File names are
-            removed from it, and it contains no personal data and no screen recording.
+            When something breaks, an error report with the technical cause is sent, along with
+            warnings the app logs and timings of how long pages and requests took. File names are
+            removed from them, and they contain no personal data and no screen recording.
           </Text>
         </VStack>
         <VStack gap={3}>

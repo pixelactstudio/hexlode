@@ -119,8 +119,13 @@ quick tools.
 - A new Studio opens a template picker: Web-ready photos, Photos for email, Remove location, Square
   thumbnails, WebP and AVIF, Responsive image set, Watermark and compress, Instagram carousel, and
   Blank. The picker also imports a `.hexlode` file and opens saved pipelines.
-- The Studio keeps the open pipeline as a draft in browser storage, so a reload does not lose it.
-  Images are not kept; the user adds them again.
+- Each tab keeps its open pipeline as a draft, so a reload does not lose it, while a new tab or
+  visit to `/studio` starts at the template picker. A saved pipeline opens at
+  `/studio?pipeline=<id>`. For a day, the picker offers to continue the last pipeline with unsaved
+  changes from another tab, in case a tab was closed by mistake. Images are not kept; the user adds
+  them again.
+- The toolbar has icon buttons for a new pipeline, which asks first when there are unsaved changes,
+  and for saving, with a dot while changes are unsaved.
 - Run stays disabled until the pipeline has images and an Output node, and the canvas offers to add
   the Output node.
 

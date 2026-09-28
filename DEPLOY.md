@@ -10,8 +10,9 @@ needs rebuilding to change a setting ([ADR 0008](./docs/adr/0008-one-image-confi
 
 | Tag | Updated |
 | --- | --- |
-| `latest` | On every push to `main`. |
-| `1.2.3`, `1.2` | When a `v1.2.3` tag is pushed. |
+| `latest` | On every release. Production runs this tag. |
+| `1.2.3`, `1.2` | On every release: merging the Release Please pull request tags `v1.2.3`. |
+| `main` | On every merge to `main`, released or not. Use it to try unreleased changes. |
 | `sha-abc1234` | On every build. Use it to pin or roll back to one commit. |
 
 The container listens on port `3000`, runs as an unprivileged user, and answers `GET /api/health`
@@ -43,18 +44,27 @@ runs with analytics and error reports off.
 | --- | --- |
 | `VITE_POSTHOG_KEY` | PostHog project key. Turns on cookieless analytics. |
 | `VITE_POSTHOG_HOST` | PostHog API host, for example `https://eu.i.posthog.com`. Defaults to the US host. |
-| `VITE_SENTRY_DSN` | Sentry DSN. Turns on error reports in the browser and on the server. |
+| `VITE_SENTRY_DSN` | Sentry DSN. Turns on error reports, logs and tracing in the browser and on the server. |
 | `PORT` | The port the server listens on. Defaults to `3000`; change the domain's port to match. |
 
 The `VITE_*` values are public: they reach every visitor's browser. Never put a secret in a
-variable that starts with `VITE_`. A change takes effect on the next deploy or restart.
+variable that starts with `VITE_`. A change takes effect on the next deploy or restart. The image
+sets `HEXLODE_VERSION` itself; Sentry and PostHog label reports and events with it.
+
+The Sentry organisation, project and auth token are not runtime settings. They are only needed
+where the image is built, to upload source maps; see [Readable Sentry stack traces](#readable-sentry-stack-traces).
 
 Hexlode sends PostHog cookieless events, so in the PostHog project turn on **cookieless server
-hash mode** and **Discard client IP data**. Without the first, PostHog accepts the events and then
-drops them. The app sends only its own named events, such as `page_viewed`, and no `$pageview`, so
-look for them under **Activity → Events**; the Web analytics dashboard stays empty. PostHog's
-onboarding snippet `posthog.capture(…)` does not work in the console, because the app does not put
-PostHog on `window`.
+hash mode** (**Project settings → Web analytics**) and **Discard client IP data**. Without the
+first, PostHog answers `200 OK` and then drops the events. PostHog also answers `200 OK` for a
+wrong project key, or for a key sent to the other region's host, so check that `VITE_POSTHOG_KEY`
+is the project's key and `VITE_POSTHOG_HOST` matches its region (`us` or `eu`).
+
+PostHog records `$pageview`, `$pageleave`, clicks, heatmaps and web vitals by itself, so the Web
+analytics dashboard fills in. The app's own events, such as `run_started` and `node_added`, are
+under **Activity → Events**. PostHog's onboarding snippet `posthog.capture(…)` does not work in
+the console, because the app does not put PostHog on `window`; open a page with
+`?__posthog_debug=true` to see what PostHog sends.
 
 ### 4. Add the domain
 
@@ -97,24 +107,52 @@ runs Node directly:
 
 Then click **Deploy**. Open `https://your-domain/api/health` to see the running version.
 
-## Deploying on every push to `main`
+## Deploying on every release
 
-The `Docker image` workflow asks Dokploy to redeploy once the new image is pushed. Give it three
-secrets in GitHub (**Settings → Secrets and variables → Actions**, as repository secrets or in the
-`production` environment):
+Merging a pull request into `main` publishes the `main` image but deploys nothing. Merging the
+Release Please pull request makes a release: the `Docker image` workflow publishes `latest` and the
+version tags, then calls the application's Dokploy deploy webhook, and Dokploy pulls `latest` and
+redeploys. Copy the webhook from the application's
+**Deployments** tab in Dokploy and save it in GitHub (**Settings → Secrets and variables →
+Actions**) as the repository secret `DOKPLOY_WEBHOOK_URL`. Until it is set, the workflow publishes
+the image and skips the deploy.
 
-| Secret | Value |
-| --- | --- |
-| `DOKPLOY_URL` | Your Dokploy address, for example `https://dokploy.example.com`. |
-| `DOKPLOY_API_KEY` | A token from Dokploy's `/settings/profile` page, **API/CLI** section. |
-| `DOKPLOY_APPLICATION_ID` | The application's ID: the last part of its address in Dokploy. |
+## Readable Sentry stack traces
 
-Until they are set, the workflow publishes the image and skips the deploy.
+The build uploads source maps to Sentry, then removes them from the image, when it has these
+values. Add them in GitHub under **Settings → Secrets and variables → Actions**:
+
+| Name | Kind | Value |
+| --- | --- | --- |
+| `SENTRY_AUTH_TOKEN` | Secret | An organisation token from Sentry: **Settings → Developer Settings → Organization Tokens**. |
+| `SENTRY_ORG` | Variable | The organisation slug, from the Sentry address: `https://<org>.sentry.io`. |
+| `SENTRY_PROJECT` | Variable | The project slug, from **Settings → Projects**. |
+
+Without them the image builds the same and Sentry shows minified stack traces.
+
+## Monitoring with Sentry
+
+With `VITE_SENTRY_DSN` set, Sentry receives:
+
+- **Errors** from the browser, server requests and server functions, with file names removed.
+- **Logs**: warnings and errors the app writes to the console, with file names removed.
+- **Traces** of a fifth of page loads, navigations and server requests, under **Explore → Traces**
+  and **Insights**.
+
+Browser reports go to a same-origin route the build generates, which forwards them to Sentry, so
+content blockers do not drop them. Session replay stays off.
+
+Set these up in Sentry itself:
+
+- **Uptime monitor** (**Insights → Uptime**): check `https://your-domain/api/health` so Sentry
+  alerts you when the site is down.
+- **Alerts** (**Alerts → Create alert**): for example, email on every new issue, or when errors in
+  an hour pass a number.
 
 ## Rolling back
 
 Change the image on the **General** tab to an earlier `sha-…` tag and deploy. Every published tag
-is listed on the package's GitHub page. Switch back to `latest` to follow `main` again.
+is listed on the package's GitHub page. Switch back to `latest` to follow releases again.
 
 ## Building on the server instead
 
@@ -140,5 +178,6 @@ the same image and the same kind of settings:
 ## Running the image anywhere
 
 ```bash
-docker run -p 3000:3000 -e VITE_POSTHOG_KEY=phc_… ghcr.io/pixelactstudio/hexlode:latest
+docker run -p 3000:3000 -e VITE_POSTHOG_KEY=phc_… -e VITE_SENTRY_DSN=https://… \
+  ghcr.io/pixelactstudio/hexlode:latest
 ```

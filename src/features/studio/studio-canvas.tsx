@@ -222,7 +222,7 @@ export function StudioCanvas({
     }
     if (Object.keys(sizes).length > 0) setMeasured((current) => ({ ...current, ...sizes }))
     if (Object.keys(positions).length > 0) store.moveNodes(positions)
-    if (removed.length > 0) store.removeNodes(removed)
+    if (removed.length > 0) removeNodes(removed, 'keyboard')
   }
 
   const onEdgesChange = (changes: EdgeChange<PipelineFlowEdge>[]) => {
@@ -243,6 +243,12 @@ export function StudioCanvas({
   }
 
   const typeOf = (id: string) => studio.pipeline.nodes.find((node) => node.id === id)?.type ?? ''
+
+  const removeNodes = (ids: string[], method: 'keyboard' | 'menu') => {
+    const types = ids.map(typeOf).filter((type) => type && type !== 'files')
+    store.removeNodes(ids)
+    for (const nodeType of types) track('node_removed', { nodeType, method })
+  }
 
   const onConnect = (connection: FlowConnection) => {
     const candidate = {
@@ -363,7 +369,7 @@ export function StudioCanvas({
               label: 'Delete',
               icon: Trash2,
               isDisabled: running,
-              onClick: () => store.removeNodes([node.id]),
+              onClick: () => removeNodes([node.id], 'menu'),
             },
           ]),
     ]

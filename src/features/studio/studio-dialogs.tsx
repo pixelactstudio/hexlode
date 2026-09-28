@@ -1,4 +1,5 @@
 import { Button } from '@astryxdesign/core/Button'
+import { Card } from '@astryxdesign/core/Card'
 import { CommandPalette } from '@astryxdesign/core/CommandPalette'
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
 import { Divider } from '@astryxdesign/core/Divider'
@@ -12,12 +13,13 @@ import { HStack, VStack } from '@astryxdesign/core/Stack'
 import { Heading, Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { createStaticSource, type SearchableItem } from '@astryxdesign/core/Typeahead'
-import { FilePlus, FolderOpen, Upload } from 'lucide-react'
+import { FilePlus, FolderOpen, History, Upload } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { IconTile } from '#/features/app-shell/icon-tile'
 import { GIGABYTE } from '#/features/engine/constants'
 import type { NodeRegistry } from '#/features/engine/types'
 import { MAX_PIPELINE_NAME_LENGTH, SAVE_NOTICE } from '#/features/pipelines/constants'
+import type { RecoverableDraft } from '#/features/pipelines/draft'
 import { availableTemplates } from '#/features/pipelines/templates'
 import type { SavedPipeline, Template } from '#/features/pipelines/types'
 import { engineRuntime } from '#/features/runs/engine-runtime'
@@ -26,13 +28,16 @@ import { readSettings, writeSettings } from '#/features/settings/settings'
 import { CATEGORIES, NODE_ICONS, toneOf } from '#/features/studio/node-ui'
 import { PipelineSteps } from '#/features/studio/pipeline-steps'
 import { track } from '#/features/usage/usage'
-import { formatBytes } from '#/lib/format'
+import { formatAge, formatBytes } from '#/lib/format'
 
 export function TemplatePicker({
   isOpen,
   onOpenChange,
   registry,
   hasSaved,
+  recovery,
+  onRecover,
+  onDiscardRecovery,
   onChoose,
   onImport,
   onOpenSaved,
@@ -42,6 +47,10 @@ export function TemplatePicker({
   registry: NodeRegistry
   /** The browser has saved pipelines to open. */
   hasSaved: boolean
+  /** Unsaved changes from another tab, possibly closed, to continue with. */
+  recovery: RecoverableDraft | null
+  onRecover: (draft: RecoverableDraft) => void
+  onDiscardRecovery: () => void
   onChoose: (template: Template) => void
   onImport: () => void
   onOpenSaved: () => void
@@ -56,6 +65,25 @@ export function TemplatePicker({
         onOpenChange={onOpenChange}
       />
       <VStack gap={4} padding={4}>
+        {recovery ? (
+          <Card variant="muted" padding={3}>
+            <HStack gap={3} vAlign="center" hAlign="between" wrap="wrap">
+              <HStack gap={3} vAlign="center">
+                <Icon icon={History} size="md" color="secondary" />
+                <VStack gap={0.5}>
+                  <Text type="body">Continue “{recovery.name}”</Text>
+                  <Text type="supporting">
+                    Unsaved changes from another tab, {formatAge(Date.now() - recovery.updatedAt)}
+                  </Text>
+                </VStack>
+              </HStack>
+              <HStack gap={1}>
+                <Button label="Discard" variant="ghost" size="sm" onClick={onDiscardRecovery} />
+                <Button label="Continue" size="sm" onClick={() => onRecover(recovery)} />
+              </HStack>
+            </HStack>
+          </Card>
+        ) : null}
         <List hasDividers>
           {templates
             .filter((template) => template.id !== 'blank')

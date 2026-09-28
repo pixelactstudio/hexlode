@@ -1,8 +1,10 @@
 name: Docker image
 
-# Publishes ghcr.io/<owner>/hexlode for Dokploy to pull, then asks Dokploy to redeploy.
-# `main` updates the `latest` tag; a `v1.2.3` tag also publishes `1.2.3` and `1.2`. Every image
-# also gets a `sha-<commit>` tag to roll back to. See DEPLOY.md.
+# Publishes ghcr.io/<owner>/hexlode. Every merge to `main` updates the `main` tag. A release, the
+# `v1.2.3` tag Release Please starts this workflow for, publishes `latest`, `1.2.3` and `1.2`, then
+# calls the Dokploy deploy webhook, since Dokploy runs `latest`. Every image also gets a
+# `sha-<commit>` tag to roll back to. With the Sentry secret and variables set, the build uploads
+# source maps. See DEPLOY.md.
 on:
   push:
     branches: [main]
@@ -32,12 +34,24 @@ jobs:
       - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
+      # The release name the app reports to Sentry: the version for a release tag, else the commit.
+      - id: version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          fi
+
       - id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: ${{ env.IMAGE }}
+          # `latest` only moves on a release, never on a plain merge to `main`.
+          flavor: latest=false
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=main,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix=sha-,format=short
@@ -49,7 +63,12 @@ jobs:
           platforms: linux/amd64
           load: true
           tags: hexlode:scan
-          build-args: HEXLODE_VERSION=${{ steps.meta.outputs.version }}
+          build-args: |
+            HEXLODE_VERSION=${{ steps.version.outputs.value }}
+            SENTRY_ORG=${{ vars.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ vars.SENTRY_PROJECT }}
+          secrets: |
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -97,7 +116,14 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: HEXLODE_VERSION=${{ steps.meta.outputs.version }}
+          # The same arguments as the scan build, so the build stage comes from its cache and the
+          # source maps are uploaded once.
+          build-args: |
+            HEXLODE_VERSION=${{ steps.version.outputs.value }}
+            SENTRY_ORG=${{ vars.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ vars.SENTRY_PROJECT }}
+          secrets: |
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: mode=max
@@ -116,23 +142,19 @@ jobs:
   deploy:
     name: deploy to Dokploy
     needs: image
-    # Only `main` deploys, and only once the Dokploy secrets are set (see DEPLOY.md).
-    if: github.ref == 'refs/heads/main'
+    # Only releases deploy, and only once the webhook secret is set (see DEPLOY.md).
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Redeploy
+      - name: Call the deploy webhook
         env:
-          DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
-          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
-          DOKPLOY_APPLICATION_ID: ${{ secrets.DOKPLOY_APPLICATION_ID }}
+          DOKPLOY_WEBHOOK_URL: ${{ secrets.DOKPLOY_WEBHOOK_URL }}
         run: |
-          if [ -z "$DOKPLOY_URL" ] || [ -z "$DOKPLOY_API_KEY" ] || [ -z "$DOKPLOY_APPLICATION_ID" ]; then
-            echo "::notice::Dokploy secrets are not set, so Dokploy was not asked to redeploy."
+          if [ -z "$DOKPLOY_WEBHOOK_URL" ]; then
+            echo "::notice::DOKPLOY_WEBHOOK_URL is not set, so Dokploy was not asked to deploy."
             exit 0
           fi
-          curl -fsS -X POST "${DOKPLOY_URL%/}/api/application.deploy" \
-            -H "x-api-key: $DOKPLOY_API_KEY" \
-            -H 'Content-Type: application/json' \
-            -d "{\"applicationId\": \"$DOKPLOY_APPLICATION_ID\"}"
+          curl -fsS --retry 3 --retry-all-errors -X POST "$DOKPLOY_WEBHOOK_URL"
+          echo
           echo "Dokploy is deploying the new image."

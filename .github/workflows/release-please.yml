@@ -1,0 +1,39 @@
+name: Release Please
+
+# Keeps a release pull request open on `main` that bumps the version and writes CHANGELOG.md from
+# the Conventional Commits merged since the last release. Merging it tags `vX.Y.Z`, creates the
+# GitHub release and publishes the versioned image.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: release pull request
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      actions: write
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      # Tags pushed with the workflow token start no workflows, so start the image build directly.
+      - name: Publish the versioned image
+        if: steps.release.outputs.release_created == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag_name }}
+        run: gh workflow run docker.yml --repo "$GITHUB_REPOSITORY" --ref "$TAG"

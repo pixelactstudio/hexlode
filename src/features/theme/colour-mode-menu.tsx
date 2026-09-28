@@ -11,6 +11,7 @@ import { colourModeStore } from '#/features/theme/colour-mode'
 import { DEFAULT_COLOUR_MODE } from '#/features/theme/constants'
 import type { ColourMode } from '#/features/theme/types'
 import { colourModeSchema } from '#/features/theme/validators'
+import { track } from '#/features/usage/usage'
 
 const MODES: { value: ColourMode; label: string; icon: typeof Moon }[] = [
   { value: 'dark', label: 'Dark', icon: Moon },
@@ -45,7 +46,11 @@ export function ColourModeMenu() {
       <DropdownMenuRadioGroup
         aria-label="Theme"
         value={mode}
-        onChange={(value) => colourModeStore().set(colourModeSchema.parse(value))}
+        onChange={(value) => {
+          const next = colourModeSchema.parse(value)
+          colourModeStore().set(next)
+          track('colour_mode_changed', { mode: next })
+        }}
       >
         {MODES.map((entry) => (
           <DropdownMenuRadioItem

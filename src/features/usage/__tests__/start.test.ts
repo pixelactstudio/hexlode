@@ -21,14 +21,59 @@ describe('starting analytics and error reports', () => {
     )
   })
 
-  it('starts Sentry with the DSN from the public config', async () => {
+  it('starts Sentry with the DSN and release from the public config, with logs and tracing', async () => {
     vi.stubGlobal('window', {})
     const init = vi.fn()
-    vi.doMock('@sentry/tanstackstart-react', () => ({ init }))
+    vi.doMock('@sentry/tanstackstart-react', () => ({
+      init,
+      consoleLoggingIntegration: () => ({ name: 'ConsoleLogs' }),
+    }))
     const { startErrorReporting } = await import('#/features/usage/error-reports')
-    await startErrorReporting({ sentryDsn: 'https://key@o1.ingest.sentry.io/2' })
+    await startErrorReporting({
+      sentryDsn: 'https://key@o1.ingest.sentry.io/2',
+      appVersion: '1.4.0',
+    })
     expect(init).toHaveBeenCalledWith(
-      expect.objectContaining({ dsn: 'https://key@o1.ingest.sentry.io/2' }),
+      expect.objectContaining({
+        dsn: 'https://key@o1.ingest.sentry.io/2',
+        release: '1.4.0',
+        sendDefaultPii: false,
+        enableLogs: true,
+        tracesSampleRate: expect.any(Number),
+      }),
     )
+    const options = init.mock.calls[0][0]
+    expect(options.tracesSampleRate).toBeGreaterThan(0)
+    expect(options.replaysSessionSampleRate ?? 0).toBe(0)
+    expect(options.beforeSendLog({ message: 'Lost a.jpg' })).toEqual({ message: 'Lost [file]' })
+  })
+
+  it('traces router navigations once Sentry has started', async () => {
+    vi.stubGlobal('window', {})
+    const addIntegration = vi.fn()
+    const routerIntegration = vi.fn((router: unknown) => ({ name: 'Router', router }))
+    vi.doMock('@sentry/tanstackstart-react', () => ({
+      init: vi.fn(),
+      addIntegration,
+      consoleLoggingIntegration: () => ({ name: 'ConsoleLogs' }),
+      tanstackRouterBrowserTracingIntegration: routerIntegration,
+    }))
+    const { startErrorReporting, traceRouter } = await import('#/features/usage/error-reports')
+    const router = { isServer: false }
+    const tracing = traceRouter(router as never)
+    await startErrorReporting({ sentryDsn: 'https://key@o1.ingest.sentry.io/2' })
+    await tracing
+    expect(addIntegration).toHaveBeenCalledWith({ name: 'Router', router })
+  })
+
+  it('leaves router tracing off without a DSN', async () => {
+    vi.stubGlobal('window', {})
+    const addIntegration = vi.fn()
+    vi.doMock('@sentry/tanstackstart-react', () => ({ init: vi.fn(), addIntegration }))
+    const { startErrorReporting, traceRouter } = await import('#/features/usage/error-reports')
+    const tracing = traceRouter({ isServer: false } as never)
+    await startErrorReporting({})
+    await tracing
+    expect(addIntegration).not.toHaveBeenCalled()
   })
 })

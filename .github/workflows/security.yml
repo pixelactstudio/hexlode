@@ -1,8 +1,7 @@
 name: Security
 
+# Dependency changes in pull requests, plus a daily audit of `main` for newly published advisories.
 on:
-  push:
-    branches: [main]
   pull_request:
     paths:
       - pnpm-lock.yaml

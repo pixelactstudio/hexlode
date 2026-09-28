@@ -47,8 +47,9 @@ A ready-made pipeline offered when the Studio opens.
 _Avoid_: preset, example
 
 **Draft**:
-The pipeline open in the Studio, kept in browser storage so a reload does not lose it. It holds
-nodes, settings and the name, never images.
+The pipeline open in a Studio tab, kept in that tab's session storage so a reload does not lose
+it, while a new tab starts fresh. The last draft with unsaved changes is also kept in local storage
+for a day, for a new tab to offer. It holds nodes, settings and the name, never images.
 _Avoid_: autosave, backup
 
 **Pipeline file**:

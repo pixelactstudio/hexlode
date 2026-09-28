@@ -7,4 +7,6 @@ export interface PublicConfig {
   posthogKey?: string
   posthogHost?: string
   sentryDsn?: string
+  /** The running image's version, from `HEXLODE_VERSION`. Labels events and error reports. */
+  appVersion?: string
 }
