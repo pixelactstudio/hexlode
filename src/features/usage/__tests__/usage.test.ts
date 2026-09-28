@@ -55,10 +55,15 @@ describe('analytics', () => {
     })
   })
 
-  it('labels every event with the app version', () => {
+  it('labels every event with the app version and environment', () => {
     const posthog = fakePostHog()
-    createAnalytics({ key: 'phc_test', appVersion: '1.4.0', posthog: posthog.client })
-    expect(posthog.registered).toEqual([{ app_version: '1.4.0' }])
+    createAnalytics({
+      key: 'phc_test',
+      appVersion: '1.4.0',
+      environment: 'staging',
+      posthog: posthog.client,
+    })
+    expect(posthog.registered).toEqual([{ app_version: '1.4.0', environment: 'staging' }])
   })
 
   // PostHog hashes the IP into the daily cookieless ID and drops cookieless events without one.

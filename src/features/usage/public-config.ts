@@ -12,5 +12,7 @@ export const getPublicConfig = createServerFn({ method: 'GET' }).handler(() =>
     VITE_POSTHOG_HOST: process.env.VITE_POSTHOG_HOST || import.meta.env.VITE_POSTHOG_HOST,
     VITE_SENTRY_DSN: process.env.VITE_SENTRY_DSN || import.meta.env.VITE_SENTRY_DSN,
     HEXLODE_VERSION: process.env.HEXLODE_VERSION,
+    HEXLODE_ENVIRONMENT: process.env.HEXLODE_ENVIRONMENT,
+    NODE_ENV: process.env.NODE_ENV,
   }),
 )

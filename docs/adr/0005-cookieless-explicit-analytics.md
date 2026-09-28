@@ -17,6 +17,10 @@ They carry the product signal autocapture cannot: tools, pipeline shapes, node t
 counts, timings and error codes. Events never contain file names, paths, pixels, image metadata or
 text the user types.
 
+Every event carries the app version and an `environment` property, `production` or `staging`, from
+`HEXLODE_ENVIRONMENT`. Staging reports to the same project, since the free plan has one, and
+PostHog's test account filter keeps it out of dashboards.
+
 ## Considered options
 
 - **Explicit events only** (the first version). Private, but the web analytics dashboard stayed

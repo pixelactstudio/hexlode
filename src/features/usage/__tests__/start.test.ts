@@ -32,11 +32,13 @@ describe('starting analytics and error reports', () => {
     await startErrorReporting({
       sentryDsn: 'https://key@o1.ingest.sentry.io/2',
       appVersion: '1.4.0',
+      environment: 'staging',
     })
     expect(init).toHaveBeenCalledWith(
       expect.objectContaining({
         dsn: 'https://key@o1.ingest.sentry.io/2',
         release: '1.4.0',
+        environment: 'staging',
         sendDefaultPii: false,
         enableLogs: true,
         tracesSampleRate: expect.any(Number),

@@ -12,7 +12,7 @@ needs rebuilding to change a setting ([ADR 0008](./docs/adr/0008-one-image-confi
 | --- | --- |
 | `latest` | On every release. Production runs this tag. |
 | `1.2.3`, `1.2` | On every release: merging the Release Please pull request tags `v1.2.3`. |
-| `main` | On every merge to `main`, released or not. Use it to try unreleased changes. |
+| `main` | On every merge to `main`, released or not. Staging runs this tag. |
 | `sha-abc1234` | On every build. Use it to pin or roll back to one commit. |
 
 The container listens on port `3000`, runs as an unprivileged user, and answers `GET /api/health`
@@ -45,6 +45,7 @@ runs with analytics and error reports off.
 | `VITE_POSTHOG_KEY` | PostHog project key. Turns on cookieless analytics. |
 | `VITE_POSTHOG_HOST` | PostHog API host, for example `https://eu.i.posthog.com`. Defaults to the US host. |
 | `VITE_SENTRY_DSN` | Sentry DSN. Turns on error reports, logs and tracing in the browser and on the server. |
+| `HEXLODE_ENVIRONMENT` | `staging` on the staging application. Leave it unset in production, which reports as `production`. |
 | `PORT` | The port the server listens on. Defaults to `3000`; change the domain's port to match. |
 
 The `VITE_*` values are public: they reach every visitor's browser. Never put a secret in a
@@ -107,15 +108,38 @@ runs Node directly:
 
 Then click **Deploy**. Open `https://your-domain/api/health` to see the running version.
 
-## Deploying on every release
+## Staging and production
 
-Merging a pull request into `main` publishes the `main` image but deploys nothing. Merging the
-Release Please pull request makes a release: the `Docker image` workflow publishes `latest` and the
-version tags, then calls the application's Dokploy deploy webhook, and Dokploy pulls `latest` and
-redeploys. Copy the webhook from the application's
-**Deployments** tab in Dokploy and save it in GitHub (**Settings → Secrets and variables →
-Actions**) as the repository secret `DOKPLOY_WEBHOOK_URL`. Until it is set, the workflow publishes
-the image and skips the deploy.
+Hexlode runs as two Dokploy applications from the same image, with the same PostHog key and Sentry
+DSN:
+
+| | Staging | Production |
+| --- | --- | --- |
+| Image | `ghcr.io/pixelactstudio/hexlode:main` | `ghcr.io/pixelactstudio/hexlode:latest` |
+| Deploys when | a pull request is merged into `main` | the Release Please pull request is merged |
+| `HEXLODE_ENVIRONMENT` | `staging` | unset |
+| Webhook secret in GitHub | `DOKPLOY_STAGING_WEBHOOK_URL` | `DOKPLOY_WEBHOOK_URL` |
+
+So a merged change shows up on staging to test, and reaches production with the next release. Set
+up the staging application like production (steps 1 to 5 above) with the `main` image, its own
+domain with HTTPS, and `HEXLODE_ENVIRONMENT=staging`.
+
+Copy each application's webhook from its **Deployments** tab in Dokploy and save it in GitHub
+(**Settings → Secrets and variables → Actions**) as the repository secret in the table. Until a
+secret is set, the workflow publishes the image and skips that deploy.
+
+### Keeping staging out of the numbers
+
+Both applications report to the same Sentry and PostHog projects, labelled with their environment.
+
+- **Sentry** files every error, log and trace under the environment, `production` or `staging`.
+  Pick it with the environment selector at the top of Issues, Traces and Logs. Make alert rules
+  fire for the `production` environment only.
+- **PostHog** labels every event with an `environment` property. In **Project settings → Product
+  analytics → Filter out internal and test users**, add the filter `environment` **is not**
+  `staging`, add another for `development`, and turn on **Enable this filter on all new insights**.
+  Dashboards then count production only. To check events from staging, turn off **Filter out
+  internal and test users** on an insight.
 
 ## Readable Sentry stack traces
 
@@ -147,7 +171,7 @@ Set these up in Sentry itself:
 - **Uptime monitor** (**Insights → Uptime**): check `https://your-domain/api/health` so Sentry
   alerts you when the site is down.
 - **Alerts** (**Alerts → Create alert**): for example, email on every new issue, or when errors in
-  an hour pass a number.
+  an hour pass a number. Set their environment to `production`, so testing on staging stays quiet.
 
 ## Rolling back
 
