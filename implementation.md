@@ -147,20 +147,31 @@ removed.
 - The batch of 500 images of 12 megapixels runs with `pnpm test:scale`. It takes minutes, so it is
   outside `pnpm validate`; run it before closing a phase.
 - `pnpm validate` passes before every commit.
-- CI (`.github/workflows/`) runs on every push to `main` and on every pull request:
-  Biome, types, commit messages, the generated theme and route tree, actionlint and hadolint;
-  unit tests on Linux, macOS and Windows; browser tests in three engines; coverage; the build with
-  a smoke test of the server; and the Docker image with a smoke test of the container, its health
-  check, runtime settings and an ARM build. CodeQL, `pnpm audit`, dependency review and PR titles
-  run in their own workflows, and the scale test runs weekly or on demand.
+- CI (`.github/workflows/`) runs on every pull request: Biome, types, commit messages, the
+  generated theme and route tree, actionlint and hadolint; unit tests on Linux, macOS and Windows;
+  browser tests in three engines; coverage; the build with a smoke test of the server; and the
+  Docker image with a smoke test of the container, its health check, runtime settings and an ARM
+  build. CodeQL, `pnpm audit`, dependency review and PR titles run in their own workflows. A push
+  to `main` only publishes and deploys the image, since the pull request already ran the checks;
+  CodeQL, the audit and the scale test also run on a schedule.
+- Release Please keeps a release pull request open on `main` from the Conventional Commits merged
+  there; merging it tags the version, writes the changelog and publishes the versioned image.
 
 ## Analytics
 
-- PostHog uses `cookieless_mode: 'always'` and `person_profiles: 'never'`, with session replay and
-  autocapture turned off. The app sends its own events from one analytics module
-  ([ADR 0005](./docs/adr/0005-cookieless-explicit-analytics.md)).
-- Sentry sends errors with `sendDefaultPii: false` and no replay. File names are removed from error
-  messages before sending.
+- PostHog starts as its TanStack Start guide shows, with `cookieless_mode: 'always'` and
+  `person_profiles: 'never'`. It captures pageviews, page leaves, clicks, heatmaps and web vitals
+  with element text and attributes masked; session replay is off. The app also sends its own events
+  from one analytics module ([ADR 0005](./docs/adr/0005-cookieless-explicit-analytics.md)).
+- Sentry starts as its TanStack Start guide shows: `src/client.tsx` in the browser,
+  `instrument.server.mjs` on the server, `src/server.ts` and the global middlewares in
+  `src/start.ts`. It sends errors, logs and a fifth of traces, with `sendDefaultPii: false` and no
+  replay, through a same-origin tunnel route. File names are removed from messages, exceptions,
+  breadcrumbs and logs before sending. Source maps upload at build time when `SENTRY_AUTH_TOKEN`,
+  `SENTRY_ORG` and `SENTRY_PROJECT` are set.
+- The browser reads the public settings from a `hexlode-config` meta tag the root route writes, so
+  both start before hydration. Their libraries load on their own, so a content blocker cannot stop
+  the app.
 - The PostHog project must have cookieless mode enabled and "Discard client IP data" turned on;
   without the first, PostHog ignores cookieless events. The client must not clear `$ip`: PostHog
   hashes it into the daily anonymous ID and drops cookieless events without it.
@@ -169,8 +180,8 @@ removed.
 ## Deployment
 
 The app runs as one Docker container that serves the Nitro build. The `Docker image` workflow
-publishes `ghcr.io/pixelactstudio/hexlode` for x86 and ARM on every push to `main`, then asks
-Dokploy on the maintainer's VPS to redeploy. Dokploy pulls the image, sets its environment and
+publishes `ghcr.io/pixelactstudio/hexlode` for x86 and ARM on every push to `main`, then calls
+the Dokploy deploy webhook on the maintainer's VPS. Dokploy pulls the image, sets its environment and
 handles the domain and HTTPS ([ADR 0008](./docs/adr/0008-one-image-configured-at-runtime.md)).
 `/api/health` answers the container health check that Dokploy's zero-downtime updates wait for.
 A future cloud mode adds a Postgres service on the same VPS, reached through `DATABASE_URL`.

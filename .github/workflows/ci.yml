@@ -1,14 +1,14 @@
 name: CI
 
+# Every check runs on the pull request. `main` only receives squash merges of checked pull
+# requests, so a push there runs the Docker image workflow instead of repeating these.
 on:
-  push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

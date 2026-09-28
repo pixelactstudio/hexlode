@@ -7,7 +7,13 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm build && chmod -R a+rX .output
+# With a Sentry auth token (a build secret), the build uploads source maps and removes them from the
+# output. Without one it skips the upload.
+ARG HEXLODE_VERSION=dev
+ARG SENTRY_ORG
+ARG SENTRY_PROJECT
+RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN \
+    SENTRY_RELEASE="$HEXLODE_VERSION" pnpm build && chmod -R a+rX .output
 # Nitro leaves Sentry out of the server bundle, so install it on its own at the locked version.
 RUN SENTRY=$(node -p "require('@sentry/tanstackstart-react/package.json').version") \
     && npm install --prefix /runtime --omit=dev --omit=optional --ignore-scripts \

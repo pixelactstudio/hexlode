@@ -5,6 +5,7 @@ import { Lock, MonitorX } from 'lucide-react'
 import { type ReactNode, useEffect, useState } from 'react'
 
 import { engineProblem } from '#/features/runs/engine-runtime'
+import { track } from '#/features/usage/usage'
 
 const MESSAGES = {
   insecure: {
@@ -28,7 +29,11 @@ const MESSAGES = {
  */
 export function EngineGate({ children }: { children: ReactNode }) {
   const [problem, setProblem] = useState<ReturnType<typeof engineProblem>>(null)
-  useEffect(() => setProblem(engineProblem()), [])
+  useEffect(() => {
+    const found = engineProblem()
+    setProblem(found)
+    if (found) track('engine_unavailable', { reason: found })
+  }, [])
   if (problem === null) return children
   const message = MESSAGES[problem]
   return (

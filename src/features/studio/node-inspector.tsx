@@ -24,6 +24,7 @@ import { SourceList } from '#/features/runs/source-list'
 import { NODE_TYPES_WITH_SETTINGS, NodeSettings } from '#/features/studio/node-settings'
 import { NODE_ICONS, toneOf } from '#/features/studio/node-ui'
 import type { PreviewState, PreviewView, StudioSession } from '#/features/studio/studio-session'
+import { track } from '#/features/usage/usage'
 import { formatBytes, formatChange, formatCount, formatDuration } from '#/lib/format'
 
 /** A part of the inspector: a small uppercase title, then its content, under a divider. */
@@ -328,7 +329,10 @@ export function NodeInspector({
                 icon={<Trash2 size={16} />}
                 size="sm"
                 variant="ghost"
-                onClick={() => session.store.removeNodes([node.id])}
+                onClick={() => {
+                  session.store.removeNodes([node.id])
+                  track('node_removed', { nodeType: node.type, method: 'inspector' })
+                }}
                 isDisabled={run.running}
               />
             ) : null}

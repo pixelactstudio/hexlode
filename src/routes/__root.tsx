@@ -5,15 +5,13 @@ import type { QueryClient } from '@tanstack/react-query'
 import { createRootRouteWithContext, HeadContent, Scripts } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 
-import { useEffect } from 'react'
 import { SiteFrame } from '#/features/app-shell/site-frame'
 import { COLOUR_MODE_SCRIPT } from '#/features/theme/colour-mode'
 import { useColourMode } from '#/features/theme/colour-mode-menu'
 import { DEFAULT_COLOUR_MODE } from '#/features/theme/constants'
 import { hexlodeTheme } from '#/features/theme/hexlode'
-import { startErrorReporting } from '#/features/usage/error-reports'
+import { PUBLIC_CONFIG_META } from '#/features/usage/constants'
 import { getPublicConfig } from '#/features/usage/public-config'
-import { startAnalytics } from '#/features/usage/usage'
 import { RouterLink } from '#/lib/router-link'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import appCss from '../styles.css?url'
@@ -26,7 +24,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   // Read once per visit on the server, so the deployment's environment sets the keys.
   loader: () => getPublicConfig(),
   staleTime: Number.POSITIVE_INFINITY,
-  head: () => ({
+  head: ({ loaderData }) => ({
     meta: [
       {
         charSet: 'utf-8',
@@ -43,6 +41,8 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         content:
           'Convert, compress, resize, crop and clean images in your browser, or build batch pipelines in the Studio. Works on your device, with no upload needed.',
       },
+      // src/client.tsx reads this to start analytics and error reports before hydration.
+      { name: PUBLIC_CONFIG_META, content: JSON.stringify(loaderData ?? {}) },
     ],
     links: [
       {
@@ -56,11 +56,6 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const config = Route.useLoaderData()
-  useEffect(() => {
-    void startAnalytics(config)
-    void startErrorReporting(config)
-  }, [config])
   const mode = useColourMode()
   return (
     // The inline script sets the colour mode before paint, so the attribute can differ from the

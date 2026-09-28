@@ -41,3 +41,23 @@ export function scrubSentryEvent<T extends SentryLikeEvent>(event: T): T {
   }
   return scrubbed
 }
+
+interface SentryLikeLog {
+  message?: unknown
+  attributes?: Record<string, unknown>
+}
+
+/** Logs carry console arguments as attributes, so both the message and the attributes are scrubbed. */
+export function scrubSentryLog<T extends SentryLikeLog>(log: T): T {
+  const scrubbed: T = { ...log }
+  if (typeof log.message === 'string') scrubbed.message = scrubText(log.message)
+  if (log.attributes) {
+    scrubbed.attributes = Object.fromEntries(
+      Object.entries(log.attributes).map(([key, value]) => [
+        key,
+        typeof value === 'string' ? scrubText(value) : value,
+      ]),
+    )
+  }
+  return scrubbed
+}

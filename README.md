@@ -71,11 +71,6 @@ Settings come from the container's environment, for example `-e VITE_POSTHOG_KEY
 `-e VITE_SENTRY_DSN=…` to enable analytics and error reports. [DEPLOY.md](./DEPLOY.md) covers
 Dokploy, every variable, zero-downtime updates and deploying on each push.
 
-## Documents
-
-[idea.md](./idea.md) describes the product, [implementation.md](./implementation.md) the plan and
-engine, [CONTEXT.md](./CONTEXT.md) the vocabulary and [docs/adr/](./docs/adr/) the decisions.
-
 ## License
 
 [Apache License 2.0](./LICENSE). Copyright 2026 Dev Talan. The jSquash codecs keep their own

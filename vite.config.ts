@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import babel from '@rolldown/plugin-babel'
+import { sentryTanstackStart } from '@sentry/tanstackstart-react/vite'
 import tailwindcss from '@tailwindcss/vite'
 import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
@@ -57,6 +58,10 @@ const config = defineConfig({
     viteReact(),
     babel({ presets: [reactCompilerPreset()] }),
     codecLicences(),
+    // Last, as Sentry's guide asks. Uploads source maps when SENTRY_AUTH_TOKEN, SENTRY_ORG and
+    // SENTRY_PROJECT are set at build time, then deletes them from the output. The tunnel sends
+    // browser reports through this server, at a path generated per build, past content blockers.
+    sentryTanstackStart({ tunnelRoute: true, telemetry: false }),
   ],
 })
 

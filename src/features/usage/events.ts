@@ -4,6 +4,8 @@
  */
 import { z } from 'zod'
 
+import { COLOUR_MODES } from '#/features/theme/constants'
+
 const count = z.number().int().nonnegative()
 const code = z.string().regex(/^[a-z0-9_]{1,40}$/)
 const nodeType = z.string().regex(/^[a-z0-9.-]{1,40}$/)
@@ -112,6 +114,10 @@ export const EVENTS = {
     description: 'A node was added to the canvas, and how.',
     properties: z.object({ nodeType, method: z.enum(['drag', 'click', 'search']) }).strict(),
   },
+  node_removed: {
+    description: 'A node was removed from the canvas, and how.',
+    properties: z.object({ nodeType, method: z.enum(['keyboard', 'menu', 'inspector']) }).strict(),
+  },
   connection_checked: {
     description: 'A connection was made or refused: the two node types and the decision.',
     properties: z
@@ -146,6 +152,15 @@ export const EVENTS = {
     properties: z
       .object({ action: z.enum(['budget', 'clear']), budgetGigabytes: z.number().optional() })
       .strict(),
+  },
+  engine_unavailable: {
+    description:
+      'A page could not run the engine: it was opened over plain HTTP, or the browser lacks Web Workers or the Origin Private File System.',
+    properties: z.object({ reason: z.enum(['insecure', 'unsupported']) }).strict(),
+  },
+  colour_mode_changed: {
+    description: 'The colour mode was changed.',
+    properties: z.object({ mode: z.enum(COLOUR_MODES) }).strict(),
   },
 } as const
 

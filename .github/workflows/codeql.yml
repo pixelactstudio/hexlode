@@ -1,8 +1,7 @@
 name: CodeQL
 
+# Pull requests, plus a weekly run on `main` that keeps the baseline pull requests compare with.
 on:
-  push:
-    branches: [main]
   pull_request:
   schedule:
     - cron: '17 4 * * 1'
