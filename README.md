@@ -61,7 +61,8 @@ Browser tests use the Chromium at `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`, or the 
 
 ## Docker
 
-CI publishes `ghcr.io/pixelactstudio/hexlode` for x86 and ARM on every push to `main`.
+CI publishes `ghcr.io/pixelactstudio/hexlode` for x86 and ARM: `main` on every merge to `main`,
+and `latest` with the version tags on every release.
 
 ```bash
 docker run -p 3000:3000 ghcr.io/pixelactstudio/hexlode:latest

@@ -10,8 +10,9 @@ needs rebuilding to change a setting ([ADR 0008](./docs/adr/0008-one-image-confi
 
 | Tag | Updated |
 | --- | --- |
-| `latest` | On every push to `main`. |
-| `1.2.3`, `1.2` | When a release is made: merging the Release Please pull request tags `v1.2.3`. |
+| `latest` | On every release. Production runs this tag. |
+| `1.2.3`, `1.2` | On every release: merging the Release Please pull request tags `v1.2.3`. |
+| `main` | On every merge to `main`, released or not. Use it to try unreleased changes. |
 | `sha-abc1234` | On every build. Use it to pin or roll back to one commit. |
 
 The container listens on port `3000`, runs as an unprivileged user, and answers `GET /api/health`
@@ -106,10 +107,12 @@ runs Node directly:
 
 Then click **Deploy**. Open `https://your-domain/api/health` to see the running version.
 
-## Deploying on every push to `main`
+## Deploying on every release
 
-The `Docker image` workflow calls the application's Dokploy deploy webhook once the new image is
-pushed, and Dokploy pulls `latest` and redeploys. Copy the webhook from the application's
+Merging a pull request into `main` publishes the `main` image but deploys nothing. Merging the
+Release Please pull request makes a release: the `Docker image` workflow publishes `latest` and the
+version tags, then calls the application's Dokploy deploy webhook, and Dokploy pulls `latest` and
+redeploys. Copy the webhook from the application's
 **Deployments** tab in Dokploy and save it in GitHub (**Settings → Secrets and variables →
 Actions**) as the repository secret `DOKPLOY_WEBHOOK_URL`. Until it is set, the workflow publishes
 the image and skips the deploy.
@@ -149,7 +152,7 @@ Set these up in Sentry itself:
 ## Rolling back
 
 Change the image on the **General** tab to an earlier `sha-…` tag and deploy. Every published tag
-is listed on the package's GitHub page. Switch back to `latest` to follow `main` again.
+is listed on the package's GitHub page. Switch back to `latest` to follow releases again.
 
 ## Building on the server instead
 

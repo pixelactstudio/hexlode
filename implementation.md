@@ -152,10 +152,11 @@ removed.
   browser tests in three engines; coverage; the build with a smoke test of the server; and the
   Docker image with a smoke test of the container, its health check, runtime settings and an ARM
   build. CodeQL, `pnpm audit`, dependency review and PR titles run in their own workflows. A push
-  to `main` only publishes and deploys the image, since the pull request already ran the checks;
+  to `main` only publishes the `main` image, since the pull request already ran the checks;
   CodeQL, the audit and the scale test also run on a schedule.
 - Release Please keeps a release pull request open on `main` from the Conventional Commits merged
-  there; merging it tags the version, writes the changelog and publishes the versioned image.
+  there; merging it tags the version, writes the changelog, publishes `latest` and the version tags, and
+  deploys.
 
 ## Analytics
 
@@ -180,8 +181,8 @@ removed.
 ## Deployment
 
 The app runs as one Docker container that serves the Nitro build. The `Docker image` workflow
-publishes `ghcr.io/pixelactstudio/hexlode` for x86 and ARM on every push to `main`, then calls
-the Dokploy deploy webhook on the maintainer's VPS. Dokploy pulls the image, sets its environment and
+publishes `ghcr.io/pixelactstudio/hexlode` for x86 and ARM: `main` on every merge to `main`, and
+`latest` on every release, after which it calls the Dokploy deploy webhook on the maintainer's VPS. Dokploy pulls the image, sets its environment and
 handles the domain and HTTPS ([ADR 0008](./docs/adr/0008-one-image-configured-at-runtime.md)).
 `/api/health` answers the container health check that Dokploy's zero-downtime updates wait for.
 A future cloud mode adds a Postgres service on the same VPS, reached through `DATABASE_URL`.
