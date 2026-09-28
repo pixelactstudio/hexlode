@@ -1,6 +1,6 @@
 # Hexlode product
 
-> Updated: 2026-09-27 (Phase 1 interface redesign: animated home page, top bar, tool pages)
+> Updated: 2026-09-28 (directed Studio scenes on the home page, footer credits and wordmark glow)
 > Delivery plan: [implementation.md](./implementation.md). Vocabulary: [CONTEXT.md](./CONTEXT.md).
 > Decisions and their reasons: [docs/adr/](./docs/adr/).
 
@@ -45,13 +45,21 @@ it says the work can run on the device without uploading, never that nothing is 
 that there are no accounts. Animations run only while on screen, start from a still first frame
 rendered on the server, and stop when the system asks for reduced motion.
 
+The Studio section's pictures are short directed scenes that follow one batch of 240 photos: the
+graph builds and the batch runs through it, a pointer changes a crop and the preview reframes, four
+workers share the last images of the batch, an edited setting reruns only the changed steps, and
+the pipeline is saved as a tool. One thing moves at a time, each scene rests on its last frame
+before it plays again, and scenes side by side start one after another. With reduced motion each
+scene shows one still frame.
+
 Every page shares one frame that stays mounted while pages change. The top bar holds the name, a
 Tools menu that opens on click and lists the quick tools with a short line each, the Studio, a
 GitHub link and the colour mode. The bar is opaque. On pages that scroll it lines up with the
 1200-pixel column and folds into a floating dock once the page scrolls; on the Studio it spans the
 window, and moving between the two animates its width. On phones its links move into a menu
-button. The footer holds a line about Hexlode, the links to the tools, the Studio, the privacy
-page, the codec licences and the repository, and a large dotted wordmark.
+button. The footer holds a line about Hexlode, a credit to Damn Labs and Pixelact Studio, the links to
+the tools, the Studio, the privacy page, the codec licences, the repository and the other Damn Labs
+sites, and a large dotted wordmark whose dots brighten in a circle under the pointer.
 
 The colour mode is dark, light or the system's. Dark is the default and is pitch dark. The choice
 is kept in browser storage and applied before the page paints, so a light page never flashes dark.

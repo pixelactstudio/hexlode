@@ -29,17 +29,17 @@ function ProductShot() {
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-[12%] top-[8%] bottom-[10%] rounded-full bg-red-ring/15 blur-[110px]"
       />
-      <div className="relative left-1/2 w-[calc(100vw-24px)] max-w-[1440px] -translate-x-1/2 origin-top animate-shot-in rounded-xl border border-border bg-card p-1.5 shadow-lg motion-reduce:animate-none md:w-[calc(100vw-64px)]">
+      <div className="relative left-1/2 w-[calc(100vw-24px)] max-w-[1440px] -translate-x-1/2 origin-top animate-shot-in rounded-lg border border-border bg-card p-1.5 shadow-lg motion-reduce:animate-none md:w-[calc(100vw-64px)]">
         <div className="flex items-center gap-2 px-2.5 pt-1 pb-2.5">
           <span className="size-2.5 rounded-full bg-border-strong" />
           <span className="size-2.5 rounded-full bg-border-strong" />
           <span className="size-2.5 rounded-full bg-border-strong" />
-          <span className="mx-auto rounded-md bg-muted px-3 py-0.5 text-secondary text-xs">
+          <span className="mx-auto rounded-sm bg-muted px-3 py-0.5 text-secondary text-xs">
             Hexlode · Studio
           </span>
           <span className="w-12" />
         </div>
-        <div className="overflow-hidden rounded-lg border border-border">
+        <div className="overflow-hidden rounded-sm border border-border">
           {SHOTS.map((shot) => (
             <img
               key={shot.mode}
