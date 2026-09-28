@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM --platform=$BUILDPLATFORM node:24.17.0-slim AS build
+FROM --platform=$BUILDPLATFORM node:26.10.0-slim AS build
 WORKDIR /app
 ENV HUSKY=0 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 SKIP_ENV_VALIDATION=1
 RUN corepack enable
