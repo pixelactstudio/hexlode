@@ -42,4 +42,10 @@ export const studioDraftSchema = z.object({
   name: z.string().max(MAX_PIPELINE_NAME_LENGTH),
   savedId: z.string().min(1).nullable(),
   pipeline: pipelineSchema,
+  dirty: z.boolean().optional(),
+})
+
+export const recoverableDraftSchema = studioDraftSchema.extend({
+  updatedAt: z.number().int().nonnegative(),
+  tabId: z.string().min(1),
 })

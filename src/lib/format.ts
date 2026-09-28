@@ -28,3 +28,15 @@ export function formatChange(before: number, after: number) {
 
 const counter = new Intl.NumberFormat('en')
 export const formatCount = (value: number) => counter.format(value)
+
+const relativeTime = new Intl.RelativeTimeFormat('en', { numeric: 'always' })
+
+/** "5 minutes ago" or "2 hours ago": how long ago something happened, in whole units. */
+export function formatAge(ms: number) {
+  const minutes = Math.floor(ms / 60_000)
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return relativeTime.format(-minutes, 'minute')
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return relativeTime.format(-hours, 'hour')
+  return relativeTime.format(-Math.floor(hours / 24), 'day')
+}

@@ -53,7 +53,7 @@ Active phase: **Phase 1**.
     self-hosted Figtree font.
 14. Studio: node library with every category, drag, search, category filter and a folded rail,
     inspector, template picker, live previews, run statistics on nodes and connections, undo and
-    redo, right-click menus, a draft that survives a reload, narrow-screen message.
+    redo, right-click menus, a per-tab draft that survives a reload, narrow-screen message.
 15. Save in browser storage, `.hexlode` export and import, pipeline tools.
 
 ### Node batch 1

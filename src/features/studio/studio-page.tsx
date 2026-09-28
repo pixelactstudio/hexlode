@@ -1,3 +1,4 @@
+import { AlertDialog } from '@astryxdesign/core/AlertDialog'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
 import { Center } from '@astryxdesign/core/Center'
@@ -10,18 +11,19 @@ import { Link } from '@astryxdesign/core/Link'
 import { MoreMenu } from '@astryxdesign/core/MoreMenu'
 import { Popover } from '@astryxdesign/core/Popover'
 import { HStack, VStack } from '@astryxdesign/core/Stack'
+import { StatusDot } from '@astryxdesign/core/StatusDot'
 import { Text } from '@astryxdesign/core/Text'
 import { useToast } from '@astryxdesign/core/Toast'
 import { useNavigate } from '@tanstack/react-router'
 import { ReactFlowProvider, useReactFlow } from '@xyflow/react'
-import { CircleHelp, Download, Play, Redo2, Settings, Undo2 } from 'lucide-react'
+import { CircleHelp, Download, Play, Plus, Redo2, Save, Settings, Undo2 } from 'lucide-react'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 import { describeEstimate } from '#/features/engine/estimate'
 import type { FolderTarget } from '#/features/engine/opfs/run-stores'
 import { pickOutputFolder } from '#/features/image-input/folder'
 import { productRegistry } from '#/features/nodes/registry'
-import { draftStore } from '#/features/pipelines/draft'
+import { draftStore, type RecoverableDraft } from '#/features/pipelines/draft'
 import {
   exportPipelineFile,
   importPipelineFile,
@@ -30,6 +32,7 @@ import {
   validatePipeline,
 } from '#/features/pipelines/pipeline-file'
 import { pipelineStore } from '#/features/pipelines/storage'
+import type { NamedPipeline } from '#/features/pipelines/types'
 import { QUICK_TOOL_GROUPS } from '#/features/quick-tools/tool-ui'
 import { QUICK_TOOL_DEFINITIONS } from '#/features/quick-tools/tools'
 import { EngineGate } from '#/features/runs/engine-unavailable'
@@ -119,7 +122,7 @@ function initialPipeline(savedPipelineId: string | undefined) {
     return { named: saved, savedId: saved.id, dirty: false }
   }
   if (!savedPipelineId && draft && draft.savedId === null && usable(draft.pipeline)) {
-    return { named: draft, savedId: null, dirty: true }
+    return { named: draft, savedId: null, dirty: draft.dirty ?? true }
   }
   return null
 }
@@ -148,7 +151,11 @@ function Studio({
   const showToast = useToast()
   const navigate = useNavigate()
   const importInput = useRef<HTMLInputElement>(null)
-  const [dialog, setDialog] = useState<'templates' | 'save' | 'open' | 'settings' | null>(null)
+  const [dialog, setDialog] = useState<
+    'templates' | 'discard' | 'save' | 'open' | 'settings' | null
+  >(null)
+  /** Unsaved changes from another tab, offered when this tab starts without a pipeline. */
+  const [recovery, setRecovery] = useState<RecoverableDraft | null>(null)
   const [nodeRequest, setNodeRequest] = useState<AddNodeRequest | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
   const [libraryCollapsed, setLibraryCollapsed] = useState(false)
@@ -159,19 +166,20 @@ function Studio({
       store.load(initial.named, initial.savedId, { dirty: initial.dirty })
       requestAnimationFrame(() => void flow.fitView(FIT_VIEW))
     } else {
+      setRecovery(draftStore().recoverable())
       setDialog('templates')
     }
     session.refresh()
   }, [savedPipelineId, session, store, flow])
 
-  // Keep the pipeline being edited, so a reload or a closed tab does not lose it.
+  // Keep this tab's pipeline, so a reload does not lose it, and unsaved changes for a new tab to offer.
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined
     const unsubscribe = store.subscribe(() => {
       clearTimeout(timer)
       timer = setTimeout(() => {
-        const { name, pipeline, savedId } = store.getState()
-        draftStore().write({ name, pipeline, savedId })
+        const { name, pipeline, savedId, dirty } = store.getState()
+        draftStore().write({ name, pipeline, savedId, dirty })
       }, DRAFT_SAVE_DELAY_MS)
     })
     return () => {
@@ -273,6 +281,26 @@ function Studio({
     await session.start({ folders })
   }
 
+  /**
+   * Opens a pipeline in this tab and points the address at it: `?pipeline=<id>` for a saved one,
+   * plain `/studio` otherwise. The draft is written first, so a reload opens the same pipeline.
+   */
+  const openInTab = (named: NamedPipeline, savedId: string | null, dirty = false) => {
+    draftStore().write({ ...named, savedId, dirty })
+    setDialog(null)
+    setRecovery(null)
+    if ((savedId ?? undefined) !== savedPipelineId) {
+      // The page reloads the pipeline from the draft once the address changes.
+      void navigate({ to: '/studio', search: { pipeline: savedId ?? undefined } })
+      return
+    }
+    store.load(named, savedId, { dirty })
+    session.refresh()
+    requestAnimationFrame(() => void flow.fitView(FIT_VIEW))
+  }
+
+  const startNew = () => setDialog(studio.dirty ? 'discard' : 'templates')
+
   const save = (name: string) => {
     const result = pipelineStore().save({
       id: studio.savedId ?? undefined,
@@ -300,15 +328,12 @@ function Studio({
   const importFile = async (file: File) => {
     try {
       const imported = importPipelineFile(await file.text(), registry)
-      store.load(imported)
-      session.refresh()
-      setDialog(null)
+      openInTab(imported, null)
       track('pipeline_file', {
         action: 'import',
         result: 'ok',
         nodeCount: imported.pipeline.nodes.length,
       })
-      requestAnimationFrame(() => void flow.fitView(FIT_VIEW))
     } catch (reason) {
       const message =
         reason instanceof PipelineFileError ? reason.message : 'The file could not be read.'
@@ -363,17 +388,30 @@ function Studio({
             onClick={() => store.redo()}
             isDisabled={!studio.canRedo}
           />
-          <Button
-            label={studio.dirty || !studio.savedId ? 'Save' : 'Saved'}
-            size="sm"
+          <IconButton
+            label="New pipeline"
+            tooltip="New pipeline"
+            icon={<Plus size={16} />}
             variant="ghost"
+            size="sm"
+            onClick={startNew}
+          />
+          <IconButton
+            label="Save pipeline"
+            tooltip={studio.dirty || !studio.savedId ? 'Save pipeline' : 'Saved in this browser'}
+            icon={<Save size={16} />}
+            variant="ghost"
+            size="sm"
             onClick={() => setDialog('save')}
           />
+          {studio.dirty ? (
+            <StatusDot variant="warning" label="Unsaved changes" tooltip="Unsaved changes" />
+          ) : null}
           <MoreMenu
             label="Pipeline menu"
             size="sm"
             items={[
-              { label: 'New pipeline…', onClick: () => setDialog('templates') },
+              { label: 'New pipeline…', onClick: startNew },
               { label: 'Open saved pipeline…', onClick: () => setDialog('open') },
               { type: 'divider' },
               { label: 'Import .hexlode file…', onClick: () => importInput.current?.click() },
@@ -538,18 +576,35 @@ function Studio({
         onOpenChange={(open) => setDialog(open ? 'templates' : null)}
         registry={registry}
         hasSaved={saved.length > 0}
+        recovery={recovery}
+        onRecover={(draft) => {
+          const savedId = draft.savedId && pipelineStore().get(draft.savedId) ? draft.savedId : null
+          openInTab(draft, savedId, true)
+        }}
+        onDiscardRecovery={() => {
+          draftStore().discardRecovery()
+          setRecovery(null)
+        }}
         onImport={() => importInput.current?.click()}
         onOpenSaved={() => setDialog('open')}
         onChoose={(template) => {
-          store.load({
-            name: template.id === 'blank' ? 'Untitled pipeline' : template.name,
-            pipeline: template.pipeline,
-          })
-          session.refresh()
-          setDialog(null)
+          openInTab(
+            {
+              name: template.id === 'blank' ? 'Untitled pipeline' : template.name,
+              pipeline: template.pipeline,
+            },
+            null,
+          )
           track('template_chosen', { template: template.id })
-          requestAnimationFrame(() => void flow.fitView(FIT_VIEW))
         }}
+      />
+      <AlertDialog
+        isOpen={dialog === 'discard'}
+        onOpenChange={(open) => setDialog(open ? 'discard' : null)}
+        title="Start a new pipeline?"
+        description={`Your unsaved changes to “${studio.name}” will be lost. Save the pipeline first to keep them.`}
+        actionLabel="Discard changes"
+        onAction={() => setDialog('templates')}
       />
       <NodePicker
         isOpen={nodeRequest !== null}

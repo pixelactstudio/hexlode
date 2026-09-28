@@ -42,7 +42,7 @@ function Privacy() {
             />
             <ListItem
               label="The pipeline open in the Studio"
-              description="Its nodes, settings and name, so a reload does not lose your work. Never your images. Clearing site data deletes it."
+              description="Its nodes, settings and name, so a reload does not lose your work, kept for that tab only. Unsaved changes are also kept for a day, so a new tab can offer them back. Never your images. Clearing site data deletes it."
             />
             <ListItem
               label="Your colour mode"
