@@ -20,14 +20,14 @@ Hexlode has quick tools for converting, compressing, resizing, cropping, rotatin
 metadata, and a node-based Studio for running many images through the same pipeline. Images are
 processed on your device, without uploading them.
 
+Use it at [hexlode.damnlabs.com](https://hexlode.damnlabs.com). Hexlode is made by [Damn Labs](https://damnlabs.com),
+a [Pixelact Studio](https://pixelactstudio.com) product.
+
 ## Principles
 
 - Process images on the user's device.
 - Make the Studio canvas show real work: progress, results and errors.
 - Never send image bytes, filenames, thumbnails or metadata to analytics.
-
-Use it at [hexlode.damnlabs.com](https://hexlode.damnlabs.com). Hexlode is made by [Damn Labs](https://damnlabs.com),
-a [Pixelact Studio](https://pixelactstudio.com) product.
 
 ## Run locally
 
