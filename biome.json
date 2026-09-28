@@ -12,6 +12,7 @@
       "!src/routeTree.gen.ts",
       "!src/styles.css",
       "!pnpm-lock.yaml",
+      "!.release-please-manifest.json",
       "!src/features/theme/hexlode.js",
       "!src/features/theme/hexlode.d.ts",
       "!src/features/theme/hexlode.variants.d.ts",
