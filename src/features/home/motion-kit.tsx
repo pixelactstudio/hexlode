@@ -148,6 +148,9 @@ export function Crosshair({ side }: { side: 'start' | 'end' }) {
   )
 }
 
+/** The pointer's outline, in a 16 × 20 box with its tip at the top left. */
+export const POINTER_PATH = 'M1 1v15.5l4.2-4 2.9 6.5 2.6-1.2-2.9-6.3H13z'
+
 /**
  * The pointer that acts out a scene: `clickOn` in scene.ts moves it and presses. It starts hidden
  * at the top left of its positioned parent, with its tip on that corner.
@@ -161,7 +164,7 @@ export function SceneCursor() {
       className="pointer-events-none invisible absolute top-0 left-0 z-20 w-4 origin-top-left text-primary opacity-0 drop-shadow-md"
     >
       <path
-        d="M1 1v15.5l4.2-4 2.9 6.5 2.6-1.2-2.9-6.3H13z"
+        d={POINTER_PATH}
         fill="currentColor"
         className="stroke-body"
         strokeWidth={1.2}

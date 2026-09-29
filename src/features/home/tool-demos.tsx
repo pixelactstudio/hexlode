@@ -3,7 +3,7 @@ import { Aperture, CalendarClock, Camera, Check, MapPin, RotateCw } from 'lucide
 import { AnimatePresence, motion, useSpring, useTransform } from 'motion/react'
 import { useEffect } from 'react'
 
-import { Rolling, useLoop } from '#/features/home/motion-kit'
+import { POINTER_PATH, Rolling, useLoop } from '#/features/home/motion-kit'
 import type { QuickTool } from '#/features/quick-tools/tools'
 
 /*
@@ -41,8 +41,22 @@ function FileTile({
           : 'border-border'
       }`}
     >
-      <div className="aspect-[4/3] overflow-hidden rounded">
+      <div className="relative aspect-[4/3] overflow-hidden rounded">
         <Photo />
+        {isResult ? (
+          // A band that passes over the picture each time it is encoded to a new format.
+          <AnimatePresence initial={false}>
+            <motion.span
+              key={format}
+              aria-hidden="true"
+              className="absolute inset-x-0 top-0 h-1/2 bg-linear-to-b from-transparent via-red-vivid/35 to-transparent"
+              initial={{ y: '-100%' }}
+              animate={{ y: '200%' }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.7, ease: 'easeInOut' }}
+            />
+          </AnimatePresence>
+        ) : null}
       </div>
       <div className="flex items-center justify-between gap-1 px-0.5 text-[11px] tabular-nums">
         <span className="rounded bg-muted px-1.5 py-0.5 font-semibold text-primary">
@@ -94,12 +108,16 @@ function kilobytes(value: number) {
   return value >= 1024 ? `${(value / 1024).toFixed(1)} MB` : `${Math.round(value)} KB`
 }
 
+/** Quality moves from 100 to 75 first, then the file shrinks to match. */
 function CompressDemo() {
   const { ref, step } = useLoop(2, 2400)
   const after = step === 1
   const size = useSpring(2458, { stiffness: 60, damping: 18 })
   const label = useTransform(size, kilobytes)
-  useEffect(() => size.set(after ? 338 : 2458), [after, size])
+  useEffect(() => {
+    const timer = setTimeout(() => size.set(after ? 338 : 2458), after ? 350 : 0)
+    return () => clearTimeout(timer)
+  }, [after, size])
   return (
     <div
       ref={ref}
@@ -121,16 +139,33 @@ function CompressDemo() {
           <motion.span
             className="block h-full origin-left rounded-full bg-linear-to-r from-red-vivid to-pink-vivid"
             animate={{ scaleX: after ? 0.14 : 1 }}
-            transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 1.1, delay: after ? 0.35 : 0, ease: [0.22, 1, 0.36, 1] }}
           />
         </span>
       </div>
-      <div className="flex items-center justify-between">
-        <span className="text-secondary text-xs">Quality 75</span>
+      <div className="flex items-center gap-3">
+        <span className="w-16 shrink-0 text-secondary text-xs tabular-nums">
+          Quality <Rolling value={after ? '75' : '100'} />
+        </span>
+        <span className="relative flex h-3 flex-1 items-center">
+          <span className="absolute inset-x-0 h-1 rounded-full bg-muted" />
+          <motion.span
+            className="absolute left-0 h-1 rounded-full bg-border-strong"
+            initial={false}
+            animate={{ width: after ? '75%' : '100%' }}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          />
+          <motion.span
+            className="absolute size-3 -translate-x-1/2 rounded-full border-2 border-primary bg-card shadow-sm"
+            initial={false}
+            animate={{ left: after ? '75%' : '100%', scale: [1, 1.25, 1] }}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          />
+        </span>
         <motion.span
           className="rounded-full bg-green-subtle px-2 py-0.5 font-semibold text-green-vivid text-xs tabular-nums"
           animate={{ opacity: after ? 1 : 0, y: after ? 0 : 4 }}
-          transition={{ duration: 0.4, delay: after ? 0.6 : 0 }}
+          transition={{ duration: 0.4, delay: after ? 0.9 : 0 }}
         >
           −86%
         </motion.span>
@@ -152,9 +187,31 @@ function ResizeDemo() {
         transition={SPRING}
       >
         <Photo name="dawn" />
-        <span className="absolute right-1 bottom-1 size-2 rounded-[2px] border border-on-dark bg-red-vivid" />
+        <motion.span
+          className="absolute right-1 bottom-1 size-2 rounded-[2px] border border-on-dark bg-red-vivid"
+          animate={{ scale: [1, 1.6, 1] }}
+          transition={{ duration: 0.5 }}
+          key={small ? 'small' : 'large'}
+        />
       </motion.div>
-      <span className="absolute right-2 bottom-2 rounded-sm border border-border bg-card px-2 py-1 font-medium text-primary text-xs tabular-nums shadow-sm">
+      {/* The pointer holds the handle, so it follows the corner as the picture changes size. */}
+      <motion.svg
+        aria-hidden="true"
+        viewBox="0 0 16 20"
+        className="pointer-events-none absolute top-0 left-0 w-4 text-primary drop-shadow-md"
+        initial={false}
+        animate={{ x: small ? 110 : 248, y: small ? 73 : 168 }}
+        transition={SPRING}
+      >
+        <path
+          d={POINTER_PATH}
+          fill="currentColor"
+          className="stroke-body"
+          strokeWidth={1.2}
+          strokeLinejoin="round"
+        />
+      </motion.svg>
+      <span className="absolute bottom-2 left-2 rounded-sm border border-border bg-card px-2 py-1 font-medium text-primary text-xs tabular-nums shadow-sm">
         <Rolling value={small ? '1600 × 1200' : '4032 × 3024'} />
       </span>
     </div>
@@ -189,10 +246,26 @@ function CropDemo() {
         <span className="absolute inset-y-0 left-2/3 w-px bg-on-dark/35" />
         <span className="absolute inset-x-0 top-1/3 h-px bg-on-dark/35" />
         <span className="absolute inset-x-0 top-2/3 h-px bg-on-dark/35" />
-        <span className="absolute top-1.5 left-1.5 rounded bg-body/80 px-1.5 py-0.5 font-semibold text-[11px] text-primary">
-          <Rolling value={crop.label} />
-        </span>
       </motion.div>
+      <span className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-0.5 rounded-md bg-body/80 p-0.5 backdrop-blur-sm">
+        {CROPS.map((entry) => (
+          <span
+            key={entry.label}
+            className={`relative rounded px-2 py-0.5 font-semibold text-[11px] transition-colors duration-300 ${
+              entry.label === crop.label ? 'text-primary' : 'text-secondary'
+            }`}
+          >
+            {entry.label === crop.label ? (
+              <motion.span
+                layoutId="crop-chip"
+                className="absolute inset-0 rounded bg-muted ring-1 ring-border"
+                transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              />
+            ) : null}
+            <span className="relative">{entry.label}</span>
+          </span>
+        ))}
+      </span>
     </div>
   )
 }
@@ -211,10 +284,23 @@ function RotateDemo() {
       >
         <Photo name="desert" />
       </motion.div>
-      <span className="absolute right-0 bottom-0 inline-flex items-center gap-1.5 rounded-sm border border-border bg-card px-2 py-1 font-medium text-primary text-xs tabular-nums shadow-sm">
-        <Icon icon={RotateCw} size="xsm" color="secondary" />
+      <motion.span
+        key={tick}
+        className="absolute right-0 bottom-0 inline-flex items-center gap-1.5 rounded-sm border border-border bg-card px-2 py-1 font-medium text-primary text-xs tabular-nums shadow-sm"
+        initial={{ scale: tick === 0 ? 1 : 0.88 }}
+        animate={{ scale: 1 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 18 }}
+      >
+        <motion.span
+          className="inline-flex"
+          initial={{ rotate: angle - 90 }}
+          animate={{ rotate: angle }}
+          transition={SPRING}
+        >
+          <Icon icon={RotateCw} size="xsm" color="secondary" />
+        </motion.span>
         <Rolling value={`${angle % 360}°`} />
-      </span>
+      </motion.span>
     </div>
   )
 }
@@ -255,9 +341,19 @@ function StripDemo() {
               layout
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, x: 24, transition: { duration: 0.3 } }}
-              className="flex items-center gap-2 rounded bg-muted px-2 py-1.5 text-xs"
+              exit="removed"
+              variants={{
+                removed: { opacity: 0, x: 24, transition: { delay: 0.3, duration: 0.3 } },
+              }}
+              className="relative flex items-center gap-2 rounded bg-muted px-2 py-1.5 text-xs"
             >
+              {/* Struck through first, so each field is seen going before it slides away. */}
+              <motion.span
+                aria-hidden="true"
+                className="absolute inset-x-2 top-1/2 h-px origin-left bg-red-vivid"
+                style={{ scaleX: 0 }}
+                variants={{ removed: { scaleX: 1, transition: { duration: 0.3 } } }}
+              />
               <Icon icon={field.icon} size="xsm" color="secondary" />
               <span className="text-secondary">{field.label}</span>
               <span className="ms-auto truncate text-primary">{field.value}</span>

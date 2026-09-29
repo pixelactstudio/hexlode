@@ -166,6 +166,17 @@ With `VITE_SENTRY_DSN` set, Sentry receives:
 Browser reports go to a same-origin route the build generates, which forwards them to Sentry, so
 content blockers do not drop them. Session replay stays off.
 
+What it leaves out:
+
+- **Server console output**, such as the container logs Dokploy shows. Only errors come from the
+  server; the **Logs** page shows the browser's warnings and errors.
+- **PostHog's own console messages**, such as its toolbar failing to load for a signed-in admin.
+- **Visitor IP addresses.** Server spans have the address the proxy forwards removed, and header
+  values that name an address are filtered. Also turn on **Settings → Projects → hexlode →
+  Security & Privacy → Prevent Storing of IP Addresses**, so Sentry keeps none either.
+- **Aborts from visitors leaving.** A browser that closes a tab while it sends a report makes the
+  server's read fail with `AbortError`; the server drops those instead of reporting a 500.
+
 Set these up in Sentry itself:
 
 - **Uptime monitor** (**Insights → Uptime**): check `https://your-domain/api/health` so Sentry
