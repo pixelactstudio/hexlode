@@ -159,12 +159,26 @@ Without them the image builds the same and Sentry shows minified stack traces.
 With `VITE_SENTRY_DSN` set, Sentry receives:
 
 - **Errors** from the browser, server requests and server functions, with file names removed.
-- **Logs**: warnings and errors the app writes to the console, with file names removed.
+- **Logs**: everything the server writes to the console, the same lines Dokploy shows, and the
+  warnings and errors the browser writes, with file names removed.
 - **Traces** of a fifth of page loads, navigations and server requests, under **Explore → Traces**
   and **Insights**.
 
 Browser reports go to a same-origin route the build generates, which forwards them to Sentry, so
 content blockers do not drop them. Session replay stays off.
+
+What it leaves out:
+
+- **PostHog's own console messages**, such as its toolbar failing to load for a signed-in admin.
+- **Visitor IP addresses.** Server spans have the address the proxy forwards removed, and header
+  values that name an address are filtered. Also turn on **Settings → Projects → hexlode →
+  Security & Privacy → Prevent Storing of IP Addresses**, so Sentry keeps none either.
+- **Aborts from visitors leaving.** A browser that closes a tab while it sends a report makes the
+  server's read fail with `AbortError`; the server drops those instead of reporting a 500.
+
+With the Sentry token and variables set, every deploy is recorded on its release: `sha-<commit>`
+for staging and the version for production. **Releases** then shows when each one went out and
+where. Profiling is left off because Sentry's free plan does not include it.
 
 Set these up in Sentry itself:
 

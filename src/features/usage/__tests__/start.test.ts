@@ -50,6 +50,23 @@ describe('starting analytics and error reports', () => {
     expect(options.beforeSendLog({ message: 'Lost a.jpg' })).toEqual({ message: 'Lost [file]' })
   })
 
+  it("leaves PostHog's own console messages out of Sentry logs", async () => {
+    vi.stubGlobal('window', {})
+    const init = vi.fn()
+    vi.doMock('@sentry/tanstackstart-react', () => ({
+      init,
+      consoleLoggingIntegration: () => ({ name: 'ConsoleLogs' }),
+    }))
+    const { startErrorReporting } = await import('#/features/usage/error-reports')
+    await startErrorReporting({ sentryDsn: 'https://key@o1.ingest.sentry.io/2' })
+    const { beforeSendLog } = init.mock.calls[0][0]
+    expect(
+      beforeSendLog({ message: '[PostHog Toolbar][api] Request failed: load_experiments' }),
+    ).toBeNull()
+    expect(beforeSendLog({ message: "[PostHog.js] persistence is set to 'memory'" })).toBeNull()
+    expect(beforeSendLog({ message: 'Worker crashed' })).toEqual({ message: 'Worker crashed' })
+  })
+
   it('traces router navigations once Sentry has started', async () => {
     vi.stubGlobal('window', {})
     const addIntegration = vi.fn()

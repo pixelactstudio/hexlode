@@ -1,7 +1,7 @@
 import { useGSAP } from '@gsap/react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { useRef } from 'react'
+import { type RefObject, useRef } from 'react'
 
 import { BEAT, EASE, SCENE_START } from '#/features/home/constants'
 
@@ -25,7 +25,7 @@ export type SceneBuilder = (timeline: gsap.core.Timeline, q: Query, root: HTMLEl
  */
 export function useScene<T extends HTMLElement = HTMLDivElement>(
   build: SceneBuilder,
-  { delay = 0, repeat = 0, repeatDelay = BEAT.rest }: SceneOptions = {},
+  { delay = 0, repeat = 0, repeatDelay = BEAT.rest, timelineRef }: SceneOptions = {},
 ) {
   const ref = useRef<T>(null)
   useGSAP(
@@ -34,6 +34,7 @@ export function useScene<T extends HTMLElement = HTMLDivElement>(
       if (!element) return
       const timeline = gsap.timeline({ paused: true, repeat, repeatDelay })
       build(timeline, gsap.utils.selector(element), element)
+      if (timelineRef) timelineRef.current = timeline
 
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         timeline.seek(timeline.labels.poster ?? timeline.duration(), false)
@@ -70,6 +71,8 @@ type SceneOptions = {
   repeat?: number
   /** Seconds between repeats. */
   repeatDelay?: number
+  /** Receives the timeline, for a scene that the user can steer, such as jumping to a label. */
+  timelineRef?: RefObject<gsap.core.Timeline | null>
 }
 
 /** The centre of `target`, in the coordinates of its positioned ancestor `container`. */
