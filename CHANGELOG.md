@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.1](https://github.com/pixelactstudio/hexlode/compare/v0.1.0...v0.1.1) (2026-09-29)
+
+
+### Features
+
+* **home:** refine landing animations and server report privacy ([#19](https://github.com/pixelactstudio/hexlode/issues/19)) ([453ddce](https://github.com/pixelactstudio/hexlode/commit/453ddceaa0a40dba31a9ad2c7bb0ed26397d1652))
+
+
+### Miscellaneous Chores
+
+* release 0.1.1 ([#21](https://github.com/pixelactstudio/hexlode/issues/21)) ([4752e4b](https://github.com/pixelactstudio/hexlode/commit/4752e4b4ee290ab91538a108d8e48a4dd54b73b0))
+
 ## 0.1.0 (2026-09-28)
 
 
