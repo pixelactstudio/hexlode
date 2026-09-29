@@ -1,7 +1,7 @@
 import { Icon } from '@astryxdesign/core/Icon'
 import { Aperture, CalendarClock, Camera, Check, MapPin, RotateCw } from 'lucide-react'
 import { AnimatePresence, motion, useSpring, useTransform } from 'motion/react'
-import { useEffect } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 
 import { POINTER_PATH, Rolling, useLoop } from '#/features/home/motion-kit'
 import type { QuickTool } from '#/features/quick-tools/tools'
@@ -77,27 +77,54 @@ const CONVERT_TARGETS = [
   { format: 'PNG', size: '3.1 MB' },
 ]
 
+/** Seconds a pulse takes to cross the link from the source file to the result. */
+const PULSE = 0.6
+
+/**
+ * The source file on the left, the result on the right, and a link between them with a port at
+ * each end. Each format change sends a pulse across the link; it lands in the result's port, and
+ * only then does the result re-encode to the new format.
+ */
 function ConvertDemo() {
-  const { ref, step } = useLoop(CONVERT_TARGETS.length, 1800)
-  const target = CONVERT_TARGETS[step]
+  const { ref, tick, step } = useLoop(CONVERT_TARGETS.length, 1800)
+  const [shown, setShown] = useState(step)
+  useEffect(() => {
+    const timer = setTimeout(() => setShown(step), PULSE * 1000)
+    return () => clearTimeout(timer)
+  }, [step])
+  const target = CONVERT_TARGETS[shown]
   return (
-    <div ref={ref} className="flex items-center gap-3">
+    <div ref={ref} className="flex items-center">
       <FileTile format="JPG" size="2.4 MB" />
-      <span className="relative flex h-2 w-12 items-center" aria-hidden="true">
-        <span className="absolute inset-x-0 h-px bg-border-strong" />
-        {[0, 1, 2].map((index) => (
+      <span className="relative z-10 -mx-1 flex h-3 w-16 items-center" aria-hidden="true">
+        <span className="absolute inset-x-1 h-px bg-border-strong" />
+        {tick > 0 ? (
+          <Fragment key={tick}>
+            <motion.span
+              className="absolute inset-x-1 h-px origin-left bg-linear-to-r from-transparent to-red-vivid"
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: [0, 1, 1], opacity: [1, 1, 0] }}
+              transition={{ duration: PULSE + 0.4, times: [0, 0.6, 1], ease: 'easeIn' }}
+            />
+            <motion.span
+              className="absolute left-0 size-2 rounded-full bg-red-vivid shadow-[0_0_10px_var(--color-red-vivid)]"
+              initial={{ x: 0, opacity: 0 }}
+              animate={{ x: [0, 56, 56], opacity: [0, 1, 0], scale: [0.6, 1, 2.2] }}
+              transition={{ duration: PULSE + 0.3, times: [0, 0.67, 1], ease: 'easeIn' }}
+            />
+          </Fragment>
+        ) : null}
+        <span className="absolute left-0 size-2 rounded-full border border-border-strong bg-card" />
+        <span className="absolute right-0 size-2 rounded-full border border-border-strong bg-card" />
+        {tick > 0 ? (
           <motion.span
-            key={index}
-            className="absolute size-1.5 rounded-full bg-red-vivid"
-            animate={{ x: [0, 42], opacity: [0, 1, 0] }}
-            transition={{
-              duration: 1.4,
-              delay: index * 0.46,
-              repeat: Number.POSITIVE_INFINITY,
-              ease: 'easeInOut',
-            }}
+            key={`port-${tick}`}
+            className="absolute right-0 size-2 rounded-full bg-red-vivid"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 1, 0] }}
+            transition={{ duration: 0.7, delay: PULSE - 0.1, times: [0, 0.2, 1] }}
           />
-        ))}
+        ) : null}
       </span>
       <FileTile format={target.format} size={target.size} isResult />
     </div>

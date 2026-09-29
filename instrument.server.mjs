@@ -42,6 +42,8 @@ if (sentryDsn) {
       httpBodies: [],
     },
     enableLogs: true,
+    // Everything the server writes to the console, which is what Dokploy's log view shows.
+    integrations: [Sentry.consoleLoggingIntegration({ levels: ['log', 'info', 'warn', 'error'] })],
     // Matches TRACES_SAMPLE_RATE in src/features/usage/constants.ts.
     tracesSampleRate: 0.2,
     beforeSendSpan: withoutIp,

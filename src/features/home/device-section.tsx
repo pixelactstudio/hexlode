@@ -1,8 +1,6 @@
 import { Button } from '@astryxdesign/core/Button'
 import { Icon } from '@astryxdesign/core/Icon'
 import { Heading, Text } from '@astryxdesign/core/Text'
-import { gsap } from 'gsap'
-import { MotionPathPlugin } from 'gsap/MotionPathPlugin'
 import {
   Archive,
   ArrowRight,
@@ -22,8 +20,6 @@ import { Drop, FitDrawing, Reveal, Rolling } from '#/features/home/motion-kit'
 import { useScene } from '#/features/home/scene'
 import { Section, SectionHeader } from '#/features/home/section'
 
-gsap.registerPlugin(MotionPathPlugin)
-
 const WIDTH = 900
 const HEIGHT = 250
 const CHIP = { width: 212, height: 54 }
@@ -36,8 +32,8 @@ const INPUTS = [
 ] as const
 
 const OUTPUTS = [
-  { icon: Archive, name: 'photos.zip', detail: 'Download', y: 63 },
-  { icon: FolderOpen, name: 'photos/', detail: 'Or save to a folder', y: 133 },
+  { icon: Archive, name: 'photos.zip', detail: 'Download', y: 28 },
+  { icon: FolderOpen, name: 'photos/', detail: 'Or save to a folder', y: 168 },
 ]
 
 function curve(sx: number, sy: number, tx: number, ty: number) {
@@ -52,7 +48,7 @@ const PATHS = [
   ...OUTPUTS.map((output, index) => ({
     d: curve(
       TAB.x + TAB.width,
-      TAB.y + 85 + index * 30,
+      TAB.y + 70 + index * 60,
       WIDTH - CHIP.width,
       output.y + CHIP.height / 2,
     ),
@@ -186,13 +182,23 @@ function DeviceGraph() {
   const ref = useScene(
     (scene, q) => {
       const chips = q('[data-chip]')
-      const tokens = q('[data-token]')
       const trails = q('[data-trail]')
       const fills = q('[data-fill]')
-      const bundles = q('[data-bundle]')
-      const along = (index: number) => ({ path: PATHS[index].d })
-
-      scene.set([...tokens, ...bundles], { xPercent: -50, yPercent: -50, autoAlpha: 0 })
+      // A signal runs along a link: the line draws in from its source, then drains into the
+      // chip or tab it points at, so it never fades out halfway.
+      const signal = (index: number, position?: gsap.Position) =>
+        scene
+          .fromTo(
+            trails[index],
+            { attr: { 'stroke-dashoffset': 1 }, autoAlpha: 1 },
+            { attr: { 'stroke-dashoffset': 0 }, duration: BEAT.move, ease: EASE.move },
+            position,
+          )
+          .to(trails[index], {
+            attr: { 'stroke-dashoffset': -1 },
+            duration: BEAT.base,
+            ease: EASE.exit,
+          })
       OUTPUTS.forEach((output, pass) => {
         scene
           .call(() => {
@@ -208,21 +214,7 @@ function DeviceGraph() {
           scene
             .to(chips[index], { scale: 0.96, duration: 0.1, yoyo: true, repeat: 1 }, leave)
             .call(setStatus, [`Reading ${input.name}`], leave)
-            .set(tokens[index], { autoAlpha: 1, scale: 1 }, leave)
-            .to(
-              tokens[index],
-              { motionPath: along(index), duration: BEAT.move, ease: EASE.move },
-              leave,
-            )
-            .fromTo(
-              trails[index],
-              { attr: { 'stroke-dashoffset': 1 }, autoAlpha: 1 },
-              { attr: { 'stroke-dashoffset': 0 }, duration: BEAT.move, ease: EASE.move },
-              leave,
-            )
-            .to(tokens[index], { scale: 0, autoAlpha: 0, duration: BEAT.quick, ease: EASE.exit })
-            .to(trails[index], { autoAlpha: 0, duration: BEAT.base }, '<')
-            .call(setBusy, [true], '<')
+          signal(index, leave).call(setBusy, [true], '<')
           STAGES.forEach((stage, step) => {
             scene
               .call(setStatus, [`${stage} · ${input.name}`])
@@ -235,23 +227,8 @@ function DeviceGraph() {
           scene.to(fills, { autoAlpha: 0, duration: BEAT.quick })
         })
         const outputPath = INPUTS.length + pass
-        scene
-          .call(setStatus, [`3 images · ${output.name}`])
-          .set(bundles[pass], { autoAlpha: 1, scale: 1 })
-          .to(bundles[pass], {
-            motionPath: along(outputPath),
-            duration: BEAT.move,
-            ease: EASE.move,
-          })
-          .fromTo(
-            trails[outputPath],
-            { attr: { 'stroke-dashoffset': 1 }, autoAlpha: 1 },
-            { attr: { 'stroke-dashoffset': 0 }, duration: BEAT.move, ease: EASE.move },
-            '<',
-          )
-          .call(setBusy, [false], '<')
-          .to(bundles[pass], { scale: 0, autoAlpha: 0, duration: BEAT.quick, ease: EASE.exit })
-          .to(trails[outputPath], { autoAlpha: 0, duration: BEAT.base }, '<')
+        scene.call(setStatus, [`3 images · ${output.name}`]).call(setBusy, [false])
+        signal(outputPath)
           .call(() =>
             setDelivered((current) =>
               current.map((entry, index) => (index === pass ? DELIVERED[pass] : entry)),
@@ -355,28 +332,6 @@ function DeviceGraph() {
               className="size-full"
             />
           </div>
-        ))}
-        {INPUTS.map((input) => (
-          <span
-            key={input.name}
-            data-token=""
-            className="invisible absolute top-0 left-0 z-10 size-8 overflow-hidden rounded-md border-2 border-card shadow-md"
-          >
-            <img
-              src={`/home/photo-${input.photo}.webp`}
-              alt=""
-              className="size-full object-cover"
-            />
-          </span>
-        ))}
-        {OUTPUTS.map((output) => (
-          <span
-            key={output.name}
-            data-bundle=""
-            className="invisible absolute top-0 left-0 z-10 inline-flex size-8 items-center justify-center rounded-md border border-border bg-green-subtle text-green-vivid shadow-md"
-          >
-            <Icon icon={output.icon} size="sm" color="inherit" />
-          </span>
         ))}
       </div>
     </FitDrawing>

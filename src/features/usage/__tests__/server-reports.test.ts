@@ -8,10 +8,18 @@ type BeforeSendSpan = (span: { data: Record<string, unknown> }) => { data: Recor
 async function serverOptions() {
   vi.stubEnv('VITE_SENTRY_DSN', 'https://key@o1.ingest.sentry.io/2')
   const init = vi.fn()
-  vi.doMock('@sentry/tanstackstart-react', () => ({ init }))
+  vi.doMock('@sentry/tanstackstart-react', () => ({
+    init,
+    consoleLoggingIntegration: (options: object) => ({ name: 'ConsoleLogs', options }),
+  }))
   // @ts-expect-error: a plain module that Node loads with --import, without types.
   await import('../../../../instrument.server.mjs')
-  return init.mock.calls[0][0] as { beforeSend: BeforeSend; beforeSendSpan: BeforeSendSpan }
+  return init.mock.calls[0][0] as {
+    beforeSend: BeforeSend
+    beforeSendSpan: BeforeSendSpan
+    enableLogs: boolean
+    integrations: { name: string; options: { levels: string[] } }[]
+  }
 }
 
 async function serverBeforeSend() {
@@ -54,5 +62,14 @@ describe('server error reports', () => {
       },
     })
     expect(span.data).toEqual({ 'http.target': '/api/health' })
+  })
+
+  it('sends what the server writes to the console, as Dokploy shows it, to Sentry logs', async () => {
+    const options = await serverOptions()
+    expect(options.enableLogs).toBe(true)
+    expect(options.integrations).toContainEqual({
+      name: 'ConsoleLogs',
+      options: { levels: ['log', 'info', 'warn', 'error'] },
+    })
   })
 })
