@@ -419,31 +419,42 @@ const PHOTOS = ['dusk', 'dawn', 'desert'] as const
 
 type Lane = { job: number; isDone: boolean } | null
 
+const NO_LANES: Lane[] = Array.from({ length: WORKERS }, () => null)
+/** A queued image's slot in the up-next row, in pixels: a 14px thumbnail and its gap. */
+const QUEUE_SLOT = 17
+
 /**
- * The last twelve images of the batch shared over four workers. Each worker shows the image it is
- * on and its progress; the next image goes to whichever worker frees up first, and the count goes
- * up by one each time an image is done, until the batch is finished.
+ * The last twelve images of the batch shared over four workers. They wait in the up-next row; each
+ * worker takes one, shows its progress, and takes the next as soon as it is free, so the row
+ * empties as the count climbs. When the batch is done the row gives way to the result, then the
+ * workers clear and the row fills again for the next pass.
  */
 function WorkersDemo() {
-  const [lanes, setLanes] = useState<Lane[]>(() => Array.from({ length: WORKERS }, () => null))
+  const [lanes, setLanes] = useState<Lane[]>(NO_LANES)
   const [done, setDone] = useState(FIRST_DONE)
   const ref = useScene(
     (timeline, q) => {
       const bars = q('[data-bar]')
+      const queue = q('[data-queued]')
       const setLane = (worker: number, lane: Lane) =>
         setLanes((current) => current.map((entry, index) => (index === worker ? lane : entry)))
       timeline
         .call(() => {
           setDone(FIRST_DONE)
-          setLanes(Array.from({ length: WORKERS }, () => null))
+          setLanes(NO_LANES)
         })
-        .set(bars, { scaleX: 0 })
-        .set(q('[data-total]'), { scaleX: FIRST_DONE / BATCH_SIZE })
+        .set(bars, { scaleX: 0, autoAlpha: 1 })
       const start = BEAT.base
       const finishes = [...JOBS].sort((a, b) => a.end - b.end)
       for (const job of JOBS) {
-        const at = start + job.start
+        // The first four leave the row one after another rather than as one block.
+        const at = start + job.start + (job.start === 0 ? job.worker * STAGGER : 0)
         timeline
+          .to(
+            queue[job.index],
+            { width: 0, autoAlpha: 0, duration: BEAT.quick, ease: EASE.exit },
+            at - BEAT.quick,
+          )
           .call(setLane, [job.worker, { job: job.index, isDone: false }], at)
           .fromTo(
             bars[job.worker],
@@ -457,17 +468,28 @@ function WorkersDemo() {
         timeline
           .call(setLane, [job.worker, { job: job.index, isDone: true }], at)
           .call(setDone, [FIRST_DONE + order + 1], at)
-          .to(
-            q('[data-total]'),
-            { scaleX: (FIRST_DONE + order + 1) / BATCH_SIZE, duration: 0.3, ease: EASE.enter },
-            at,
-          )
       })
-      timeline.addLabel('poster').to({}, { duration: BEAT.rest })
+      // Rest on the finished batch, then clear the workers and refill the row, which is the frame
+      // the scene starts from, so the repeat picks up without a jump.
+      timeline
+        .addLabel('poster')
+        .to({}, { duration: BEAT.rest })
+        .call(setLanes, [NO_LANES])
+        .to(bars, { autoAlpha: 0, duration: BEAT.base, ease: EASE.exit })
+        .call(setDone, [FIRST_DONE])
+        .to(queue, {
+          width: QUEUE_SLOT,
+          autoAlpha: 1,
+          duration: BEAT.base,
+          ease: EASE.enter,
+          stagger: STAGGER / 2,
+        })
     },
     { repeat: -1, repeatDelay: 0.4 },
   )
   const isFinished = done === BATCH_SIZE
+  const working = lanes.filter((lane) => lane && !lane.isDone).length
+  const queued = JOBS.length - (done - FIRST_DONE) - working
   return (
     <div ref={ref} className={`${CARD} flex w-[296px] flex-col gap-3 p-4`}>
       <div className="flex items-baseline justify-between">
@@ -492,10 +514,10 @@ function WorkersDemo() {
                   src={`/home/photo-${PHOTOS[lane.job % PHOTOS.length]}.webp`}
                   alt=""
                   className="absolute inset-0 size-full object-cover"
-                  initial={{ opacity: 0, scale: 1.2 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: BEAT.base }}
+                  initial={{ opacity: 0, scale: 0.4, x: 12, y: 24 }}
+                  animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: BEAT.base, ease: [0.22, 1, 0.36, 1] }}
                 />
               ) : null}
             </AnimatePresence>
@@ -511,13 +533,14 @@ function WorkersDemo() {
                   </span>
                 ) : null}
               </span>
-              <span
-                className={`inline-flex text-green-vivid transition-opacity duration-200 ${
-                  lane?.isDone ? 'opacity-100' : 'opacity-0'
-                }`}
+              <motion.span
+                className="inline-flex text-green-vivid"
+                initial={false}
+                animate={lane?.isDone ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.5 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 24 }}
               >
                 <Icon icon={Check} size="xsm" color="inherit" />
-              </span>
+              </motion.span>
             </span>
             <span className="block h-1 overflow-hidden rounded-full bg-muted">
               <span
@@ -528,15 +551,46 @@ function WorkersDemo() {
           </span>
         </div>
       ))}
-      <span className="mt-1 block h-1 overflow-hidden rounded-full bg-muted">
-        <span
-          data-total=""
-          className={`block h-full origin-left rounded-full transition-colors duration-500 ${
-            isFinished ? 'bg-green-vivid' : 'bg-border-strong'
-          }`}
-          style={{ transform: `scaleX(${FIRST_DONE / BATCH_SIZE})` }}
-        />
-      </span>
+      <div className="relative mt-1 h-8 border-border border-t">
+        <motion.span
+          className="absolute inset-x-0 top-2 bottom-0 flex items-center justify-between gap-2"
+          initial={false}
+          animate={isFinished ? { opacity: 0, y: -6 } : { opacity: 1, y: 0 }}
+          transition={{ duration: BEAT.base }}
+        >
+          <span className="flex">
+            {JOBS.map((job) => (
+              <span
+                key={job.index}
+                data-queued=""
+                className="block shrink-0 overflow-hidden"
+                style={{ width: QUEUE_SLOT }}
+              >
+                <img
+                  src={`/home/photo-${PHOTOS[job.index % PHOTOS.length]}.webp`}
+                  alt=""
+                  className="block size-3.5 rounded-[3px] object-cover"
+                />
+              </span>
+            ))}
+          </span>
+          <span className="shrink-0 text-[11px] text-secondary tabular-nums">
+            <Rolling value={queued === 0 ? 'Finishing' : `${queued} queued`} />
+          </span>
+        </motion.span>
+        <motion.span
+          className="absolute inset-x-0 top-2 bottom-0 flex items-center gap-1.5 text-primary text-xs"
+          initial={false}
+          animate={isFinished ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
+          transition={{ duration: BEAT.base, delay: isFinished ? BEAT.quick : 0 }}
+        >
+          <span className="inline-flex text-green-vivid">
+            <Icon icon={Check} size="xsm" color="inherit" />
+          </span>
+          All {BATCH_SIZE} saved as WebP
+          <span className="ms-auto text-[11px] text-secondary">{WORKERS} workers</span>
+        </motion.span>
+      </div>
     </div>
   )
 }

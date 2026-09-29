@@ -11,6 +11,12 @@ import type { PublicConfig } from '#/features/usage/types'
 
 type SentryModule = typeof import('@sentry/tanstackstart-react')
 
+/**
+ * PostHog writes its own warnings to the console, such as its toolbar failing to load for a signed
+ * in admin. They say nothing about Hexlode, so they stay out of Sentry's logs.
+ */
+const POSTHOG_MESSAGE = /^\[PostHog/
+
 let started = false
 let markReady: (sentry: SentryModule | undefined) => void = () => {}
 /** Settles once Sentry has started, or with nothing when it is off or blocked. */
@@ -39,7 +45,10 @@ export async function startErrorReporting(config: PublicConfig) {
     tracesSampleRate: TRACES_SAMPLE_RATE,
     integrations: [Sentry.consoleLoggingIntegration({ levels: ['warn', 'error'] })],
     beforeSend: (event) => scrubSentryEvent(event),
-    beforeSendLog: (log) => scrubSentryLog(log),
+    beforeSendLog: (log) =>
+      typeof log.message === 'string' && POSTHOG_MESSAGE.test(log.message)
+        ? null
+        : scrubSentryLog(log),
     beforeBreadcrumb: (breadcrumb) => {
       if (breadcrumb.category === 'console' || breadcrumb.category?.startsWith('ui.')) return null
       return breadcrumb.message

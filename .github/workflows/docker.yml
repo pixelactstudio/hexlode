@@ -4,7 +4,7 @@ name: Docker image
 # staging, which runs `main`. A release, the `v1.2.3` tag Release Please starts this workflow for,
 # publishes `latest`, `1.2.3` and `1.2` and deploys production, which runs `latest`. Every image also
 # gets a `sha-<commit>` tag to roll back to. With the Sentry secret and variables set, the build
-# uploads source maps. See DEPLOY.md.
+# uploads source maps and each deploy is recorded on its release in Sentry. See DEPLOY.md.
 on:
   push:
     branches: [main]
@@ -25,6 +25,8 @@ jobs:
   image:
     name: build, scan and push
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.value }}
     permissions:
       contents: read
       packages: write
@@ -146,8 +148,13 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: staging
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
     steps:
       - name: Call the staging deploy webhook
+        id: deploy
         env:
           WEBHOOK_URL: ${{ secrets.DOKPLOY_STAGING_WEBHOOK_URL }}
         run: |
@@ -158,6 +165,21 @@ jobs:
           curl -fsS --retry 3 --retry-all-errors -X POST "$WEBHOOK_URL"
           echo
           echo "Dokploy is deploying the main image to staging."
+          echo "called=true" >> "$GITHUB_OUTPUT"
+
+      # Records the deploy on the release the image reports, `sha-<commit>` or the version, so
+      # Sentry's Releases page shows when each one reached staging. Skipped without the token.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.deploy.outputs.called == 'true' && env.SENTRY_AUTH_TOKEN != ''
+      - name: Record the deploy in Sentry
+        if: steps.deploy.outputs.called == 'true' && env.SENTRY_AUTH_TOKEN != ''
+        uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
+        with:
+          release: ${{ needs.image.outputs.version }}
+          environment: staging
+          # Linking commits needs Sentry's GitHub integration. Switch to `auto` once it is installed.
+          set_commits: skip
+          disable_telemetry: true
 
   deploy-production:
     name: deploy production
@@ -165,8 +187,13 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     environment: production
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
     steps:
       - name: Call the production deploy webhook
+        id: deploy
         env:
           WEBHOOK_URL: ${{ secrets.DOKPLOY_WEBHOOK_URL }}
         run: |
@@ -177,3 +204,18 @@ jobs:
           curl -fsS --retry 3 --retry-all-errors -X POST "$WEBHOOK_URL"
           echo
           echo "Dokploy is deploying the release to production."
+          echo "called=true" >> "$GITHUB_OUTPUT"
+
+      # Records the deploy on the release the image reports, `sha-<commit>` or the version, so
+      # Sentry's Releases page shows when each one reached production. Skipped without the token.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.deploy.outputs.called == 'true' && env.SENTRY_AUTH_TOKEN != ''
+      - name: Record the deploy in Sentry
+        if: steps.deploy.outputs.called == 'true' && env.SENTRY_AUTH_TOKEN != ''
+        uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
+        with:
+          release: ${{ needs.image.outputs.version }}
+          environment: production
+          # Linking commits needs Sentry's GitHub integration. Switch to `auto` once it is installed.
+          set_commits: skip
+          disable_telemetry: true
