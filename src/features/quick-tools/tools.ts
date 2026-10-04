@@ -68,6 +68,8 @@ export const OUTPUT_NODE_ID = 'output'
 export const QUICK_TOOL_DEFINITIONS: {
   [T in QuickTool]: {
     title: string
+    /** The tool page's main heading, in the words people search for. */
+    heading: string
     /** One sentence for the tool page. */
     description: string
     /** A few words for menus and the home page. */
@@ -78,6 +80,7 @@ export const QUICK_TOOL_DEFINITIONS: {
 } = {
   convert: {
     title: 'Convert',
+    heading: 'Convert images',
     description: 'Change format: JPEG, PNG, WebP, AVIF, JPEG XL or QOI.',
     summary: 'Switch between JPEG, PNG, WebP, AVIF, JPEG XL and QOI.',
     path: '/convert',
@@ -85,6 +88,7 @@ export const QUICK_TOOL_DEFINITIONS: {
   },
   compress: {
     title: 'Compress',
+    heading: 'Compress images',
     description: 'Reduce file size by quality setting or by target size.',
     summary: 'Make files smaller by quality or to a size you choose.',
     path: '/compress',
@@ -92,6 +96,7 @@ export const QUICK_TOOL_DEFINITIONS: {
   },
   resize: {
     title: 'Resize',
+    heading: 'Resize images',
     description: 'Change dimensions by width, height, percent or longest edge.',
     summary: 'Scale by width, height, percentage or longest edge.',
     path: '/resize',
@@ -108,6 +113,7 @@ export const QUICK_TOOL_DEFINITIONS: {
   },
   crop: {
     title: 'Crop',
+    heading: 'Crop images',
     description: 'Cut to an aspect ratio such as 1:1, 4:5 or 16:9, from the centre or an edge.',
     summary: 'Cut to 1:1, 4:5, 16:9 and other shapes.',
     path: '/crop',
@@ -115,6 +121,7 @@ export const QUICK_TOOL_DEFINITIONS: {
   },
   rotate: {
     title: 'Rotate',
+    heading: 'Rotate and flip images',
     description: 'Turn photos upright, rotate by quarter turns or flip them.',
     summary: 'Turn photos upright, rotate or flip them.',
     path: '/rotate',
@@ -122,6 +129,7 @@ export const QUICK_TOOL_DEFINITIONS: {
   },
   'strip-metadata': {
     title: 'Strip metadata',
+    heading: 'Remove image metadata',
     description: 'Remove all metadata, only location data, or everything except copyright.',
     summary: 'Remove location, camera details and other hidden data.',
     path: '/strip-metadata',

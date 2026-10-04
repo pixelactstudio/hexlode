@@ -12,7 +12,7 @@ export const ENVSIFT_URL = 'https://envsift.damnlabs.com'
 export const PAGE_WIDTH = 1200
 
 /** Prose such as the privacy page reads best at this width. */
-export const PROSE_WIDTH = 720
+export const PROSE_WIDTH = 640
 
 /** How far a page scrolls, in pixels, before the top bar folds into a floating dock. */
 export const DOCK_AFTER = 24

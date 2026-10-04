@@ -6,6 +6,7 @@ import { createRootRouteWithContext, HeadContent, Scripts } from '@tanstack/reac
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 
 import { SiteFrame } from '#/features/app-shell/site-frame'
+import { rootHead } from '#/features/seo/head'
 import { COLOUR_MODE_SCRIPT } from '#/features/theme/colour-mode'
 import { useColourMode } from '#/features/theme/colour-mode-menu'
 import { DEFAULT_COLOUR_MODE } from '#/features/theme/constants'
@@ -24,34 +25,19 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   // Read once per visit on the server, so the deployment's environment sets the keys.
   loader: () => getPublicConfig(),
   staleTime: Number.POSITIVE_INFINITY,
-  head: ({ loaderData }) => ({
-    meta: [
-      {
-        charSet: 'utf-8',
-      },
-      {
-        name: 'viewport',
-        content: 'width=device-width, initial-scale=1',
-      },
-      {
-        title: 'Hexlode — Image pipelines that run in your browser',
-      },
-      {
-        name: 'description',
-        content:
-          'Convert, compress, resize, crop and clean images in your browser, or build batch pipelines in the Studio. Works on your device, with no upload needed.',
-      },
-      // src/client.tsx reads this to start analytics and error reports before hydration.
-      { name: PUBLIC_CONFIG_META, content: JSON.stringify(loaderData ?? {}) },
-    ],
-    links: [
-      {
-        rel: 'stylesheet',
-        href: appCss,
-      },
-      { rel: 'icon', href: '/hexlode-mark.svg', type: 'image/svg+xml' },
-    ],
-  }),
+  head: ({ loaderData }) => {
+    const seo = rootHead({ environment: loaderData?.environment })
+    return {
+      meta: [
+        { charSet: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        ...seo.meta,
+        // src/client.tsx reads this to start analytics and error reports before hydration.
+        { name: PUBLIC_CONFIG_META, content: JSON.stringify(loaderData ?? {}) },
+      ],
+      links: [{ rel: 'stylesheet', href: appCss }, ...seo.links],
+    }
+  },
   shellComponent: RootDocument,
 })
 

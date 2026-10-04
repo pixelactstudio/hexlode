@@ -13,9 +13,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as CompressRouteImport } from './routes/compress'
 import { Route as ConvertRouteImport } from './routes/convert'
 import { Route as CropRouteImport } from './routes/crop'
+import { Route as ManifestDotwebmanifestRouteImport } from './routes/manifest[.]webmanifest'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResizeRouteImport } from './routes/resize'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RotateRouteImport } from './routes/rotate'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StripMetadataRouteImport } from './routes/strip-metadata'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
@@ -42,6 +45,11 @@ const CropRoute = CropRouteImport.update({
   path: '/crop',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManifestDotwebmanifestRoute = ManifestDotwebmanifestRouteImport.update({
+  id: '/manifest.webmanifest',
+  path: '/manifest.webmanifest',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -52,9 +60,19 @@ const ResizeRoute = ResizeRouteImport.update({
   path: '/resize',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RotateRoute = RotateRouteImport.update({
   id: '/rotate',
   path: '/rotate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StripMetadataRoute = StripMetadataRouteImport.update({
@@ -88,9 +106,12 @@ export interface FileRoutesByFullPath {
   '/compress': typeof CompressRoute
   '/convert': typeof ConvertRoute
   '/crop': typeof CropRoute
+  '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/privacy': typeof PrivacyRoute
   '/resize': typeof ResizeRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/rotate': typeof RotateRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
   '/api/health': typeof ApiHealthRoute
@@ -102,9 +123,12 @@ export interface FileRoutesByTo {
   '/compress': typeof CompressRoute
   '/convert': typeof ConvertRoute
   '/crop': typeof CropRoute
+  '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/privacy': typeof PrivacyRoute
   '/resize': typeof ResizeRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/rotate': typeof RotateRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
   '/api/health': typeof ApiHealthRoute
@@ -117,9 +141,12 @@ export interface FileRoutesById {
   '/compress': typeof CompressRoute
   '/convert': typeof ConvertRoute
   '/crop': typeof CropRoute
+  '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/privacy': typeof PrivacyRoute
   '/resize': typeof ResizeRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/rotate': typeof RotateRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
   '/api/health': typeof ApiHealthRoute
@@ -133,9 +160,12 @@ export interface FileRouteTypes {
     | '/compress'
     | '/convert'
     | '/crop'
+    | '/manifest.webmanifest'
     | '/privacy'
     | '/resize'
+    | '/robots.txt'
     | '/rotate'
+    | '/sitemap.xml'
     | '/strip-metadata'
     | '/studio'
     | '/api/health'
@@ -147,9 +177,12 @@ export interface FileRouteTypes {
     | '/compress'
     | '/convert'
     | '/crop'
+    | '/manifest.webmanifest'
     | '/privacy'
     | '/resize'
+    | '/robots.txt'
     | '/rotate'
+    | '/sitemap.xml'
     | '/strip-metadata'
     | '/studio'
     | '/api/health'
@@ -161,9 +194,12 @@ export interface FileRouteTypes {
     | '/compress'
     | '/convert'
     | '/crop'
+    | '/manifest.webmanifest'
     | '/privacy'
     | '/resize'
+    | '/robots.txt'
     | '/rotate'
+    | '/sitemap.xml'
     | '/strip-metadata'
     | '/studio'
     | '/api/health'
@@ -176,9 +212,12 @@ export interface RootRouteChildren {
   CompressRoute: typeof CompressRoute
   ConvertRoute: typeof ConvertRoute
   CropRoute: typeof CropRoute
+  ManifestDotwebmanifestRoute: typeof ManifestDotwebmanifestRoute
   PrivacyRoute: typeof PrivacyRoute
   ResizeRoute: typeof ResizeRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
   RotateRoute: typeof RotateRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StripMetadataRoute: typeof StripMetadataRoute
   StudioRoute: typeof StudioRoute
   ApiHealthRoute: typeof ApiHealthRoute
@@ -216,6 +255,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CropRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/manifest.webmanifest': {
+      id: '/manifest.webmanifest'
+      path: '/manifest.webmanifest'
+      fullPath: '/manifest.webmanifest'
+      preLoaderRoute: typeof ManifestDotwebmanifestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
@@ -230,11 +276,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResizeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/rotate': {
       id: '/rotate'
       path: '/rotate'
       fullPath: '/rotate'
       preLoaderRoute: typeof RotateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/strip-metadata': {
@@ -280,9 +340,12 @@ const rootRouteChildren: RootRouteChildren = {
   CompressRoute: CompressRoute,
   ConvertRoute: ConvertRoute,
   CropRoute: CropRoute,
+  ManifestDotwebmanifestRoute: ManifestDotwebmanifestRoute,
   PrivacyRoute: PrivacyRoute,
   ResizeRoute: ResizeRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
   RotateRoute: RotateRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   StripMetadataRoute: StripMetadataRoute,
   StudioRoute: StudioRoute,
   ApiHealthRoute: ApiHealthRoute,

@@ -40,6 +40,10 @@ Use pnpm. The scripts are in `package.json`; `pnpm validate` runs every check.
   `src/db/schema.ts` and run `pnpm db:generate`.
 - The theme's CSS and built object (`hexlode-theme.css`, `hexlode.js` and its `.d.ts` files in
   `src/features/theme/`) are generated too. Edit `hexlode-theme.ts`, then run `pnpm theme:build`.
+- The share cards, app icons and favicon (`public/og/`, `public/icons/`, `public/favicon.ico`) are
+  generated too. Edit a page's entry in `src/features/seo/constants.ts` or the template in
+  `src/features/seo/share-card.tsx`, then run `pnpm seo:build` (ADR 0010). A new indexable page
+  gets an entry in `SEO_PAGES` and uses `pageHead` in its route.
 - Keep secrets in `.env.local`. `.env.example` holds placeholders only.
 
 ## Tests
