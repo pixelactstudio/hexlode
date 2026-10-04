@@ -55,10 +55,14 @@ Active phase: **Phase 1**.
     inspector, template picker, live previews, run statistics on nodes and connections, undo and
     redo, right-click menus, a per-tab draft that survives a reload, narrow-screen message.
 15. Save in browser storage, `.hexlode` export and import, pipeline tools.
+16. Search and sharing: page titles and descriptions written for the searches in
+    `src/features/seo/constants.ts`, canonical links, Open Graph and X cards with a share card
+    per page, structured data, `/robots.txt`, `/sitemap.xml` and `/manifest.webmanifest`.
+    Staging and development ask not to be indexed. See ADR 0010.
 
 ### Node batch 1
 
-16. Files, Filter, Inspect, Resize, Crop, Rotate / Flip, Strip metadata, Convert, Compress to size,
+17. Files, Filter, Inspect, Resize, Crop, Rotate / Flip, Strip metadata, Convert, Compress to size,
     Optimize PNG, Rename, Output, Compare.
 
 A template appears in the template picker once all its nodes exist. Phase 1 ships Web-ready photos,

@@ -15,6 +15,7 @@
     "dev": "dotenv -e .env.local -- sh -c \"NODE_OPTIONS='--import ./instrument.server.mjs' vite dev --port 3000 --host\"",
     "generate-routes": "tsr generate",
     "theme:build": "astryx theme build src/features/theme/hexlode-theme.ts -o src/features/theme/hexlode-theme.css",
+    "seo:build": "tsx scripts/seo-build.tsx",
     "build": "vite build && cp instrument.server.mjs .output/server",
     "preview": "vite preview",
     "format": "biome format --write .",

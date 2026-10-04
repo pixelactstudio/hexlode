@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 
+import { pageHead } from '#/features/seo/head'
 import { StudioPage } from '#/features/studio/studio-page'
 
 export const Route = createFileRoute('/studio')({
-  head: () => ({ meta: [{ title: 'Studio — Hexlode' }] }),
+  head: () => pageHead('studio'),
   validateSearch: (search: Record<string, unknown>) => ({
     pipeline: typeof search.pipeline === 'string' ? search.pipeline : undefined,
   }),

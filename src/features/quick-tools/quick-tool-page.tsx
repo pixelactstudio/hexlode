@@ -188,7 +188,7 @@ export function QuickToolPage<T extends QuickTool>({ tool }: { tool: T }) {
   return (
     <ToolPageFrame
       eyebrow={group?.label}
-      title={definition.title}
+      title={definition.heading}
       description={definition.description}
       above={<ToolTabs current={tool} />}
     >
