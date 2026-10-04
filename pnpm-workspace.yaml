@@ -4,3 +4,7 @@ allowBuilds:
   '@sentry/cli': true
   core-js: true
   esbuild: true
+
+overrides:
+  # GHSA-qhr7-859c-m2p7 and GHSA-6j4f-fj2g-mc7p, through @sentry/vite-plugin > glob > minimatch.
+  'brace-expansion@>=4 <5.0.11': ^5.0.12
