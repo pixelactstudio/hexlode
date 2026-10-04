@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/pixelactstudio/hexlode/compare/v0.1.1...v0.2.0) (2026-10-04)
+
+
+### Features
+
+* **seo:** add search metadata, share cards and privacy page ([#22](https://github.com/pixelactstudio/hexlode/issues/22)) ([26be599](https://github.com/pixelactstudio/hexlode/commit/26be599b216be03073414e4953227df54715b877))
+
 ## [0.1.1](https://github.com/pixelactstudio/hexlode/compare/v0.1.0...v0.1.1) (2026-09-29)
 
 
