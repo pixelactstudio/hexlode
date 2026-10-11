@@ -98,7 +98,7 @@ jobs:
           output: trivy.sarif
           skip-setup-trivy: true
       - if: ${{ !cancelled() }}
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           sarif_file: trivy.sarif
           category: trivy
@@ -173,7 +173,7 @@ jobs:
         if: steps.deploy.outputs.called == 'true' && env.SENTRY_AUTH_TOKEN != ''
       - name: Record the deploy in Sentry
         if: steps.deploy.outputs.called == 'true' && env.SENTRY_AUTH_TOKEN != ''
-        uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
+        uses: getsentry/action-release@6fb9aeade7061441cf3864e34fbe11a1457ad7dc # v3.7.1
         with:
           release: ${{ needs.image.outputs.version }}
           environment: staging
@@ -212,7 +212,7 @@ jobs:
         if: steps.deploy.outputs.called == 'true' && env.SENTRY_AUTH_TOKEN != ''
       - name: Record the deploy in Sentry
         if: steps.deploy.outputs.called == 'true' && env.SENTRY_AUTH_TOKEN != ''
-        uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
+        uses: getsentry/action-release@6fb9aeade7061441cf3864e34fbe11a1457ad7dc # v3.7.1
         with:
           release: ${{ needs.image.outputs.version }}
           environment: production
