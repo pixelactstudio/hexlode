@@ -241,6 +241,107 @@ describe('runPipeline', () => {
     expect(order.slice(3)).toEqual(['join:1.png+2.png+3.png', '%PDF 3 pages'])
   })
 
+  describe('combining nodes that pass their inputs on', () => {
+    /** Waits for every item, then sends items with an odd first byte to `out`, others to `rest`. */
+    const pick = defineTestNode({
+      type: 'pick',
+      mode: 'all',
+      ports: ['out', 'rest'],
+      run: async (input) => {
+        if (input.mode !== 'all') throw new Error('all only')
+        const results = []
+        let index = 0
+        for await (const item of input.items) {
+          const odd = (item.payload as TestPayload).bytes[0] % 2 === 1
+          results.push({ port: odd ? 'out' : 'rest', input: index })
+          index += 1
+        }
+        return results
+      },
+    })
+
+    function setup() {
+      const seen: { name: string; bytes: number[] }[] = []
+      const after = defineTestNode({
+        type: 'after',
+        run: async (input) => {
+          if (input.mode !== 'each') throw new Error('each only')
+          const { bytes } = input.item.payload as TestPayload
+          seen.push({ name: input.item.meta.name, bytes: [...bytes] })
+          return [{ port: 'out', item: input.item }]
+        },
+      })
+      const registry = createTestRegistry([sourceNode, pick, after])
+      const pipeline = pipelineOf(
+        [
+          ['files', 'source'],
+          ['pick', 'pick'],
+          ['after', 'after'],
+        ],
+        [
+          ['files', 'pick'],
+          ['pick', 'after'],
+        ],
+      )
+      return { seen, registry, pipeline }
+    }
+
+    it('sends the items on unchanged, in order, still knowing their source file', async () => {
+      const { seen, registry, pipeline } = setup()
+      const { events } = await collect({
+        pipeline,
+        registry,
+        sources: sources(['a.png'], ['b.png'], ['c.png']),
+        host: createInlineHost({ registry }),
+      })
+      // The test items hold [index + 1, 7], so a.png and c.png have odd first bytes.
+      expect(seen).toEqual([
+        { name: 'a.png', bytes: [1, 7] },
+        { name: 'c.png', bytes: [3, 7] },
+      ])
+      const after = events.flatMap((event) =>
+        event.type === 'node-item' && event.nodeId === 'after' ? [event.source] : [],
+      )
+      expect(after).toEqual([0, 2])
+    })
+
+    it('lets later nodes reuse their step cache for the items passed on', async () => {
+      const { seen, registry, pipeline } = setup()
+      const host = createInlineHost({ registry, cache: createMemoryStepCache() })
+      const input = sources(['a.png'], ['b.png'], ['c.png'])
+      await collect({ pipeline, registry, sources: input, host })
+      seen.length = 0
+      const { events } = await collect({ pipeline, registry, sources: input, host })
+      expect(statuses(events, 'pick')).toEqual(['cached'])
+      expect(statuses(events, 'after')).toEqual(['cached', 'cached'])
+      expect(seen).toEqual([])
+    })
+
+    it('fails a per-item node that tries to pass its input on', async () => {
+      const cheat = defineTestNode({ type: 'cheat', run: async () => [{ port: 'out', input: 0 }] })
+      const registry = createTestRegistry([sourceNode, cheat])
+      const { events } = await collect({
+        pipeline: pipelineOf(
+          [
+            ['files', 'source'],
+            ['cheat', 'cheat'],
+          ],
+          [['files', 'cheat']],
+        ),
+        registry,
+        sources: sources(['a.png']),
+        host: createInlineHost({ registry }),
+      })
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          nodeId: 'cheat',
+          status: 'failed',
+          error: 'Only combining nodes can pass their inputs on.',
+        }),
+      )
+    })
+  })
+
   it('runs only the changed node and the nodes after it when run again', async () => {
     const { calls, passthrough } = counter()
     const registry = createTestRegistry([

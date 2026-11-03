@@ -63,8 +63,13 @@ One execution of a pipeline over a set of input items.
 _Avoid_: job, batch, execution
 
 **Item**:
-One unit that flows through a pipeline: an image, data (JSON or text) or a document (PDF).
+One unit that flows through a pipeline: an image, data (JSON or text) or a document (PDF or ICO).
 _Avoid_: file, asset
+
+**Document**:
+An item that is a finished file Hexlode makes but does not edit further, such as a PDF or an ICO
+icon file.
+_Avoid_: binary, attachment
 
 **Accepts**:
 The kinds and formats of items a node can process.
@@ -83,7 +88,8 @@ An item a node accepted but could not process.
 _Avoid_: errored, broken
 
 **Combining node**:
-A node that waits for every upstream item and then runs once over all of them, such as Contact sheet.
+A node that waits for every upstream item and then runs once over all of them, such as Contact
+sheet, Images to PDF or Deduplicate.
 _Avoid_: gather node, aggregate node, merge node
 
 **Step cache**:

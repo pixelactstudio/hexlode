@@ -7,7 +7,7 @@ import { settingsOf, topologicalOrder } from '#/features/engine/compatibility'
 import { itemType } from '#/features/engine/item-types'
 import { entryKey, nodeKey, outputKey } from '#/features/engine/keys'
 import type { StepCache, StepCacheEntry } from '#/features/engine/step-cache'
-import type { SpillStore } from '#/features/engine/stores'
+import type { SpilledEntry, SpillStore } from '#/features/engine/stores'
 import type {
   AnyNodeDefinition,
   Connection,
@@ -19,8 +19,8 @@ import type {
   ItemTypeSet,
   NodeContext,
   NodeInput,
-  NodeOutput,
   NodeRegistry,
+  NodeResult,
   Pipeline,
   PipelineNode,
   RunEvent,
@@ -158,13 +158,43 @@ function errorMessage(reason: unknown) {
   return reason instanceof Error ? reason.message : 'The item could not be processed.'
 }
 
-function sumSizes(outputs: NodeOutput[]) {
+function sumSizes(metas: ItemMeta[]) {
   let total = 0
-  for (const output of outputs) {
-    if (output.item.meta.size === undefined) return undefined
-    total += output.item.meta.size
+  for (const meta of metas) {
+    if (meta.size === undefined) return undefined
+    total += meta.size
   }
   return total
+}
+
+/** What the engine knows about one result of a node, wherever its item comes from. */
+interface Described {
+  port: string
+  key: string
+  meta: ItemMeta
+  /** The item the node made, or the index of the combining node's input it passed on. */
+  item?: Item
+  input?: number
+}
+
+function isPassed(result: NodeResult): result is Extract<NodeResult, { input: number }> {
+  return 'input' in result
+}
+
+function describe(results: NodeResult[], entry: string, inputs: SpilledEntry[] | undefined) {
+  return results.map((result, index): Described => {
+    if (!isPassed(result)) {
+      return {
+        port: result.port,
+        key: outputKey(entry, index),
+        meta: result.item.meta,
+        item: result.item,
+      }
+    }
+    const passed = inputs?.[result.input]
+    if (!passed) throw new Error('Only combining nodes can pass their inputs on.')
+    return { port: result.port, key: passed.key, meta: passed.meta, input: result.input }
+  })
 }
 
 function contextFor(deps: FlowDeps, nodeId: string, source: number | undefined): NodeContext {
@@ -191,16 +221,18 @@ async function runNode(
   reusable: unknown,
   recomputed: boolean,
   source: number | undefined,
+  inputs?: SpilledEntry[],
 ) {
   const started = performance.now()
   const nodeId = planned.node.id
-  let outputs: NodeOutput[]
+  let outputs: Described[]
   try {
-    outputs = await planned.definition.run(
+    const results = await planned.definition.run(
       input,
       planned.settings,
       contextFor(deps, nodeId, source),
     )
+    outputs = describe(results, entry, inputs)
   } catch (reason) {
     deps.emit({
       type: 'node-item',
@@ -219,22 +251,25 @@ async function runNode(
     source,
     status: 'processed',
     bytesIn,
-    bytesOut: sumSizes(outputs),
+    bytesOut: sumSizes(outputs.map((output) => output.meta)),
     ms: performance.now() - started,
     ...(recomputed ? { recomputed: true } : {}),
   })
   if (planned.definition.cacheable && deps.cache) {
     const record: StepCacheEntry = {
       nodeType: planned.definition.type,
-      outputs: outputs.map((output, index) => ({
+      outputs: outputs.map((output) => ({
         port: output.port,
-        key: outputKey(entry, index),
-        meta: output.item.meta,
-        reusesInput: reusable !== undefined && output.item.payload === reusable,
+        key: output.key,
+        meta: output.meta,
+        reusesInput:
+          output.input !== undefined ||
+          (reusable !== undefined && output.item?.payload === reusable),
+        ...(output.input !== undefined ? { input: output.input } : {}),
       })),
     }
     const payloads = outputs.map((output, index) => {
-      if (record.outputs[index].reusesInput) return undefined
+      if (record.outputs[index].reusesInput || !output.item) return undefined
       const handler = deps.kinds?.[output.item.meta.kind]
       return handler ? handler.storable(output.item.payload) : output.item.payload
     })
@@ -276,25 +311,30 @@ function cachedRefs(
   cached: StepCacheEntry,
   order: number[],
   input: ItemRef | undefined,
-  recompute: () => Promise<NodeOutput[] | undefined>,
+  recompute: () => Promise<Described[] | undefined>,
+  passed?: (index: number) => ItemRef,
 ) {
-  let recomputed: Promise<NodeOutput[] | undefined> | undefined
-  return cached.outputs.map((output, index) => ({
-    port: output.port,
-    ref: createRef(output.key, output.meta, [...order, index], async () => {
-      if (output.reusesInput && input) {
-        const source = await input.get()
-        return { meta: output.meta, payload: source.payload }
-      }
-      const payload = await deps.cache?.load(entry, index)
-      if (payload !== undefined) return { meta: output.meta, payload }
-      recomputed ??= recompute()
-      const outputs = await recomputed
-      const item = outputs?.[index]?.item
-      if (!item) throw new Error('An earlier step could not be rebuilt.')
-      return item
-    }),
-  }))
+  let recomputed: Promise<Described[] | undefined> | undefined
+  return cached.outputs.map((output, index) => {
+    if (output.input !== undefined && passed)
+      return { port: output.port, ref: passed(output.input) }
+    return {
+      port: output.port,
+      ref: createRef(output.key, output.meta, [...order, index], async () => {
+        if (output.reusesInput && input) {
+          const source = await input.get()
+          return { meta: output.meta, payload: source.payload }
+        }
+        const payload = await deps.cache?.load(entry, index)
+        if (payload !== undefined) return { meta: output.meta, payload }
+        recomputed ??= recompute()
+        const outputs = await recomputed
+        const item = outputs?.[index]?.item
+        if (!item) throw new Error('An earlier step could not be rebuilt.')
+        return item
+      }),
+    }
+  })
 }
 
 async function visit(deps: FlowDeps, nodeId: string, ref: ItemRef): Promise<void> {
@@ -370,10 +410,10 @@ async function visit(deps: FlowDeps, nodeId: string, ref: ItemRef): Promise<void
     outputs.map((output, index) => ({
       port: output.port,
       ref: createRef(
-        outputKey(entry, index),
-        output.item.meta,
+        output.key,
+        output.meta,
         [...ref.order, index],
-        async () => output.item,
+        async () => output.item as Item,
       ),
     })),
     'processed',
@@ -405,6 +445,13 @@ export async function flowCombining(deps: FlowDeps, nodeId: string) {
     entries.map(({ key }) => key),
   )
   const order = [COMBINING_ORDER + deps.plan.combining.indexOf(nodeId)]
+  // A passed input keeps its key and order, so it reuses later step caches and its source.
+  const passed = (index: number) => {
+    const waiting = entries[index]
+    return createRef(waiting.key, waiting.meta, waiting.order, () =>
+      deps.spill.load(nodeId, waiting.key),
+    )
+  }
   const execute = (recomputed: boolean) => {
     async function* items() {
       for (const { key } of entries) yield await deps.spill.load(nodeId, key)
@@ -418,6 +465,7 @@ export async function flowCombining(deps: FlowDeps, nodeId: string) {
       undefined,
       recomputed,
       undefined,
+      entries,
     )
   }
 
@@ -428,7 +476,7 @@ export async function flowCombining(deps: FlowDeps, nodeId: string) {
     await forwardOutputs(
       deps,
       planned,
-      cachedRefs(deps, entry, cached, order, undefined, () => execute(true)),
+      cachedRefs(deps, entry, cached, order, undefined, () => execute(true), passed),
       'cached',
     )
     return
@@ -440,12 +488,10 @@ export async function flowCombining(deps: FlowDeps, nodeId: string) {
     planned,
     outputs.map((output, index) => ({
       port: output.port,
-      ref: createRef(
-        outputKey(entry, index),
-        output.item.meta,
-        [...order, index],
-        async () => output.item,
-      ),
+      ref:
+        output.input !== undefined
+          ? passed(output.input)
+          : createRef(output.key, output.meta, [...order, index], async () => output.item as Item),
     })),
     'processed',
   )

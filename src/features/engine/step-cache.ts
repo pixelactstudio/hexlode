@@ -6,6 +6,8 @@ export interface StepCacheOutput {
   meta: ItemMeta
   /** The output reuses the input payload unchanged (Rename, Inspect), so nothing is stored. */
   reusesInput: boolean
+  /** A combining node passed its input at this index on; it loads from the waiting items. */
+  input?: number
 }
 
 export interface StepCacheEntry {

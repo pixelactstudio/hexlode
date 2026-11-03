@@ -11,7 +11,7 @@ import {
   writeFile,
 } from '#/features/engine/opfs/files'
 import { decodeBlob, decodeHeader, encodeRecord } from '#/features/engine/opfs/record-file'
-import type { OutputStore, SpillStore } from '#/features/engine/stores'
+import type { OutputStore, SpilledEntry, SpillStore } from '#/features/engine/stores'
 import { compareOrder } from '#/features/engine/stores'
 import type { Delivery, Item, ItemMeta, OutputSink } from '#/features/engine/types'
 
@@ -207,11 +207,11 @@ export function createOpfsSpillStore(
     },
     async list(nodeId) {
       const dir = await directory(nodeId)
-      const entries: { key: string; order: number[] }[] = []
+      const entries: SpilledEntry[] = []
       for (const name of await listNames(dir)) {
         const key = name.replace(/\.bin$/, '')
         const record = await decodeHeader<SpillHeader>(reader(dir, key))
-        if (record) entries.push({ key, order: record.header.order })
+        if (record) entries.push({ key, order: record.header.order, meta: record.header.meta })
       }
       return entries.sort((a, b) => compareOrder(a.order, b.order))
     },

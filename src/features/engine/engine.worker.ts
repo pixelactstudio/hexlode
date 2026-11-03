@@ -13,13 +13,14 @@ import {
   type WorkerResponse,
   workerRequestSchema,
 } from '#/features/engine/worker-protocol'
+import { fileKind } from '#/features/file-items/file-item'
 import { jsquashCodecs } from '#/features/images/codecs'
 import { imageKind, loadImageItem } from '#/features/images/image-item'
 import { productRegistry } from '#/features/nodes/registry'
 
 const scope = self as unknown as DedicatedWorkerGlobalScope
 const post = (message: WorkerResponse) => scope.postMessage(message)
-const kinds = { image: imageKind }
+const kinds = { image: imageKind, data: fileKind, document: fileKind }
 
 let current: Omit<FlowDeps, 'emit' | 'signal'> | undefined
 /** Why the current run could not be set up. Each task of the run fails with it. */

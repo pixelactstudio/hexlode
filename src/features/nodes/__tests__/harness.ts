@@ -3,6 +3,7 @@ import { fileKey } from '#/features/engine/keys'
 import { runPipeline, type SourceItem } from '#/features/engine/runner'
 import type { StepCache } from '#/features/engine/step-cache'
 import type { Pipeline, RunEvent } from '#/features/engine/types'
+import { fileKind } from '#/features/file-items/file-item'
 import { inspectImageHeader } from '#/features/image-input/validators'
 import { jsquashCodecs } from '#/features/images/codecs'
 import { imageKind, loadImageItem } from '#/features/images/image-item'
@@ -76,7 +77,7 @@ export async function run(
   const host = createInlineHost({
     registry: productRegistry,
     services: { codecs: jsquashCodecs },
-    kinds: { image: imageKind },
+    kinds: { image: imageKind, data: fileKind, document: fileKind },
     cache: options.cache,
   })
   const events: RunEvent[] = []
@@ -174,6 +175,33 @@ export function noisyPixels(size = 256) {
     data[index + 3] = 255
   }
   return { data, width: size, height: size }
+}
+
+/** Pixels of one colour, or of the colour `paint` returns for each position. */
+export function solidPixels(
+  width: number,
+  height: number,
+  paint: number[] | ((x: number, y: number) => number[]),
+) {
+  const data = new Uint8ClampedArray(width * height * 4)
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      data.set(typeof paint === 'function' ? paint(x, y) : paint, (y * width + x) * 4)
+    }
+  }
+  return { data, width, height }
+}
+
+/** A lossless PNG input made from pixels. */
+export async function pngInput(
+  name: string,
+  pixels: { data: Uint8ClampedArray; width: number; height: number },
+) {
+  const bytes = await jsquashCodecs.encode(
+    { format: 'png', options: { optimisationLevel: 0, interlace: false } },
+    pixels,
+  )
+  return { name, bytes }
 }
 
 /** Reads every entry of a ZIP (stored, as client-zip writes it) through its central directory. */

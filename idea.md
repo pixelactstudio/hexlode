@@ -1,6 +1,6 @@
 # Hexlode product
 
-> Updated: 2026-09-28 (directed Studio scenes on the home page, footer credits and wordmark glow)
+> Updated: 2026-11-04 (node batches 2 and 3)
 > Delivery plan: [implementation.md](./implementation.md). Vocabulary: [CONTEXT.md](./CONTEXT.md).
 > Decisions and their reasons: [docs/adr/](./docs/adr/).
 
@@ -189,7 +189,7 @@ Items are images, data (JSON or text) or documents (PDF). Batch numbers match th
 | Files | Takes dropped files or a folder. Starts every pipeline. | 1 |
 | Filter | Routes items by rules on format, file size, dimensions, orientation or transparency. Each rule has its own output, plus an output for everything else. An item leaves by the first rule it matches. | 1 |
 | Inspect | Shows format, dimensions, size and metadata per item. Passes items through unchanged. | 1 |
-| Deduplicate | Drops exact duplicates, or near duplicates by image fingerprint. | 2 |
+| Deduplicate | Drops exact duplicates (the same pixels), or near duplicates by image fingerprint. Waits for every image; duplicates leave by their own output. | 2 |
 
 ### Size and shape
 
@@ -225,7 +225,7 @@ Items are images, data (JSON or text) or documents (PDF). Batch numbers match th
 | Node | What it does | Batch |
 |---|---|---|
 | Strip metadata | Removes all metadata, only location data, or everything except copyright, without re-encoding. Keeps the colour profile unless told otherwise, and keeps a camera orientation tag so photos stay upright. | 1 |
-| Set copyright / author | Writes author and copyright fields. | 3 |
+| Set copyright / author | Writes author and copyright fields without re-encoding. Empty fields stay as they are. | 3 |
 
 ### Output and encoding
 
@@ -238,12 +238,12 @@ Items are images, data (JSON or text) or documents (PDF). Batch numbers match th
 | Output | Saves items, passes them on, and delivers a ZIP or folder. | 1 |
 | Compare | Shows a before and after slider and the size difference. Passes items through. | 1 |
 | Best format | Encodes several formats and keeps the smallest. | 3 |
-| Responsive set | Makes several widths and a ready `srcset` HTML snippet. | 3 |
-| Favicon / App icons | Makes every favicon and app icon size from one image. | 3 |
-| Placeholder | Generates a tiny blurred preview code for websites. | 3 |
+| Responsive set | Makes several widths and a ready `srcset` HTML snippet. Widths larger than an image become its own width. | 3 |
+| Favicon / App icons | Makes every favicon and app icon size from one image, an ICO file, a web app manifest and the HTML tags. | 3 |
+| Placeholder | Generates a tiny blurred preview code for websites: a data URI or a BlurHash, with the size and average colour, as JSON. | 3 |
 | Palette | Extracts the main colours as JSON or CSS variables. | 3 |
-| Contact sheet | Combines many images into one grid image. | 3 |
-| Images to PDF | Combines images into one PDF. | 3 |
+| Contact sheet | Combines many images into one grid image, with file names if wanted. Starts a new sheet when one is full. | 3 |
+| Images to PDF | Combines images into one PDF, one page each. JPEG files go in as they are. | 3 |
 
 ## Saving and sharing pipelines
 

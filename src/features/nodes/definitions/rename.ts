@@ -2,7 +2,7 @@ import { z } from 'zod'
 import type { ImageFormat, ItemMeta } from '#/features/engine/types'
 import { IMAGE_EXTENSIONS } from '#/features/image-input/validators'
 import { displaySize } from '#/features/images/pixel-ops'
-import { ALL_IMAGE_TYPES, OUTPUT_PORT } from '#/features/nodes/constants'
+import { ALL_ITEM_TYPES, OUTPUT_PORT } from '#/features/nodes/constants'
 import { defineNode } from '#/features/nodes/define-node'
 
 export const RENAME_TOKENS = ['{name}', '{width}', '{height}', '{format}'] as const
@@ -13,13 +13,14 @@ const schema = z.object({
   replaceSpaces: z.boolean().default(false),
 })
 
-/** Renders the new name. The extension always follows the item's format. */
+/** Renders the new name. An image's extension follows its format; other items keep theirs. */
 export function renderName(meta: ItemMeta, settings: z.infer<typeof schema>) {
   const slash = meta.name.lastIndexOf('/')
   const folder = slash >= 0 ? meta.name.slice(0, slash + 1) : ''
   const leaf = meta.name.slice(slash + 1)
   const dot = leaf.lastIndexOf('.')
   const stem = dot > 0 ? leaf.slice(0, dot) : leaf
+  const kept = dot > 0 ? leaf.slice(dot + 1) : meta.format
   const size = displaySize(meta)
   let rendered = settings.template
     .replaceAll('{name}', stem)
@@ -30,7 +31,8 @@ export function renderName(meta: ItemMeta, settings: z.infer<typeof schema>) {
     .trim()
   if (settings.replaceSpaces) rendered = rendered.replaceAll(/\s+/g, '-')
   if (settings.lowercase) rendered = rendered.toLocaleLowerCase()
-  const extension = IMAGE_EXTENSIONS[meta.format as ImageFormat] ?? meta.format
+  const extension =
+    meta.kind === 'image' ? (IMAGE_EXTENSIONS[meta.format as ImageFormat] ?? meta.format) : kept
   return `${folder}${rendered || stem}.${extension}`
 }
 
@@ -43,7 +45,7 @@ export const renameNode = defineNode({
   privateSettings: ['template'],
   schema,
   ports: () => OUTPUT_PORT,
-  accepts: () => ALL_IMAGE_TYPES,
+  accepts: () => ALL_ITEM_TYPES,
   produces: (_settings, input) => input,
   simulate: (settings, meta) => [
     { port: 'out', meta: { ...meta, name: renderName(meta, settings) } },

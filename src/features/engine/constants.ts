@@ -20,6 +20,8 @@ export const PREVIEW_SAMPLE_EDGE = 1024
 export const PREVIEW_THUMBNAIL_EDGE = 192
 /** Compare nodes show a larger before and after pair. */
 export const PREVIEW_COMPARE_EDGE = 640
+/** Data a node makes, such as a palette or a snippet, shows up to this many characters. */
+export const PREVIEW_TEXT_CHARACTERS = 4000
 
 /** Shown when an engine worker fails without a message, which is how a script load failure looks. */
 export const ENGINE_LOAD_FAILED_MESSAGE =

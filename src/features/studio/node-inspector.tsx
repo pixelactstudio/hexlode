@@ -1,6 +1,7 @@
 import { AspectRatio } from '@astryxdesign/core/AspectRatio'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
+import { CodeBlock } from '@astryxdesign/core/CodeBlock'
 import { Grid } from '@astryxdesign/core/Grid'
 import { Icon } from '@astryxdesign/core/Icon'
 import { IconButton } from '@astryxdesign/core/IconButton'
@@ -14,8 +15,8 @@ import { Download, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 
 import { IconTile } from '#/features/app-shell/icon-tile'
-import { describeTypes } from '#/features/engine/item-types'
-import type { NodeRegistry, PipelineNode } from '#/features/engine/types'
+import { describeTypes, FORMAT_LABELS } from '#/features/engine/item-types'
+import type { ItemFormat, NodeRegistry, PipelineNode } from '#/features/engine/types'
 import { FORMAT_NAMES } from '#/features/images/image-item'
 import { FileDrop } from '#/features/runs/file-drop'
 import { downloadDelivery, type RunControllerState } from '#/features/runs/run-controller'
@@ -163,9 +164,18 @@ function FilesPanel({
   )
 }
 
+/** The language to highlight data a node made: JSON, an HTML snippet or CSS variables. */
+function languageOf(format: string | undefined, text: string) {
+  const start = text.trimStart()
+  if (format === 'json' || start.startsWith('{') || start.startsWith('[')) return 'json'
+  if (start.startsWith('<')) return 'html'
+  if (start.startsWith(':root')) return 'css'
+  return 'plaintext'
+}
+
 function PreviewSection({ preview }: { preview: PreviewView }) {
   const format = preview.format
-    ? (FORMAT_NAMES[preview.format as keyof typeof FORMAT_NAMES] ?? preview.format)
+    ? (FORMAT_LABELS[preview.format as ItemFormat] ?? preview.format)
     : null
   return (
     <Section title="Preview">
@@ -192,6 +202,16 @@ function PreviewSection({ preview }: { preview: PreviewView }) {
             {preview.size !== undefined ? formatBytes(preview.size) : 'Size set at Output'}
           </Text>
         </HStack>
+      ) : null}
+      {preview.text ? (
+        <CodeBlock
+          code={preview.text}
+          language={languageOf(preview.format, preview.text)}
+          size="sm"
+          width="100%"
+          maxHeight={240}
+          isWrapped
+        />
       ) : null}
       {preview.status === 'skipped' ? (
         <Text type="supporting">
@@ -415,6 +435,31 @@ export function NodeInspector({
               { key: 'dateTaken', header: 'Taken' },
               { key: 'location', header: 'Location' },
               { key: 'copyright', header: 'Copyright' },
+            ]}
+          />
+        </Section>
+      ) : null}
+      {node.type === 'deduplicate' && records.length > 0 ? (
+        <Section title="Duplicates">
+          <RecordsTable records={records} columns={[{ key: 'duplicateOf', header: 'Same as' }]} />
+        </Section>
+      ) : null}
+      {node.type === 'best-format' && records.length > 0 ? (
+        <Section title="Sizes">
+          <RecordsTable
+            records={records}
+            columns={[
+              { key: 'format', header: 'Kept' },
+              ...['original', 'webp', 'avif', 'jpeg', 'jxl', 'png']
+                .filter((key) => records.some((record) => key in record))
+                .map((key) => ({
+                  key,
+                  header:
+                    key === 'original'
+                      ? 'Original'
+                      : FORMAT_NAMES[key as keyof typeof FORMAT_NAMES],
+                  format: (value: unknown) => formatBytes(Number(value)),
+                })),
             ]}
           />
         </Section>

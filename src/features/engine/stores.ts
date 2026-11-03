@@ -1,11 +1,17 @@
-import type { Delivery, Item, OutputSink } from '#/features/engine/types'
+import type { Delivery, Item, ItemMeta, OutputSink } from '#/features/engine/types'
 
 /** Holds items waiting at a node that combines items, until every upstream item has arrived. */
 export interface SpillStore {
   put(nodeId: string, order: number[], key: string, item: Item): Promise<void>
   /** Spilled entries for a node, in pipeline order (source index, then output index). */
-  list(nodeId: string): Promise<{ key: string; order: number[] }[]>
+  list(nodeId: string): Promise<SpilledEntry[]>
   load(nodeId: string, key: string): Promise<Item>
+}
+
+export interface SpilledEntry {
+  key: string
+  order: number[]
+  meta: ItemMeta
 }
 
 /** Saves items reaching Output nodes and turns them into a delivery. */
@@ -31,7 +37,7 @@ export function createMemorySpillStore(): SpillStore {
     },
     async list(nodeId) {
       return [...(spilled.get(nodeId)?.entries() ?? [])]
-        .map(([key, { order }]) => ({ key, order }))
+        .map(([key, { order, item }]) => ({ key, order, meta: item.meta }))
         .sort((a, b) => compareOrder(a.order, b.order))
     },
     async load(nodeId, key) {

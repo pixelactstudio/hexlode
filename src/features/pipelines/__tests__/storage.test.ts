@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { createPipelineStore } from '#/features/pipelines/storage'
+import { createPipelineStore, PipelineStorageFull } from '#/features/pipelines/storage'
 
 function memoryStorage() {
   const values = new Map<string, string>()
@@ -33,6 +33,17 @@ describe('saved pipelines', () => {
     expect(updated.id).toBe(saved.id)
     store.remove(saved.id)
     expect(store.list()).toEqual([])
+  })
+
+  it('refuses a save the browser has no room for and keeps the list as it was', () => {
+    const storage = memoryStorage()
+    const store = createPipelineStore(storage)
+    const first = store.save({ name: 'Small', pipeline })
+    storage.setItem = () => {
+      throw new DOMException('The quota has been exceeded.', 'QuotaExceededError')
+    }
+    expect(() => store.save({ name: 'With a large logo', pipeline })).toThrow(PipelineStorageFull)
+    expect(store.list()).toEqual([first])
   })
 
   it('tells subscribers when pipelines change', () => {

@@ -89,6 +89,91 @@ describe('worker pool', () => {
     for (const name of await listNames(root)) await root.removeEntry(name, { recursive: true })
   })
 
+  it('passes the items Deduplicate keeps on from storage, and reuses them on the next run', async () => {
+    const root = await appDirectory()
+    const index = await createStepCacheIndex(root, 1024 ** 3)
+    const host = createWorkerPoolHost({ size: 2, createWorker, index })
+    const pipeline = chain(['deduplicate', { mode: 'exact' }])
+    // photo.png and photo.qoi have the same pixels; photo.jpg is lossy, so it differs.
+    const names = ['photo.png', 'photo.jpg', 'photo.qoi']
+    // A new run deletes the last run's files, so each delivery is read before the next run.
+    const delivered = async (result: Awaited<ReturnType<typeof run>>['result']) => {
+      const entries = await unzip(result.deliveries[0].archive as Blob)
+      expect(entries.map(({ name }) => name)).toEqual(['photo.png', 'photo.jpg'])
+      expect(entries[0].bytes).toEqual(await fixtureBytes('photo.png'))
+      expect(entries[1].bytes).toEqual(await fixtureBytes('photo.jpg'))
+    }
+    const first = await run(pipeline, host, names)
+    expect(first.result.status).toBe('complete')
+    expect(first.statuses('deduplicate-1')).toEqual(['processed'])
+    await delivered(first.result)
+    const second = await run(pipeline, host, names)
+    expect(second.statuses('deduplicate-1')).toEqual(['cached'])
+    await delivered(second.result)
+    host.dispose()
+  })
+
+  it('delivers documents and data that nodes make in workers', async () => {
+    const host = createWorkerPoolHost({ size: 2, createWorker, index: null })
+    const node = (id: string, type: string, settings = {}) => ({
+      id,
+      type,
+      settings,
+      position: { x: 0, y: 0 },
+    })
+    const pipeline: Pipeline = {
+      nodes: [
+        node('files', 'files'),
+        node('pdf', 'images-to-pdf', { name: 'album' }),
+        node('palette', 'palette', { count: 2 }),
+        node('icons', 'favicon'),
+        node('out-pdf', 'output'),
+        node('out-palette', 'output'),
+        node('out-icons', 'output'),
+      ],
+      connections: [
+        ['files', 'pdf'],
+        ['files', 'palette'],
+        ['files', 'icons'],
+        ['pdf', 'out-pdf'],
+        ['palette', 'out-palette'],
+        ['icons', 'out-icons'],
+      ].map(([source, target]) => ({
+        id: `${source}-${target}`,
+        source,
+        sourcePort: 'out',
+        target,
+      })),
+    }
+    const { result } = await run(pipeline, host, ['photo.jpg', 'photo.png'])
+    host.dispose()
+    expect(result.status).toBe('complete')
+    const delivered = async (nodeId: string) => {
+      const delivery = result.deliveries.find((entry) => entry.nodeId === nodeId)
+      return unzip(delivery?.archive as Blob)
+    }
+    const [pdf] = await delivered('out-pdf')
+    expect(pdf.name).toBe('album.pdf')
+    const pdfText = new TextDecoder('latin1').decode(pdf.bytes)
+    expect(pdfText.startsWith('%PDF-1.4')).toBe(true)
+    expect(pdfText.match(/\/Type \/Page(?!s)/g)).toHaveLength(2)
+    const palettes = await delivered('out-palette')
+    // Workers finish in any order, so Output numbers whichever arrives second.
+    expect(palettes.map(({ name }) => name).sort()).toEqual([
+      'photo.palette-2.json',
+      'photo.palette.json',
+    ])
+    const values = palettes.map(({ bytes }) => JSON.parse(new TextDecoder().decode(bytes)))
+    const png = values.find((value) => value.image === 'photo.png')
+    expect(png.colours.map(({ hex }: { hex: string }) => hex)).toEqual(['#0000ff', '#ff0000'])
+    const icons = (await delivered('out-icons')).map(({ name }) => name)
+    expect(icons).toContain('photo/favicon.ico')
+    expect(icons).toContain('photo/site.webmanifest')
+    // Both images are named photo, so Output numbers the second set's files.
+    expect(icons.filter((name) => name.startsWith('photo/icon-512'))).toHaveLength(2)
+    expect(icons).toHaveLength(18)
+  })
+
   it('runs items in workers and delivers a ZIP backed by OPFS', async () => {
     const host = createWorkerPoolHost({ size: 2, createWorker, index: null })
     const { result } = await run(chain(['convert', { format: 'png' }]), host, ALL_FORMAT_FIXTURES)

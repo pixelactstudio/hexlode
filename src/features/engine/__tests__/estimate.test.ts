@@ -45,6 +45,18 @@ describe('estimateRun', () => {
     expect(estimate).toMatchObject({ decodes: 4, encodes: 4 })
   })
 
+  it('follows items through Deduplicate, counting every item as unique', () => {
+    const estimate = estimateRun({
+      pipeline: chain(['deduplicate'], ['convert', { format: 'webp' }]),
+      registry: productRegistry,
+      sources: sources(5),
+      workers: 1,
+    })
+    // Deduplicate decodes each item for its fingerprint. The item waits without its pixels, so
+    // Convert decodes it again.
+    expect(estimate).toMatchObject({ decodes: 10, encodes: 5 })
+  })
+
   it('counts items that will skip a branch', () => {
     const estimate = estimateRun({
       pipeline: chain(['optimize-png']),

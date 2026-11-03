@@ -29,6 +29,8 @@ export const nodePreviewSchema = z.object({
   height: z.number().optional(),
   size: z.number().optional(),
   thumbnail: blob.optional(),
+  /** The start of the first data item the node made, such as JSON, CSS or HTML. */
+  text: z.string().optional(),
   /** Compare nodes: the sample as it entered the pipeline, and as it reached the node. */
   before: blob.optional(),
   after: blob.optional(),

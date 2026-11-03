@@ -32,7 +32,7 @@ import {
   validatePipeline,
 } from '#/features/pipelines/pipeline-file'
 import { pipelineStore } from '#/features/pipelines/storage'
-import type { NamedPipeline } from '#/features/pipelines/types'
+import type { NamedPipeline, SavedPipeline } from '#/features/pipelines/types'
 import { QUICK_TOOL_GROUPS } from '#/features/quick-tools/tool-ui'
 import { QUICK_TOOL_DEFINITIONS } from '#/features/quick-tools/tools'
 import { EngineGate } from '#/features/runs/engine-unavailable'
@@ -302,11 +302,18 @@ function Studio({
   const startNew = () => setDialog(studio.dirty ? 'discard' : 'templates')
 
   const save = (name: string) => {
-    const result = pipelineStore().save({
-      id: studio.savedId ?? undefined,
-      name,
-      pipeline: studio.pipeline,
-    })
+    let result: SavedPipeline
+    try {
+      result = pipelineStore().save({
+        id: studio.savedId ?? undefined,
+        name,
+        pipeline: studio.pipeline,
+      })
+    } catch (reason) {
+      const body = reason instanceof Error ? reason.message : 'The pipeline could not be saved.'
+      showToast({ body, type: 'error', uniqueID: 'saved' })
+      return
+    }
     store.markSaved(result.id, name)
     track('pipeline_saved', { pipeline: pipelineShape(studio.pipeline, registry) })
     setDialog(null)

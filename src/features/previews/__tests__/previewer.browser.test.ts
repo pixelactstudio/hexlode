@@ -64,4 +64,31 @@ describe('live previews', () => {
     expect(results.slice(0, -1).filter((result) => result !== null).length).toBeLessThanOrEqual(1)
     previewer.dispose()
   })
+
+  it('shows the text of data a node makes, and a thumbnail when it also makes images', async () => {
+    const previewer = createPreviewer(createWorker)
+    await previewer.setSample(new Blob([await fixtureBytes('photo.png')]), 'photo.png')
+    const palette = (await previewer.render(chain(['palette', { count: 2, format: 'css' }]))) ?? []
+    const colours = palette.find((preview) => preview.nodeId === 'palette-1')
+    expect(colours).toMatchObject({ status: 'processed', format: 'text' })
+    expect(colours?.thumbnail).toBeUndefined()
+    expect(colours?.text).toContain('--photo-1:')
+    const set = (await previewer.render(chain(['responsive-set', { widths: [24] }]))) ?? []
+    const responsive = set.find((preview) => preview.nodeId === 'responsive-set-1')
+    expect(responsive).toMatchObject({ format: 'webp', width: 24, height: 16 })
+    expect(responsive?.thumbnail).toBeInstanceOf(Blob)
+    expect(responsive?.text).toContain('srcset=')
+    previewer.dispose()
+  })
+
+  it('previews combining nodes on the sample', async () => {
+    const previewer = createPreviewer(createWorker)
+    await previewer.setSample(new Blob([await fixtureBytes('photo.png')]), 'photo.png')
+    const result = (await previewer.render(chain(['images-to-pdf']))) ?? []
+    expect(result.find((preview) => preview.nodeId === 'images-to-pdf-1')).toMatchObject({
+      status: 'processed',
+      format: 'pdf',
+    })
+    previewer.dispose()
+  })
 })

@@ -6,9 +6,10 @@ import {
   inspectImageHeader,
 } from '#/features/image-input/validators'
 import { readMetadata, writeMetadata } from '#/features/images/metadata/containers'
-import { parseExif } from '#/features/images/metadata/exif'
+import { parseExif, setExifOrientation } from '#/features/images/metadata/exif'
 import { isEmptyMetadata } from '#/features/images/metadata/strip'
 import type { ImageMetadata, MetadataPart } from '#/features/images/metadata/types'
+import { applyOrientation } from '#/features/images/pixel-ops'
 import type {
   Codecs,
   EncodeOptions,
@@ -40,6 +41,13 @@ export const DEFAULT_ENCODE: Record<ImageFormat, EncodeOptions> = {
   jxl: { format: 'jxl', options: { quality: 90, lossless: false, effort: 7, progressive: false } },
   png: { format: 'png', options: { optimisationLevel: 2, interlace: false } },
   qoi: { format: 'qoi', options: {} },
+}
+
+/** Default settings for a format, with the given quality for the formats that take one. */
+export function encodeWithQuality(format: ImageFormat, quality: number): EncodeOptions {
+  const base = DEFAULT_ENCODE[format]
+  if (format === 'png' || format === 'qoi') return base
+  return { ...base, options: { ...base.options, quality } } as EncodeOptions
 }
 
 const PART_NAMES: Record<MetadataPart, string> = {
@@ -74,6 +82,13 @@ export function replaceExtension(name: string, format: ImageFormat) {
   return `${stem}.${IMAGE_EXTENSIONS[format]}`
 }
 
+/** `trip/photo.jpg` with suffix `-2` becomes `trip/photo-2.jpg`. */
+export function nameWithSuffix(name: string, suffix: string) {
+  const slash = name.lastIndexOf('/')
+  const dot = name.lastIndexOf('.')
+  return dot > slash + 1 ? `${name.slice(0, dot)}${suffix}${name.slice(dot)}` : `${name}${suffix}`
+}
+
 export function withPixels(
   item: ImageItem,
   pixels: Pixels,
@@ -88,6 +103,33 @@ export function withPixels(
       encode: item.payload.encode,
     },
   }
+}
+
+/** The item's pixels turned upright by its orientation tag, as a viewer shows them. */
+export async function uprightPixelsOf(item: ImageItem, codecs: Codecs) {
+  return applyOrientation(await pixelsOf(item, codecs), item.meta.orientation ?? 1)
+}
+
+/** What an item's meta becomes once its pixels are turned upright and changed. */
+export function uprightMeta(meta: ItemMeta): ItemMeta {
+  const turned = (meta.orientation ?? 1) >= 5
+  return {
+    ...meta,
+    width: turned ? meta.height : meta.width,
+    height: turned ? meta.width : meta.height,
+    orientation: 1,
+    size: undefined,
+  }
+}
+
+/** Like withPixels, for pixels already turned upright: resets the orientation tag to 1. */
+export function withUprightPixels(item: ImageItem, pixels: Pixels): ImageItem {
+  const result = withPixels(item, pixels, { orientation: 1 })
+  const { exif } = result.payload.metadata
+  if (exif && (item.meta.orientation ?? 1) !== 1) {
+    result.payload.metadata = { ...result.payload.metadata, exif: setExifOrientation(exif, 1) }
+  }
+  return result
 }
 
 export function withMetadata(

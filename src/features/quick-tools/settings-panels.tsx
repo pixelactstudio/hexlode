@@ -377,7 +377,7 @@ function ResizePanel({ value, onChange, isDisabled }: PanelProps<ResizeToolSetti
   )
 }
 
-const POSITIONS: {
+export const POSITIONS: {
   value: CropToolSettings['position']
   label: string
   icon: typeof ArrowUp
@@ -405,8 +405,14 @@ function ratioOf(aspect: (typeof ASPECT_PRESETS)[number]) {
   return width / height
 }
 
-function CropPanel({ value, onChange, isDisabled }: PanelProps<CropToolSettings>) {
-  const position = POSITIONS.find((option) => option.value === value.position)
+type AspectSettings = Pick<CropToolSettings, 'aspect' | 'customWidth' | 'customHeight'>
+
+/** The shape buttons and the custom ratio fields. Crop and Pad / Extend share them. */
+export function AspectFields<T extends AspectSettings>({
+  value,
+  onChange,
+  isDisabled,
+}: PanelProps<T>) {
   const isCustom = value.aspect === 'custom'
   const preset = isCustom ? null : sidesOf(value.aspect as (typeof ASPECT_PRESETS)[number])
   const choose = (aspect: (typeof ASPECTS)[number]) => {
@@ -415,7 +421,7 @@ function CropPanel({ value, onChange, isDisabled }: PanelProps<CropToolSettings>
     onChange({ ...value, aspect, customWidth: preset.width, customHeight: preset.height })
   }
   return (
-    <VStack gap={5}>
+    <>
       <Field label="Shape" isFullWidth>
         <Grid columns={{ minWidth: 76 }} gap={1}>
           {ASPECTS.map((aspect) => (
@@ -454,25 +460,49 @@ function CropPanel({ value, onChange, isDisabled }: PanelProps<CropToolSettings>
           isDisabled={isDisabled || !isCustom}
         />
       </HStack>
+    </>
+  )
+}
+
+/** Nine buttons for a place in the image: corners, edges and centre. */
+export function PositionGrid({
+  value,
+  onChange,
+  isDisabled,
+}: PanelProps<CropToolSettings['position']>) {
+  return (
+    <Grid columns={3} gap={1} width={104}>
+      {POSITIONS.map((option) => (
+        <ToggleButton
+          key={option.value}
+          label={option.label}
+          icon={<option.icon size={16} />}
+          isIconOnly
+          size="sm"
+          isPressed={value === option.value}
+          onPressedChange={() => onChange(option.value)}
+          isDisabled={isDisabled}
+        />
+      ))}
+    </Grid>
+  )
+}
+
+function CropPanel({ value, onChange, isDisabled }: PanelProps<CropToolSettings>) {
+  const position = POSITIONS.find((option) => option.value === value.position)
+  return (
+    <VStack gap={5}>
+      <AspectFields value={value} onChange={onChange} isDisabled={isDisabled} />
       <Field
         label="Keep"
         hint={`${position?.label ?? ''}. Photos are turned upright before cropping.`}
       >
         <HStack gap={5} vAlign="center" wrap="wrap">
-          <Grid columns={3} gap={1} width={104}>
-            {POSITIONS.map((option) => (
-              <ToggleButton
-                key={option.value}
-                label={option.label}
-                icon={<option.icon size={16} />}
-                isIconOnly
-                size="sm"
-                isPressed={value.position === option.value}
-                onPressedChange={() => onChange({ ...value, position: option.value })}
-                isDisabled={isDisabled}
-              />
-            ))}
-          </Grid>
+          <PositionGrid
+            value={value.position}
+            onChange={(next) => onChange({ ...value, position: next })}
+            isDisabled={isDisabled}
+          />
           <CropDiagram settings={value} />
         </HStack>
       </Field>
