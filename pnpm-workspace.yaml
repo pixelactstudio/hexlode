@@ -8,3 +8,5 @@ allowBuilds:
 overrides:
   # GHSA-qhr7-859c-m2p7 and GHSA-6j4f-fj2g-mc7p, through @sentry/vite-plugin > glob > minimatch.
   'brace-expansion@>=4 <5.0.11': ^5.0.12
+  # GHSA-68fv-2mgg-jv7q, through @tailwindcss/node and @vitest/coverage-v8 > magicast.
+  'source-map-js@>=1.0.0 <1.2.2': ^1.2.2
