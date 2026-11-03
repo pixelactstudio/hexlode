@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/pixelactstudio/hexlode/compare/v0.2.0...v0.3.0) (2026-11-03)
+
+
+### Features
+
+* add node batches 2 and 3 with their templates ([#32](https://github.com/pixelactstudio/hexlode/issues/32)) ([4712041](https://github.com/pixelactstudio/hexlode/commit/47120413dd8f8b1691e34bd454e33e3769868008))
+
+
+### Bug Fixes
+
+* **deps:** update packages with high and critical advisories ([#34](https://github.com/pixelactstudio/hexlode/issues/34)) ([b90913f](https://github.com/pixelactstudio/hexlode/commit/b90913f70aae14d0437e22b87ff0780c2b695092))
+
 ## [0.2.0](https://github.com/pixelactstudio/hexlode/compare/v0.1.1...v0.2.0) (2026-10-04)
 
 
