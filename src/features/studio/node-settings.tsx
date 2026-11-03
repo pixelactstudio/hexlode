@@ -1,5 +1,4 @@
 import { Button } from '@astryxdesign/core/Button'
-import { Collapsible } from '@astryxdesign/core/Collapsible'
 import { IconButton } from '@astryxdesign/core/IconButton'
 import { NumberInput } from '@astryxdesign/core/NumberInput'
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl'
@@ -16,32 +15,8 @@ import { canPickFolder } from '#/features/image-input/folder'
 import type { FilterRule } from '#/features/nodes/definitions/filter'
 import { RENAME_TOKENS } from '#/features/nodes/definitions/rename'
 import { Field, FORMAT_OPTIONS, SettingsPanel } from '#/features/quick-tools/settings-panels'
-
-type Settings = Record<string, unknown>
-
-interface EditorProps {
-  settings: Settings
-  onChange: (changes: Settings) => void
-  isDisabled?: boolean
-}
-
-/** Options most people never change, closed until opened. */
-function MoreOptions({ children }: { children: React.ReactNode }) {
-  return (
-    <Collapsible
-      defaultIsOpen={false}
-      trigger={
-        <Text type="label" color="secondary">
-          More options
-        </Text>
-      }
-    >
-      <VStack gap={4} paddingBlock={2}>
-        {children}
-      </VStack>
-    </Collapsible>
-  )
-}
+import { LATER_EDITORS } from '#/features/studio/node-editors'
+import { type EditorProps, MoreOptions, type Settings } from '#/features/studio/settings-fields'
 
 function ConvertEditor({ settings, onChange, isDisabled }: EditorProps) {
   const format = settings.format as string
@@ -509,6 +484,7 @@ export const NODE_TYPES_WITH_SETTINGS = new Set([
   'optimize-png',
   'rename',
   'output',
+  ...Object.keys(LATER_EDITORS),
 ])
 
 /** The settings form for a node, or null when it has none. */
@@ -560,7 +536,9 @@ export function NodeSettings({
       return <RenameEditor {...props} />
     case 'output':
       return <OutputEditor {...props} />
-    default:
-      return null
+    default: {
+      const Editor = LATER_EDITORS[definition.type]
+      return Editor ? <Editor {...props} /> : null
+    }
   }
 }

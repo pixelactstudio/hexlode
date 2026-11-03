@@ -2,7 +2,7 @@ import type { ItemFormat, ItemKind, ItemType, ItemTypeSet } from '#/features/eng
 
 export const IMAGE_FORMATS = ['jpeg', 'png', 'webp', 'avif', 'jxl', 'qoi'] as const
 export const DATA_FORMATS = ['json', 'text'] as const
-export const DOCUMENT_FORMATS = ['pdf'] as const
+export const DOCUMENT_FORMATS = ['pdf', 'ico'] as const
 
 export const FORMAT_LABELS: Record<ItemFormat, string> = {
   jpeg: 'JPEG',
@@ -14,6 +14,7 @@ export const FORMAT_LABELS: Record<ItemFormat, string> = {
   json: 'JSON',
   text: 'text',
   pdf: 'PDF',
+  ico: 'ICO',
 }
 
 const KIND_NOUNS: Record<ItemKind, string> = {
@@ -37,6 +38,13 @@ export function typesOf(kind: ItemKind, formats: readonly ItemFormat[] = KIND_FO
 }
 
 export const ALL_IMAGE_TYPES: ItemTypeSet = typesOf('image')
+
+/** Every item type: images, data and documents. */
+export const ALL_ITEM_TYPES: ItemTypeSet = new Set([
+  ...ALL_IMAGE_TYPES,
+  ...typesOf('data'),
+  ...typesOf('document'),
+])
 
 export function splitItemType(type: ItemType) {
   const [kind, format] = type.split(':') as [ItemKind, ItemFormat]

@@ -5,8 +5,8 @@ import { Text } from '@astryxdesign/core/Text'
 import { Handle, type Node, type NodeProps, Position } from '@xyflow/react'
 
 import { IconTile } from '#/features/app-shell/icon-tile'
-import type { NodeCategory, Port } from '#/features/engine/types'
-import { FORMAT_NAMES } from '#/features/images/image-item'
+import { FORMAT_LABELS } from '#/features/engine/item-types'
+import type { ItemFormat, NodeCategory, Port } from '#/features/engine/types'
 import type { NodeStats } from '#/features/runs/run-stats'
 import { NODE_ICONS, toneOf } from '#/features/studio/node-ui'
 import type { PreviewView } from '#/features/studio/studio-session'
@@ -32,7 +32,7 @@ export interface PipelineNodeData extends Record<string, unknown> {
 export type PipelineFlowNode = Node<PipelineNodeData, 'pipeline'>
 
 function formatName(format: string | undefined) {
-  return format ? (FORMAT_NAMES[format as keyof typeof FORMAT_NAMES] ?? format) : ''
+  return format ? (FORMAT_LABELS[format as ItemFormat] ?? format) : ''
 }
 
 function status(data: PipelineNodeData) {

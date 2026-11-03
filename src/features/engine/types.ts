@@ -6,7 +6,8 @@ export type ItemKind = 'image' | 'data' | 'document'
 
 export type ImageFormat = 'jpeg' | 'png' | 'webp' | 'avif' | 'jxl' | 'qoi'
 export type DataFormat = 'json' | 'text'
-export type DocumentFormat = 'pdf'
+/** Finished files Hexlode makes but does not edit further. */
+export type DocumentFormat = 'pdf' | 'ico'
 export type ItemFormat = ImageFormat | DataFormat | DocumentFormat
 
 /** `kind:format`, for example `image:png`. The unit of accepts and produces. */
@@ -68,6 +69,18 @@ export interface NodeOutput<P = unknown> {
   item: Item<P>
 }
 
+/**
+ * A combining node's output that passes one of its inputs on unchanged, by its place in arrival
+ * order. The engine reloads the item from where it waited, so the node never holds the batch,
+ * and the item keeps its step cache key and the source it came from.
+ */
+export interface PassedInput {
+  port: string
+  input: number
+}
+
+export type NodeResult = NodeOutput | PassedInput
+
 export interface NodeWarning {
   code: string
   message: string
@@ -119,7 +132,10 @@ export interface NodeDefinition<S extends Record<string, unknown> = Record<strin
   accepts(settings: S): ItemTypeSet
   /** What leaves each port, given what enters the node (already narrowed to accepts). */
   produces(settings: S, input: ItemTypeSet, port: string): ItemTypeSet
-  /** Predicts outputs from meta alone, for estimates. Returns null when the route needs pixels. */
+  /**
+   * Predicts outputs from meta alone, for estimates. Returns null when the route needs pixels.
+   * A combining node that passes items on by reference predicts where one item leaves.
+   */
   simulate?(settings: S, meta: ItemMeta): { port: string; meta: ItemMeta }[] | null
   /**
    * Rough cost of processing one item, in milliseconds on one core, excluding decoding. The
@@ -130,7 +146,8 @@ export interface NodeDefinition<S extends Record<string, unknown> = Record<strin
   privateSettings?: string[]
   /** Output nodes deliver the items they saved once no more items can arrive. */
   delivers?: boolean
-  run(input: NodeInput, settings: S, context: NodeContext): Promise<NodeOutput[]>
+  /** Per-item nodes return NodeOutput items; combining nodes may also pass inputs on. */
+  run(input: NodeInput, settings: S, context: NodeContext): Promise<NodeResult[]>
 }
 
 export interface NodeCost {

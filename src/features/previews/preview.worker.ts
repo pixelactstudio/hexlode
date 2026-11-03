@@ -7,12 +7,14 @@ import {
   PREVIEW_CACHE_BUDGET_BYTES,
   PREVIEW_COMPARE_EDGE,
   PREVIEW_SAMPLE_EDGE,
+  PREVIEW_TEXT_CHARACTERS,
   PREVIEW_THUMBNAIL_EDGE,
 } from '#/features/engine/constants'
 import { createFlowPlan, flowCombining, flowSource } from '#/features/engine/flow'
 import { createMemoryStepCache } from '#/features/engine/memory-step-cache'
 import { createMemorySpillStore } from '#/features/engine/stores'
 import type { Item, Pipeline } from '#/features/engine/types'
+import { fileBytes, fileKind } from '#/features/file-items/file-item'
 import { jsquashCodecs } from '#/features/images/codecs'
 import { asImage, imageKind, loadImageItem, pixelsOf } from '#/features/images/image-item'
 import { displayBlob, scaleDown } from '#/features/images/thumbnail'
@@ -83,7 +85,7 @@ async function render(pipeline: Pipeline): Promise<NodePreview[]> {
     services: { codecs: jsquashCodecs, output: { write: async () => undefined } },
     spill: createMemorySpillStore(),
     cache,
-    kinds: { image: imageKind },
+    kinds: { image: imageKind, data: fileKind, document: fileKind },
     signal: new AbortController().signal,
     emit: (event: Parameters<Parameters<typeof flowSource>[0]['emit']>[0]) => {
       if (event.type === 'node-item' && (event.status === 'skipped' || event.status === 'failed')) {
@@ -97,6 +99,20 @@ async function render(pipeline: Pipeline): Promise<NodePreview[]> {
     },
     observe: async (nodeId: string, _port: string, item: Item, status: 'processed' | 'cached') => {
       const preview = entry(nodeId)
+      if (item.meta.kind !== 'image') {
+        if (item.meta.kind === 'data') {
+          preview.text ??= new TextDecoder()
+            .decode(fileBytes(item))
+            .slice(0, PREVIEW_TEXT_CHARACTERS)
+        }
+        // An image the node also makes describes it better, so it replaces these.
+        if (!preview.format) {
+          preview.status = status
+          preview.format = item.meta.format
+          preview.size = item.meta.size
+        }
+        return
+      }
       if (preview.thumbnail) return
       const image = asImage(item)
       preview.status = status

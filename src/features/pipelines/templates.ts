@@ -126,6 +126,52 @@ export const TEMPLATES: Template[] = [
     ),
   },
   {
+    id: 'responsive-images',
+    name: 'Responsive image set',
+    description:
+      'Turns photos upright, keeps only copyright, and saves WebP at four widths with a ready srcset snippet.',
+    pipeline: line([
+      ['files', 'files'],
+      ['rotate', 'rotate', { auto: true }],
+      ['strip', 'strip-metadata', { mode: 'copyright' }],
+      [
+        'responsive',
+        'responsive-set',
+        { widths: [480, 960, 1440, 1920], format: 'webp', quality: 80 },
+      ],
+      ['output', 'output', { archiveName: 'responsive' }],
+    ]),
+  },
+  {
+    id: 'watermark-and-compress',
+    name: 'Watermark and compress',
+    description:
+      'Turns photos upright, fits them in 2048 pixels, adds a text watermark and keeps each JPEG under 300 KB.',
+    pipeline: line([
+      ['files', 'files'],
+      ['rotate', 'rotate', { auto: true }],
+      ['resize', 'resize', { mode: 'longestEdge', longestEdge: 2048 }],
+      ['watermark', 'text-watermark', { text: '© Your name' }],
+      ['compress', 'compress-to-size', { targetKilobytes: 300, format: 'jpeg' }],
+      ['output', 'output', { archiveName: 'watermarked' }],
+    ]),
+  },
+  {
+    id: 'instagram-carousel',
+    name: 'Instagram carousel',
+    description:
+      'Cuts a wide photo into three 4:5 slides that swipe as one picture, at most 1080 × 1350.',
+    pipeline: line([
+      ['files', 'files'],
+      ['rotate', 'rotate', { auto: true }],
+      ['crop', 'crop', { aspect: 'custom', customWidth: 12, customHeight: 5 }],
+      ['split', 'split', { columns: 3, rows: 1 }],
+      ['resize', 'resize', { mode: 'box', width: 1080, height: 1350, fit: 'fit' }],
+      ['convert', 'convert', { format: 'jpeg', jpeg: { quality: 90 } }],
+      ['output', 'output', { archiveName: 'carousel' }],
+    ]),
+  },
+  {
     id: 'blank',
     name: 'Blank',
     description: 'Starts with a Files node. Add the nodes you need.',

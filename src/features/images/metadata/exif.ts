@@ -224,3 +224,41 @@ export function setExifOrientation(bytes: Uint8Array, orientation: number) {
   const ifd0 = [...block.ifd0.filter((candidate) => candidate.tag !== TAGS.orientation), entry]
   return writeExifBlock({ ...block, ifd0 })
 }
+
+/** EXIF text is ASCII by the standard; readers commonly take Latin-1, so © survives. */
+function textValue(text: string) {
+  const latin1 = [...text].every((character) => (character.codePointAt(0) ?? 0) <= 0xff)
+  const encoded = latin1
+    ? Uint8Array.from([...text], (character) => character.codePointAt(0) ?? 0)
+    : new TextEncoder().encode(text)
+  const value = new Uint8Array(encoded.length + 1)
+  value.set(encoded)
+  return value
+}
+
+/**
+ * Returns an EXIF block with the given text fields of IFD0 set, keeping everything else. Builds
+ * a new block when there is none. Fields left undefined are not touched.
+ */
+export function setExifText(
+  bytes: Uint8Array | undefined,
+  fields: Partial<Record<'artist' | 'copyright', string>>,
+) {
+  const block: ExifBlock = (bytes && readExifBlock(bytes)) || {
+    littleEndian: false,
+    ifd0: [],
+    exif: [],
+    gps: [],
+  }
+  let ifd0 = block.ifd0
+  for (const [name, text] of Object.entries(fields)) {
+    if (text === undefined) continue
+    const tag = TAGS[name as 'artist' | 'copyright']
+    const value = textValue(text)
+    ifd0 = [
+      ...ifd0.filter((entry) => entry.tag !== tag),
+      { tag, type: 2, count: value.length, value },
+    ]
+  }
+  return writeExifBlock({ ...block, ifd0 })
+}

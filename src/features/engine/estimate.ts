@@ -51,7 +51,10 @@ export function estimateRun(options: EstimateOptions): Estimate {
       return
     }
     const { definition, settings } = planned
-    if (definition.mode === 'all') return
+    if (definition.mode === 'all') {
+      passThrough(nodeId, state)
+      return
+    }
     const entry = entryKey(planned.key, [state.key])
     entryKeys.push(entry)
     const cached = definition.cacheable ? options.lookup?.(entry) : undefined
@@ -109,6 +112,30 @@ export function estimateRun(options: EstimateOptions): Estimate {
         meta: output.meta,
         weight: state.weight,
       })
+    }
+  }
+
+  /**
+   * A combining node that passes items on by reference simulates where each item leaves. The item
+   * keeps its key, and waited without its pixels. Other combining nodes end the estimate.
+   */
+  const passThrough = (nodeId: string, state: State) => {
+    const planned = plan.nodes.get(nodeId)
+    if (!planned) return
+    const { definition, settings } = planned
+    const passed = definition.simulate?.(settings, state.meta)
+    if (!passed) return
+    const cost = definition.cost?.(settings, state.meta, { encoded: state.encoded })
+    if (cost?.needsPixels && !state.decoded) {
+      totals.decodes += state.weight
+      totals.ms +=
+        DECODE_MS_PER_MEGAPIXEL[state.meta.format as ImageFormat] *
+        megapixels(state.meta) *
+        state.weight
+    }
+    totals.ms += (cost?.ms ?? 0) * state.weight
+    for (const output of passed) {
+      forward(nodeId, output.port, { ...state, meta: output.meta, decoded: false })
     }
   }
 

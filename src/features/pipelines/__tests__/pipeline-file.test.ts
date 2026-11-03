@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { chain } from '#/features/nodes/__tests__/harness'
 import { productRegistry } from '#/features/nodes/registry'
 import {
   exportPipelineFile,
@@ -69,11 +70,11 @@ describe('pipeline file', () => {
         version: 1,
         name: 'x',
         pipeline: {
-          nodes: [{ id: 'a', type: 'text-watermark', settings: {}, position: { x: 0, y: 0 } }],
+          nodes: [{ id: 'a', type: 'dither', settings: {}, position: { x: 0, y: 0 } }],
           connections: [],
         },
       }),
-      'This pipeline uses nodes this version of Hexlode does not have: text-watermark.',
+      'This pipeline uses nodes this version of Hexlode does not have: dither.',
     ],
     [
       JSON.stringify({
@@ -111,6 +112,26 @@ describe('pipeline file', () => {
   })
 })
 
+describe('pipelines with later nodes', () => {
+  it('keeps a watermark logo and the other settings through export and import', () => {
+    const logo = { name: 'logo.png', data: 'iVBORw0KGgoAAAANSUhEUg==', width: 64, height: 32 }
+    const pipeline = chain(
+      ['image-watermark', { logo, position: 'top-left', opacity: 55 }],
+      ['responsive-set', { widths: [320, 640], sizes: '50vw' }],
+    )
+    const text = exportPipelineFile({ name: 'Branded', pipeline })
+    expect(importPipelineFile(text, productRegistry).pipeline).toEqual(pipeline)
+  })
+
+  it('refuses a file whose node settings are not valid', () => {
+    const pipeline = chain(['background', { colour: 'red' }])
+    const text = exportPipelineFile({ name: 'Broken', pipeline })
+    expect(() => importPipelineFile(text, productRegistry)).toThrow(
+      new PipelineFileError('The settings of Background are not valid.'),
+    )
+  })
+})
+
 describe('templates', () => {
   it('offers every template whose nodes all exist, with Blank last', () => {
     expect(availableTemplates(productRegistry).map((template) => template.id)).toEqual([
@@ -119,6 +140,9 @@ describe('templates', () => {
       'remove-location',
       'square-thumbnails',
       'webp-and-avif',
+      'responsive-images',
+      'watermark-and-compress',
+      'instagram-carousel',
       'blank',
     ])
   })

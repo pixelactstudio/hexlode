@@ -12,6 +12,14 @@ export interface KeyValueStorage {
   removeItem(key: string): void
 }
 
+/** The browser has no room left in local storage for the saved pipelines. */
+export class PipelineStorageFull extends Error {
+  constructor() {
+    super('This browser has no room left to save it. Export a .hexlode file instead.')
+    this.name = 'PipelineStorageFull'
+  }
+}
+
 export function createPipelineStore(storage: KeyValueStorage | undefined, now = () => Date.now()) {
   const listeners = new Set<() => void>()
   let cached: SavedPipeline[] | undefined
@@ -29,8 +37,13 @@ export function createPipelineStore(storage: KeyValueStorage | undefined, now = 
   }
 
   const write = (pipelines: SavedPipeline[]) => {
+    try {
+      storage?.setItem(SAVED_PIPELINES_KEY, JSON.stringify(pipelines))
+    } catch {
+      // Pipelines can hold a watermark logo, so storage can fill up.
+      throw new PipelineStorageFull()
+    }
     cached = pipelines
-    storage?.setItem(SAVED_PIPELINES_KEY, JSON.stringify(pipelines))
     for (const listener of listeners) listener()
   }
 

@@ -30,16 +30,20 @@ export const CROP_POSITIONS = [
   'bottom-right',
 ] as const
 
-const schema = z.object({
+/** The aspect and position settings Crop shares with Pad / Extend. */
+export const aspectFields = {
   aspect: z.enum([...ASPECT_PRESETS, 'custom']).default('1:1'),
   customWidth: z.number().positive().max(1000).default(1),
   customHeight: z.number().positive().max(1000).default(1),
   position: z.enum(CROP_POSITIONS).default('center'),
-})
+}
+
+const schema = z.object(aspectFields)
 
 type CropSettings = z.infer<typeof schema>
 
-function ratioOf(settings: CropSettings) {
+/** The width to height ratio of an aspect setting, preset or custom. */
+export function ratioOf(settings: Pick<CropSettings, 'aspect' | 'customWidth' | 'customHeight'>) {
   if (settings.aspect === 'custom') return settings.customWidth / settings.customHeight
   const [width, height] = settings.aspect.split(':').map(Number)
   return width / height
@@ -50,9 +54,12 @@ export function planCrop(settings: CropSettings, width: number, height: number) 
   const ratio = ratioOf(settings)
   const cropWidth = Math.max(1, Math.min(width, Math.round(height * ratio)))
   const cropHeight = Math.max(1, Math.min(height, Math.round(cropWidth / ratio)))
-  const spareX = width - cropWidth
-  const spareY = height - cropHeight
-  const position = settings.position
+  const { x, y } = placeAt(settings.position, width - cropWidth, height - cropHeight)
+  return { x, y, width: cropWidth, height: cropHeight }
+}
+
+/** Where something sits when `spareX` by `spareY` pixels are left over around it. */
+export function placeAt(position: (typeof CROP_POSITIONS)[number], spareX: number, spareY: number) {
   const x = position.includes('left')
     ? 0
     : position.includes('right')
@@ -63,7 +70,7 @@ export function planCrop(settings: CropSettings, width: number, height: number) 
     : position.includes('bottom')
       ? spareY
       : Math.floor(spareY / 2)
-  return { x, y, width: cropWidth, height: cropHeight }
+  return { x, y }
 }
 
 export const cropNode = defineNode({

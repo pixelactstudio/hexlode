@@ -1,6 +1,6 @@
 # Hexlode implementation plan
 
-> Updated: 2026-09-27
+> Updated: 2026-11-04
 > Product: [idea.md](./idea.md). Vocabulary: [CONTEXT.md](./CONTEXT.md). Decisions: [docs/adr/](./docs/adr/).
 
 ## Goal
@@ -10,7 +10,7 @@ Studio with all 33 nodes from the catalogue in [idea.md](./idea.md). It ships in
 builds the whole application and node batch 1. Phases 2 and 3 only add node batches 2 and 3. Each
 phase is deployable and passes its exit gate before the next phase starts.
 
-Active phase: **Phase 1**.
+Active phase: **Phase 3**. Phases 2 and 3 are built and pass their exit gates.
 
 ## Phase 1: the application and node batch 1
 
@@ -87,6 +87,12 @@ Watermark and compress and Instagram carousel templates.
 Exit gate: each node has output tests on real fixtures, the node pair matrix passes with the new
 nodes, and the new templates run end to end.
 
+Deduplicate is a combining node with two outputs, Unique and Duplicates, and passes items on by
+reference ([ADR 0011](./docs/adr/0011-combining-nodes-pass-inputs-by-reference.md)). Image
+watermark logos are kept in the pipeline itself, at most 512 KB; an SVG logo is drawn to a PNG
+when it is chosen, because workers cannot draw SVG. Text is drawn with an OffscreenCanvas and
+blended with the engine's own compositing.
+
 ## Phase 3: node batch 3
 
 Best format, Responsive set, Favicon / App icons, Placeholder, Palette, Contact sheet, Images to
@@ -95,17 +101,24 @@ PDF, Set copyright / author. Adds the Responsive image set template.
 Exit gate: same as phase 2, plus tests for nodes that change the item count (one image to many,
 many images to one) and nodes that produce data or documents.
 
+Output and Rename take every kind of item; the other nodes take images. Favicon / App icons makes
+an ICO file, which is a document ([ADR 0012](./docs/adr/0012-ico-files-are-documents.md)), and puts
+each image's icons in a folder named after it. Live previews show the text of data items, such as
+a palette or a snippet, in the inspector.
+
 ## Engine design
 
 - A pipeline is a directed graph without cycles. Items flow through it one by one, so an item can
   reach the last node while later items are still at the first node.
-- Nodes that combine items (Contact sheet, Images to PDF, near-duplicate Deduplicate) wait until
-  every upstream item has arrived.
+- Nodes that combine items (Contact sheet, Images to PDF, Deduplicate) wait until every upstream
+  item has arrived. A combining node that passes items on unchanged returns them by reference, so
+  it never holds the batch ([ADR 0011](./docs/adr/0011-combining-nodes-pass-inputs-by-reference.md)).
 - Decoding happens at most once per item, the first time a node needs pixels; nodes that only read
   headers or metadata (Filter by format, Inspect, Rename, Strip metadata) never decode. Nodes pass
-  pixels between them. Encoding happens at Convert, Compress to size and Optimize PNG. An image
-  that reaches Output without an encoding node keeps its source format, and its original bytes
-  when nothing changed its pixels.
+  pixels between them. Encoding happens at Convert, Compress to size and Optimize PNG, and at
+  the nodes that make finished files: Best format, Responsive set, Favicon / App icons and Contact
+  sheet. An image that reaches Output without an encoding node keeps its source format, and its
+  original bytes when nothing changed its pixels.
 - Metadata is rewritten in the container without re-encoding for JPEG, PNG, WebP and JPEG XL.
   AVIF metadata is read and can be removed in place but not added; QOI holds none. The run reports
   a warning when a format cannot keep metadata.
@@ -139,7 +152,9 @@ removed.
 - Fixtures are small files in the repository, generated or with a licence that allows it, covering
   every input format, transparency, EXIF orientation, location metadata and a malformed file.
 - The node pair matrix connects every pair of node types and checks that the Studio's accept or
-  refuse decision matches what the engine does when it runs that pair.
+  refuse decision matches what the engine does when it runs that pair. It feeds one fixture per
+  format plus one different picture, so nodes that route by content send items down every output,
+  and runs as four shards that browsers run in parallel.
 - Worker, OPFS, codec and ZIP tests run in real browsers through Vitest browser mode. Locally they
   run in Chromium with `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`; `VITEST_BROWSERS=firefox` or
   `webkit` picks another engine. CI runs Chromium, Firefox and WebKit. Playwright's WebKit has no

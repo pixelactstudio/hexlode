@@ -55,7 +55,15 @@ export const workerRequestSchema = z.discriminatedUnion('type', [
 
 const stepCacheEntry = z.object({
   nodeType: z.string(),
-  outputs: z.array(z.object({ port: z.string(), key: z.string(), meta, reusesInput: z.boolean() })),
+  outputs: z.array(
+    z.object({
+      port: z.string(),
+      key: z.string(),
+      meta,
+      reusesInput: z.boolean(),
+      input: z.number().int().nonnegative().optional(),
+    }),
+  ),
 })
 
 export const workerResponseSchema = z.discriminatedUnion('type', [

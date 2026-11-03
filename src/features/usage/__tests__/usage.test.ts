@@ -142,6 +142,31 @@ describe('pipelineShape', () => {
   })
 })
 
+describe('pipelineShape of later nodes', () => {
+  it('leaves out watermark text, logos, author names and file names', () => {
+    const shape = pipelineShape(
+      chain(
+        ['text-watermark', { text: 'Property of Ada Lovelace', opacity: 40 }],
+        [
+          'image-watermark',
+          { logo: { name: 'ada-logo.png', data: 'iVBORw0KGgo=', width: 64, height: 32 } },
+        ],
+        ['set-copyright', { artist: 'Ada Lovelace', copyright: '© 2026 Ada Lovelace' }],
+        ['images-to-pdf', { name: 'ada-portfolio' }],
+      ),
+      productRegistry,
+    )
+    const serialised = JSON.stringify(shape)
+    for (const text of ['Ada', 'Lovelace', 'logo', 'iVBOR', 'portfolio']) {
+      expect(serialised).not.toContain(text)
+    }
+    expect(shape.nodes.find((node) => node.type === 'text-watermark')?.settings).toMatchObject({
+      opacity: 40,
+      tile: false,
+    })
+  })
+})
+
 describe('scrub', () => {
   it('removes file names and paths from text', () => {
     expect(scrubText('Could not decode "IMG 2041 (copy).HEIC" in /Users/ada/Trip/beach.jpg')).toBe(
