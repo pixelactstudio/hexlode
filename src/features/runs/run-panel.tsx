@@ -114,6 +114,7 @@ export function RunSection({
   runLabel,
   surface,
   countRun,
+  blockedReason,
 }: {
   controller: RunController
   state: RunControllerState
@@ -122,26 +123,31 @@ export function RunSection({
   surface: Exclude<Surface, 'studio'>
   /** For a saved pipeline: counts this run and returns how many times it has run. */
   countRun?: () => number | undefined
+  /** What still has to be set before the pipeline can run, shown in place of the status. */
+  blockedReason?: string | null
 }) {
   const { stats, sources, running } = state
   const delivery = stats.deliveries[outputNodeId]
-  const canRun = sources.length > 0 && !running && !state.preparing
+  const canRun = sources.length > 0 && !running && !state.preparing && !blockedReason
   const count = sources.length
   const done = stats.status !== 'idle' && stats.status !== 'running'
   const delivered = delivery?.files.length ?? 0
   const totalIn = sources.reduce((sum, source) => sum + (source.meta.size ?? 0), 0)
 
-  const status = running
-    ? `Working on ${formatCount(Math.min(count, stats.finishedItems + 1))} of ${formatCount(count)}…`
-    : done && stats.status === 'complete'
-      ? `${formatCount(delivered)} of ${plural(count, 'image')} done in ${formatDuration(stats.ms)}. ${formatBytes(totalIn)} became ${formatBytes(delivery?.bytes ?? 0)}.`
-      : done && stats.status === 'cancelled'
-        ? 'Cancelled. The images that finished can still be downloaded.'
-        : count === 0
-          ? 'Add images to start.'
-          : state.estimate
-            ? `${plural(count, 'image')} ready · ${describeEstimate(state.estimate)}`
-            : `${plural(count, 'image')} ready`
+  const status =
+    blockedReason && !running
+      ? blockedReason
+      : running
+        ? `Working on ${formatCount(Math.min(count, stats.finishedItems + 1))} of ${formatCount(count)}…`
+        : done && stats.status === 'complete'
+          ? `${formatCount(delivered)} of ${plural(count, 'image')} done in ${formatDuration(stats.ms)}. ${formatBytes(totalIn)} became ${formatBytes(delivery?.bytes ?? 0)}.`
+          : done && stats.status === 'cancelled'
+            ? 'Cancelled. The images that finished can still be downloaded.'
+            : count === 0
+              ? 'Add images to start.'
+              : state.estimate
+                ? `${plural(count, 'image')} ready · ${describeEstimate(state.estimate)}`
+                : `${plural(count, 'image')} ready`
 
   const run = async () => {
     await controller.start({ singleFileAsIs: true, pipelineRuns: countRun?.() })

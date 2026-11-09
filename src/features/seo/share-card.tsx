@@ -9,6 +9,7 @@
 import { ShieldCheck, Workflow } from 'lucide-react'
 import type { ComponentType, CSSProperties, SVGProps } from 'react'
 
+import { BUILT_IN_TOOL_ICONS } from '#/features/built-in-tools/tool-ui'
 import { QUICK_TOOL_ICONS } from '#/features/quick-tools/tool-ui'
 import { SEO_PAGES, SHARE_CARD, SITE_URL } from '#/features/seo/constants'
 import type { SeoPage } from '#/features/seo/types'
@@ -30,6 +31,7 @@ const FONT = 'Figtree, sans-serif'
 
 const PAGE_ICONS: Record<SeoPage, ComponentType<SVGProps<SVGSVGElement>>> = {
   ...QUICK_TOOL_ICONS,
+  ...BUILT_IN_TOOL_ICONS,
   home: Workflow,
   studio: Workflow,
   privacy: ShieldCheck,

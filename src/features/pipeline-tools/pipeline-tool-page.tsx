@@ -84,6 +84,8 @@ export function PipelineToolBody({
   builtInTool,
   adjustable = [],
   countRun,
+  problem,
+  onPipelineChange,
 }: {
   pipeline: Pipeline
   surface?: Exclude<Surface, 'studio' | 'quick-tool'>
@@ -91,9 +93,14 @@ export function PipelineToolBody({
   /** Ids of the nodes whose settings the page shows. */
   adjustable?: readonly string[]
   countRun?: () => number | undefined
+  /** What still has to be set before the pipeline can run, or null when it is ready. */
+  problem?: (pipeline: Pipeline) => string | null
+  /** Called with the pipeline as the page's settings change it. */
+  onPipelineChange?: (pipeline: Pipeline) => void
 }) {
   const [current, setCurrent] = useState(pipeline)
   useEffect(() => setCurrent(pipeline), [pipeline])
+  useEffect(() => onPipelineChange?.(current), [current, onPipelineChange])
   const outputs = outputsOf(current)
   const outputId = outputs[0]?.id ?? 'output'
   const controller = useController(() =>
@@ -134,6 +141,7 @@ export function PipelineToolBody({
                 outputNodeId={outputId}
                 surface={surface}
                 countRun={countRun}
+                blockedReason={problem?.(current) ?? null}
                 runLabel={count > 0 ? `Run on ${count} image${count === 1 ? '' : 's'}` : 'Run'}
               />
             }

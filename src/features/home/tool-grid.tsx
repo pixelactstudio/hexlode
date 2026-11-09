@@ -1,8 +1,10 @@
 import { Icon } from '@astryxdesign/core/Icon'
 import { Heading, Text } from '@astryxdesign/core/Text'
-import { ArrowUpRight, Bookmark, Wrench } from 'lucide-react'
+import { ArrowUpRight, Bookmark, Sparkles, Wrench } from 'lucide-react'
 import { useSyncExternalStore } from 'react'
 
+import { BUILT_IN_TOOL_ICONS } from '#/features/built-in-tools/tool-ui'
+import { BUILT_IN_TOOLS } from '#/features/built-in-tools/tools'
 import { Section, SectionHeader } from '#/features/home/section'
 import { TOOL_DEMOS } from '#/features/home/tool-demos'
 import { pipelineStore } from '#/features/pipelines/storage'
@@ -45,6 +47,27 @@ function ToolCell({ tool }: { tool: QuickTool }) {
   )
 }
 
+const PILL =
+  'inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-primary text-sm no-underline outline-accent transition-colors hover:bg-muted focus-visible:outline-2'
+
+/** The built-in tools: ready pipelines for common jobs, as links to their pages. */
+function BuiltInTools() {
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-border border-t px-6 py-6 md:px-8">
+      <span className="me-2 inline-flex items-center gap-2 text-secondary text-sm">
+        <Icon icon={Sparkles} size="sm" color="inherit" />
+        Ready-made tools
+      </span>
+      {BUILT_IN_TOOLS.map((tool) => (
+        <RouterLink key={tool.slug} href={`/tools/${tool.slug}`} className={PILL}>
+          <Icon icon={BUILT_IN_TOOL_ICONS[tool.slug]} size="xsm" color="secondary" />
+          {tool.name}
+        </RouterLink>
+      ))}
+    </div>
+  )
+}
+
 /** Pipelines saved in this browser, as links to their tool pages. */
 function SavedTools() {
   const store = pipelineStore()
@@ -57,11 +80,7 @@ function SavedTools() {
         Your tools
       </span>
       {saved.map((pipeline) => (
-        <RouterLink
-          key={pipeline.id}
-          href={`/tools/${pipeline.id}`}
-          className="rounded-full border border-border px-3 py-1 text-primary text-sm no-underline outline-accent transition-colors hover:bg-muted focus-visible:outline-2"
-        >
+        <RouterLink key={pipeline.id} href={`/tools/${pipeline.id}`} className={PILL}>
           {pipeline.name}
         </RouterLink>
       ))}
@@ -84,6 +103,7 @@ export function ToolGrid() {
           <ToolCell key={tool} tool={tool} />
         ))}
       </div>
+      <BuiltInTools />
       <SavedTools />
     </Section>
   )

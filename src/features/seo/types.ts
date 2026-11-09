@@ -1,7 +1,8 @@
+import type { BuiltInToolSlug } from '#/features/built-in-tools/types'
 import type { QuickTool } from '#/features/quick-tools/tools'
 
 /** The pages search engines may list. Each has its own title, description and share card. */
-export type SeoPage = 'home' | 'studio' | 'privacy' | QuickTool
+export type SeoPage = 'home' | 'studio' | 'privacy' | QuickTool | BuiltInToolSlug
 
 /** What the share card for a page shows. */
 export interface ShareCard {

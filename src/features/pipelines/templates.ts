@@ -7,7 +7,7 @@ const COLUMN_STEP = 300
 /** Leaves room for the preview each node shows once there is a sample image. */
 const ROW_STEP = 280
 
-type Step = [id: string, type: string, settings?: Record<string, unknown>]
+export type Step = [id: string, type: string, settings?: Record<string, unknown>]
 
 function node([id, type, settings]: Step, column: number, row: number): PipelineNode {
   return {
@@ -23,7 +23,7 @@ function connect(source: string, target: string) {
 }
 
 /** Steps in a line, wrapping into rows. */
-function line(steps: Step[]): Pipeline {
+export function line(steps: Step[]): Pipeline {
   return {
     nodes: steps.map((step, index) =>
       node(step, index % NODES_PER_ROW, Math.floor(index / NODES_PER_ROW)),

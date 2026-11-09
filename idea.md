@@ -107,6 +107,17 @@ page exists only to catch a search. A tool that follows a platform's rules, such
 photo requirements, names the guidance its numbers come from and the date they were checked. The
 list and the reason for each entry live in `src/features/built-in-tools/`.
 
+| Tool | Job |
+|---|---|
+| WebP to JPG | Turns WebP images saved from the web into JPEG, with transparency made white. |
+| JPG to PDF | Puts every image on its own page of one PDF, upright, on A4, Letter or the image size. |
+| Instagram without cropping | Fits each photo into a 4:5 or square post 1080 pixels wide, with a blurred or plain border. |
+| Favicon generator | Makes an ICO file, PNG icons, a web app manifest and the HTML tags from one image. |
+| Watermark photos | Writes a text watermark on every photo, in a corner or tiled, keeping each format. |
+| Add logo to photos | Places a logo on every photo at the same corner, size and opacity. Runs once a logo is chosen. |
+
+The Tools menu, the home page and the footer list the built-in tools after the quick tools.
+
 ## Studio
 
 The Studio is for desktop screens. Phones and narrow windows get a message that points them to the
