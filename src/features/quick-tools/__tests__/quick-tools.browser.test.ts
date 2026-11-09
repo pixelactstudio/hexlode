@@ -98,7 +98,8 @@ describe('quick tools on every input format', () => {
       // The model's stand-in sees the red half of each fixture as the subject.
       { services: { segmenter: redSubjectSegmenter() } },
     )
-    expect(statuses('step')).toEqual(Array(6).fill('processed'))
+    expect(statuses('step')).toEqual(Array(ALL_FORMAT_FIXTURES.length).fill('processed'))
+    expect(files(OUTPUT_NODE_ID)).toHaveLength(ALL_FORMAT_FIXTURES.length)
     for (const file of files(OUTPUT_NODE_ID)) {
       expect(file.name.endsWith(`.${format}`)).toBe(true)
       const image = await decodeFile(file.bytes)
