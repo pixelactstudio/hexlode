@@ -1,6 +1,6 @@
 # Hexlode implementation plan
 
-> Updated: 2026-11-04
+> Updated: 2026-11-10
 > Product: [idea.md](./idea.md). Vocabulary: [CONTEXT.md](./CONTEXT.md). Decisions: [docs/adr/](./docs/adr/).
 
 ## Goal
@@ -147,12 +147,32 @@ node pair matrix passes with HEIC fixtures.
 
 ## Phase 7: remove background
 
-A Remove background node and quick tool cut the subject out onto transparency, on the device, with
-a segmentation model run by ONNX Runtime Web on WebGPU or WASM. The model downloads once from
-Hexlode's own server after the user agrees, and stays cached.
+A Remove background node and quick tool cut the subject out onto transparency, on the device
+([ADR 0017](./docs/adr/0017-on-device-background-removal.md)).
 
-Exit gate: masks on fixtures match a reference within a set tolerance, the node pair matrix passes
-with the new node, and the estimate covers the model download and slow devices.
+1. The model is BiRefNet_lite exported to ONNX at 512 × 512 in half precision (MIT, 94 MB), pinned
+   by revision and SHA-256 in `src/features/background-removal/constants.ts`. ONNX Runtime Web runs
+   it on WebGPU where the browser has an adapter and on one thread of WebAssembly otherwise; its
+   WebAssembly is served with the app, the smaller build without WebGPU where WebGPU is missing.
+2. The server serves the model at `/models/<file>`: the first request fetches the pinned file,
+   checks its size and hash, and keeps it in `HEXLODE_MODEL_DIR`. Browsers never contact a third
+   party. A page asks before the one-time download, says its size, shows its progress, checks the
+   hash again and keeps the model in Cache Storage.
+3. One inference worker per page holds the model. The run controller gives each engine worker,
+   and the Studio gives the preview worker, a MessagePort to it when the pipeline needs a model.
+   The node resizes the upright image to the model's input in its own worker, sends only that, and
+   scales the returned mask back to cut the subject out, estimating the colour of soft edges so no
+   fringe of the old background shows on white. JPEG cut-outs become PNG.
+4. The estimate times model runs one after another on the inference worker, adds the model's
+   start once and the download while it is missing, and uses measured times once the model ran.
+   Analytics record the download (size, time, error code) and each run's backend and timings.
+5. The quick tool at `/remove-background` saves PNG or WebP. The node has no settings; its
+   inspector shows whether the model is in the browser and offers the download for previews.
+
+Exit gate: masks on licensed fixtures match their reference within the minimums in the quality
+suite, the node pair matrix passes with the new node, the quick tool's output decodes with
+transparency where the background was, and the estimate covers the model download and devices
+without WebGPU.
 
 ## Engine design
 
@@ -213,6 +233,13 @@ removed.
   what batches 2 and 3 need. They join the node pair matrix but never the product registry.
 - The batch of 500 images of 12 megapixels runs with `pnpm test:scale`. It takes minutes, so it is
   outside `pnpm validate`; run it before closing a phase.
+- Nodes that run an on-device model use a stand-in segmenter in node tests and the node pair
+  matrix. The inference worker, the worker pool and previews run ONNX Runtime on `threshold.onnx`,
+  a tiny model with the real model's input and output (`scripts/generate-model-fixture.mjs`).
+  `pnpm test:model` runs the real background removal model in Node on licensed photos with
+  reference masks and checks intersection over union and edge colour. It downloads 94 MB once and
+  needs about 2.5 GB of memory, so it is outside `pnpm validate`; run it when the model, ONNX
+  Runtime or the cut-out code changes.
 - `pnpm validate` passes before every commit.
 - CI (`.github/workflows/`) runs on every pull request: Biome, types, commit messages, the
   generated theme and route tree, actionlint and hadolint; unit tests on Linux, macOS and Windows;

@@ -1,6 +1,6 @@
 # Hexlode product
 
-> Updated: 2026-11-04 (node batches 2 and 3)
+> Updated: 2026-11-10 (Remove background)
 > Delivery plan: [implementation.md](./implementation.md). Vocabulary: [CONTEXT.md](./CONTEXT.md).
 > Decisions and their reasons: [docs/adr/](./docs/adr/).
 
@@ -35,7 +35,7 @@ Below the hero, in one bordered column:
 - The formats Hexlode opens and saves.
 - The Studio: moving pictures of chaining steps, previews that follow a setting, work spread over
   workers, the step cache and saving a pipeline as a tool, then the templates.
-- The six quick tools, each with a moving picture of its job, and the user's saved pipeline tools.
+- The seven quick tools, each with a moving picture of its job, and the user's saved pipeline tools.
 - How Hexlode works on the device: images flow into the browser tab and out as a ZIP or a folder,
   with three notes: no upload needed, modern formats and open source.
 - A closing call to open the Studio.
@@ -74,9 +74,10 @@ is kept in browser storage and applied before the page paints, so a light page n
 | Crop | Cut to an aspect ratio such as 1:1, 4:5 or 16:9, from the centre or an edge. |
 | Rotate | Turn photos upright, rotate by quarter turns or flip them. |
 | Strip metadata | Remove all metadata, only location data, or everything except copyright. |
+| Remove background | Cut the subject out onto transparency with a model that runs on the device, saved as PNG or WebP. |
 
 Each quick tool is a fixed pipeline that runs on the same engine as the Studio. A quick tool page
-opens with a row of all six tools for switching, then the tool's name and one line, then two
+opens with a row of all seven tools for switching, then the tool's name and one line, then two
 numbered panels, side by side on wide screens and stacked on phones. The first holds the
 drop area and the list of added images, with a thumbnail, a full-size preview and a remove button
 for each. The second holds the settings for that job and, under them, the run button, progress and
@@ -89,6 +90,11 @@ Settings keep their place when options change, and the panels keep their height:
 does not apply is shown disabled with the reason, not hidden, and text or fields that change with
 an option keep the room of the longest version. A single result downloads as the file itself; several download as a ZIP.
 Compress by quality never returns a file larger than the original.
+
+Remove background runs a segmentation model on the device. The first time a pipeline needs it,
+the page asks before downloading it, says its size and that it comes from Hexlode's own server,
+and shows the progress; the browser keeps it for later runs and live previews. Its estimate counts
+the download and how slowly the model runs without WebGPU.
 
 A pipeline tool is a saved Studio pipeline opened as a quick tool page. The user builds the
 pipeline once, then drops new images into the simple page whenever they need it.
@@ -236,6 +242,7 @@ Items are images, data (JSON or text) or documents (PDF). Batch numbers match th
 | Filters | Applies grayscale, sepia, duotone or invert. | 2 |
 | Sharpen / Blur | Sharpens, or blurs the whole image or a region. | 2 |
 | Background | Replaces transparency with a colour. | 2 |
+| Remove background | Cuts the subject out onto transparency with a model that runs on the device, on WebGPU or WebAssembly. Turns the image upright first; JPEG becomes PNG, since JPEG has no transparency. The model downloads once from Hexlode's server after the user agrees. | 7 |
 
 ### Overlays
 

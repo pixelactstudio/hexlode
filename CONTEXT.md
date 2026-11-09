@@ -8,8 +8,8 @@ building branching pipelines.
 ### Surfaces
 
 **Quick tool**:
-A single-purpose page (Convert, Compress, Resize, Crop, Rotate, Strip metadata) that runs a fixed
-pipeline.
+A single-purpose page (Convert, Compress, Resize, Crop, Rotate, Strip metadata, Remove
+background) that runs a fixed pipeline.
 _Avoid_: converter, feature page
 
 **Pipeline tool**:
@@ -112,6 +112,20 @@ _Avoid_: preview image, test image
 **Estimate**:
 The predicted work and duration of a run, shown before it starts.
 _Avoid_: forecast, quote
+
+**On-device model**:
+A machine learning model Hexlode runs in the browser, such as the one Remove background uses. It
+downloads once from Hexlode's own server, after the user agrees, and stays in the browser.
+_Avoid_: AI, cloud model
+
+**Inference worker**:
+The one worker per page that runs on-device models, one image at a time, for every engine and
+preview worker, so the page holds a single copy of each model.
+_Avoid_: model worker, AI worker
+
+**Cut-out**:
+An image whose background Remove background made transparent, leaving its subject.
+_Avoid_: matte, sticker, mask (the mask is what the model returns)
 
 ### Delivery
 
