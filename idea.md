@@ -287,8 +287,8 @@ Items are images, data (JSON or text) or documents (PDF). Batch numbers match th
 
 ## Offline and installing
 
-- After one online visit, Hexlode works without a connection: the home page, the six quick tools,
-  pipeline tools and the Studio open and run, with every codec, including formats not used yet.
+- After one online visit, Hexlode works without a connection: the home page, the quick tools,
+  the built-in tools, pipeline tools and the Studio open and run, with every codec, including formats not used yet.
   Pages load from the network when there is one, so a new version shows on the next online visit;
   without one they open from the copy kept in the browser. A small Offline badge shows in the top
   bar while there is no connection.
@@ -296,8 +296,8 @@ Items are images, data (JSON or text) or documents (PDF). Batch numbers match th
   privacy page says.
 - Hexlode can be installed from the browser as an app.
 - Installed on desktop Chromium, Hexlode opens images and `.hexlode` files from the file manager.
-  A `.hexlode` file opens in the Studio. Images open on a page that asks what to do with them: one
-  of the six quick tools or a saved pipeline tool. The chosen page opens with the images already
+  A `.hexlode` file opens in the Studio. Images open on a page that asks what to do with them: a
+  quick tool, a built-in tool or a saved pipeline tool. The chosen page opens with the images already
   added; they travel in the tab's memory.
 - Installed on Android, Hexlode is offered in the share sheet for photos. Shared photos open in
   Strip metadata with the photos added and the setting on removing only the location, since shared
