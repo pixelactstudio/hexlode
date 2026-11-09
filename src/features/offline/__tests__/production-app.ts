@@ -62,6 +62,8 @@ export async function startProductionApp(
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined,
     })
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+    // Pages, runs and downloads get a minute each, so a busy machine slows tests without failing them.
+    context.setDefaultTimeout(60_000)
     const page = await context.newPage()
     await page.goto(`${base}/`)
     // The worker takes control once it has downloaded the whole build.
@@ -90,7 +92,12 @@ export async function runAndDownload(page: Page, runLabel: string) {
   return new Uint8Array(readFileSync(await (await download).path()))
 }
 
-/** Whether the page shows this exact text somewhere visible. */
-export function showsText(page: Page, text: string) {
-  return page.getByText(text, { exact: true }).locator('visible=true').first().isVisible()
+/** Waits until the page shows this exact text somewhere visible. */
+export function waitForText(page: Page, text: string) {
+  return page.getByText(text, { exact: true }).locator('visible=true').first().waitFor()
+}
+
+/** Waits until the page shows a heading with this name. */
+export function waitForHeading(page: Page, name: string) {
+  return page.getByRole('heading', { name }).waitFor()
 }

@@ -10,8 +10,9 @@ import {
   FIXTURES,
   type ProductionApp,
   runAndDownload,
-  showsText,
   startProductionApp,
+  waitForHeading,
+  waitForText,
 } from '#/features/offline/__tests__/production-app'
 import { SAVED_PIPELINES_KEY } from '#/features/pipelines/constants'
 import { QUICK_TOOL_DEFINITIONS, quickToolPipeline } from '#/features/quick-tools/tools'
@@ -42,10 +43,8 @@ afterAll(() => app?.close())
 describe('offline after one visit', () => {
   it('opens a quick tool it never showed and converts a photo with its codecs', async () => {
     const page = await app.open('/convert')
-    await expect
-      .poll(() => page.getByRole('heading', { name: 'Convert images' }).isVisible())
-      .toBe(true)
-    await expect.poll(() => showsText(page, 'Offline')).toBe(true)
+    await waitForHeading(page, 'Convert images')
+    await waitForText(page, 'Offline')
     await page
       .locator('input[type=file][accept]')
       .first()
@@ -62,15 +61,13 @@ describe('offline after one visit', () => {
 
   it('opens the Studio', async () => {
     const page = await app.open('/studio')
-    await expect.poll(() => showsText(page, 'Web-ready photos')).toBe(true)
+    await waitForText(page, 'Web-ready photos')
     await page.close()
   })
 
   it('opens a saved pipeline tool from the app shell', async () => {
     const page = await app.open(`/tools/${SAVED_TOOL.id}`)
-    await expect
-      .poll(() => page.getByRole('heading', { name: SAVED_TOOL.name }).isVisible())
-      .toBe(true)
+    await waitForHeading(page, SAVED_TOOL.name)
     await page.close()
   })
 
