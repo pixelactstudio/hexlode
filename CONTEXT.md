@@ -16,6 +16,11 @@ _Avoid_: converter, feature page
 A saved pipeline opened as a quick tool page, without the canvas.
 _Avoid_: custom tool, app
 
+**Built-in tool**:
+A pipeline tool that ships with Hexlode, on its own page at `/tools/<slug>`, for a job people
+search for by name and repeat.
+_Avoid_: preset, landing page, recipe
+
 **Studio**:
 The desktop editor where users build pipelines on a canvas.
 _Avoid_: canvas (as the product name), workspace, editor
@@ -55,6 +60,10 @@ _Avoid_: autosave, backup
 **Pipeline file**:
 A pipeline exported as a `.hexlode` file.
 _Avoid_: recipe file, export
+
+**Pipeline link**:
+A link to Hexlode that carries a whole pipeline file, compressed, after its `#`.
+_Avoid_: share URL, permalink
 
 ### Running
 

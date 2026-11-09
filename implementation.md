@@ -5,12 +5,16 @@
 
 ## Goal
 
-Version 1 is the complete local product: the home page, six quick tools, pipeline tools, and the
+Version 1 was the complete local product: the home page, six quick tools, pipeline tools, and the
 Studio with all 33 nodes from the catalogue in [idea.md](./idea.md). It ships in three phases. Phase 1
 builds the whole application and node batch 1. Phases 2 and 3 only add node batches 2 and 3. Each
 phase is deployable and passes its exit gate before the next phase starts.
 
-Active phase: **Phase 3**. Phases 2 and 3 are built and pass their exit gates.
+Version 2 adds phases 4 to 7 on top of version 1. They make the pipeline easy to share and find,
+keep the app working offline, and open the photos people actually have.
+
+Active phase: **Version 2, phases 4 to 7**, built together on one branch. Phases 1 to 3 are built
+and pass their exit gates.
 
 ## Phase 1: the application and node batch 1
 
@@ -105,6 +109,50 @@ Output and Rename take every kind of item; the other nodes take images. Favicon 
 an ICO file, which is a document ([ADR 0012](./docs/adr/0012-ico-files-are-documents.md)), and puts
 each image's icons in a folder named after it. Live previews show the text of data items, such as
 a palette or a snippet, in the inspector.
+
+## Phase 4: pipelines people can share
+
+1. Pipeline links. The Studio and every pipeline tool page copy a link that carries the whole
+   pipeline after `#`, compressed. The part after `#` never reaches the server. Opening the link
+   shows the pipeline tool page with Save and Open in the Studio. A pipeline too large for a link
+   offers its `.hexlode` file instead.
+2. Built-in tools: pipeline tools that ship with Hexlode at `/tools/<slug>`, rendered on the
+   server, each with an entry in `SEO_PAGES`, a share card and a place in the sitemap. Only jobs
+   people search for by name and repeat; the list and the reason for each entry live in
+   `src/features/built-in-tools/`. A built-in tool can show the settings of a few chosen nodes.
+3. The run event carries how many times a saved pipeline has run.
+
+Exit gate: every template survives a pipeline link unchanged, a damaged link shows a clear message,
+every built-in tool runs end to end on real fixtures and is in the sitemap, and the run count rises
+by one per run of a saved pipeline.
+
+## Phase 5: offline and installable
+
+1. A service worker caches the built scripts, styles and codec WASM after the first visit. Pages
+   load from the network first and fall back to the cache offline. A badge shows when the app is
+   offline.
+2. Installed on desktop Chromium, Hexlode opens images and `.hexlode` files from the file manager.
+   Installed on Android, photos shared to Hexlode open in Strip metadata, set to remove location.
+
+Exit gate: a browser test loads a quick tool and the Studio offline after one online visit, files
+from a share or a file launch land in the right page, and the privacy page explains the cache.
+
+## Phase 6: HEIC input
+
+HEIC and HEIF photos open wherever other images do, through a WASM decoder loaded on first use in
+the worker. Hexlode decodes HEIC but does not write it.
+
+Exit gate: real iPhone photos decode with the right dimensions, orientation and metadata, and the
+node pair matrix passes with HEIC fixtures.
+
+## Phase 7: remove background
+
+A Remove background node and quick tool cut the subject out onto transparency, on the device, with
+a segmentation model run by ONNX Runtime Web on WebGPU or WASM. The model downloads once from
+Hexlode's own server after the user agrees, and stays cached.
+
+Exit gate: masks on fixtures match a reference within a set tolerance, the node pair matrix passes
+with the new node, and the estimate covers the model download and slow devices.
 
 ## Engine design
 

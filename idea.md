@@ -93,6 +93,20 @@ Compress by quality never returns a file larger than the original.
 A pipeline tool is a saved Studio pipeline opened as a quick tool page. The user builds the
 pipeline once, then drops new images into the simple page whenever they need it.
 
+## Built-in tools
+
+A built-in tool is a pipeline tool that ships with Hexlode, on its own page at `/tools/<slug>`.
+It looks like a quick tool page: the drop area and images first, then the pipeline's steps and,
+for a tool that needs them, the settings of one or two of its nodes, such as the watermark text.
+Each page renders on the server, has its own title, description and share card, and offers Open in
+the Studio to change the pipeline.
+
+The list stays short on purpose. A job earns a page only when people search for it by name in large
+numbers, repeat it, and Hexlode does all of it on the device better than a single quick tool. No
+page exists only to catch a search. A tool that follows a platform's rules, such as a marketplace's
+photo requirements, names the guidance its numbers come from and the date they were checked. The
+list and the reason for each entry live in `src/features/built-in-tools/`.
+
 ## Studio
 
 The Studio is for desktop screens. Phones and narrow windows get a message that points them to the
@@ -252,6 +266,13 @@ Items are images, data (JSON or text) or documents (PDF). Batch numbers match th
 - Nothing is stored in the browser until the user clicks Save or starts a run.
 - A pipeline exports to and imports from a `.hexlode` file. The file is versioned JSON, and older
   versions are migrated on import.
+- Share copies a pipeline link: the pipeline file, compressed, after the `#` of a link to Hexlode.
+  The part after `#` never reaches the server, so the pipeline is not stored anywhere but the link.
+  Opening the link shows the pipeline as a pipeline tool page, with Save and Open in the Studio.
+  A pipeline too large for a link, such as one with a big watermark logo, offers its `.hexlode`
+  file instead. A damaged or unreadable link says so and opens nothing.
+- Each saved pipeline counts its runs in the browser, and the run event carries that count, so
+  Hexlode can see whether people come back to their pipelines.
 
 ## Analytics
 
@@ -267,9 +288,10 @@ A signed-in cloud mode may later run large jobs on a server, keep running after 
 and use a credit system. Local processing stays free and unlimited. The database and account code
 in the repository waits for this work.
 
-## Out of scope for version 1
+## Out of scope for now
 
 - Accounts, sign-in, cloud processing and billing.
-- HEIC input, animated images and colour-profile conversion.
+- A command-line runner and a GitHub Action for pipelines.
+- HEIC output, animated images and colour-profile conversion.
 - Dither and retro effects.
 - The Studio on phones.
