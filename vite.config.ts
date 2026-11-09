@@ -77,11 +77,47 @@ function codecLicences(): Plugin {
   }
 }
 
+/**
+ * Ships the licences of the background removal model and of ONNX Runtime, which runs it, at
+ * /licenses/background-removal.txt (ADR 0017).
+ */
+function modelLicences(): Plugin {
+  const folder = 'src/features/background-removal/licences'
+  const files = [
+    ['The BiRefNet_lite model, 512 × 512 ONNX export', 'birefnet-lite-512-LICENSE.txt'],
+    ['ONNX Runtime Web', 'onnxruntime-LICENSE.txt'],
+    ['ONNX Runtime third-party notices', 'onnxruntime-ThirdPartyNotices.txt'],
+  ]
+  return {
+    name: 'hexlode:model-licences',
+    apply: 'build',
+    generateBundle() {
+      if (this.environment?.name !== 'client') return
+      const sections = files.map(
+        ([title, file]) => `==> ${title} <==\n\n${readFileSync(`${folder}/${file}`, 'utf8')}`,
+      )
+      this.emitFile({
+        type: 'asset',
+        fileName: 'licenses/background-removal.txt',
+        source: `Hexlode removes backgrounds with BiRefNet_lite, run by ONNX Runtime Web.\n\n${sections.join('\n\n')}`,
+      })
+    },
+  }
+}
+
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
-  // libheif-js ships a CommonJS loader, which must be pre-bundled. Listing it keeps a first run from
-  // finding it late and reloading the page while tests or the app are running.
-  optimizeDeps: { exclude: JSQUASH_PACKAGES, include: ['libheif-js/libheif-wasm/libheif.js'] },
+  // libheif-js ships a CommonJS loader, which must be pre-bundled; ONNX Runtime is told where its
+  // WebAssembly is, so pre-bundling it is safe too. Listing them keeps a first run from finding them
+  // late and reloading the page while tests or the app are running.
+  optimizeDeps: {
+    exclude: JSQUASH_PACKAGES,
+    include: [
+      'libheif-js/libheif-wasm/libheif.js',
+      'onnxruntime-web/webgpu',
+      'onnxruntime-web/wasm',
+    ],
+  },
   worker: { format: 'es' },
   // The dev server is also opened from other devices on the tailnet, such as the T3 Code preview.
   server: { allowedHosts: ['.ts.net'] },
@@ -93,6 +129,7 @@ const config = defineConfig({
     viteReact(),
     babel({ presets: [reactCompilerPreset()] }),
     codecLicences(),
+    modelLicences(),
     // Writes /sw.js with every build file listed, so the app works offline after one visit.
     serviceWorker({ entry: 'src/features/offline/service-worker.ts', pages: OFFLINE_PAGES }),
     // Last, as Sentry's guide asks. Uploads source maps when SENTRY_AUTH_TOKEN, SENTRY_ORG and

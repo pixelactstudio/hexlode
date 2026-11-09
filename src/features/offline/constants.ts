@@ -29,6 +29,13 @@ export const PAGE_CACHE_PREFIX = `${CACHE_PREFIX}pages-`
 export const NETWORK_ONLY_PREFIXES = ['/api/', '/models/'] as const
 
 /**
+ * Build files the worker keeps the first time they are used instead of on install: ONNX Runtime's
+ * WebAssembly, which only Remove background needs and only after the user agrees to its download
+ * (ADR 0017). The first visit stays small, and background removal works offline once used.
+ */
+export const CACHED_ON_FIRST_USE: readonly RegExp[] = [/(^|\/)ort-wasm[^/]*\.wasm$/]
+
+/**
  * Build output the worker does not download: source maps, the share cards only link previews
  * show, hidden files such as Vite's manifest, and the worker itself.
  */

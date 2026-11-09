@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { precacheUrls } from '#/features/offline/precache'
+import { cachedOnFirstUse, precacheUrls } from '#/features/offline/precache'
 
 describe('precacheUrls', () => {
   it('keeps every script, style, font, codec and public file of the client build', () => {
@@ -48,5 +48,14 @@ describe('precacheUrls', () => {
       '/assets/a.js',
       '/assets/b.js',
     ])
+  })
+})
+
+describe('cachedOnFirstUse', () => {
+  it("picks ONNX Runtime's WebAssembly, fetched only after the user agrees to Remove background", () => {
+    expect(cachedOnFirstUse('/assets/ort-wasm-simd-threaded.asyncify-Ab12.wasm')).toBe(true)
+    expect(cachedOnFirstUse('/assets/ort-wasm-simd-threaded-Cd34.wasm')).toBe(true)
+    expect(cachedOnFirstUse('/assets/avif_enc-Gh78.wasm')).toBe(false)
+    expect(cachedOnFirstUse('/assets/index-Ab12.js')).toBe(false)
   })
 })

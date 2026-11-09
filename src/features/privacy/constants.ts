@@ -18,6 +18,11 @@ export const STORED_IN_BROWSER = [
       'Its nodes, settings and name, so a reload does not lose your work, kept for that tab only. Unsaved changes are also kept for a day, so a new tab can offer them back. Never your images.',
   },
   {
+    label: 'The background removal model',
+    description:
+      "Only after you agree to download it for Remove background. It comes from Hexlode's own server and stays in your browser's cache, so later runs need no download.",
+  },
+  {
     label: 'Your colour mode',
     description: 'Dark, light or system, once you pick one in the top bar.',
   },

@@ -4,6 +4,8 @@
  */
 import { describe, expect, it } from 'vitest'
 
+import { redSubjectSegmenter } from '#/features/background-removal/__tests__/stand-in-segmenter'
+
 import {
   ALL_FORMAT_FIXTURES,
   BLUE,
@@ -83,6 +85,26 @@ describe('quick tools on every input format', () => {
       })
       const [x, y] = expected.red ?? [0, expected.height - 1]
       expect(near(pixelAt(image, x, y), RED, 64)).toBe(true)
+    }
+  })
+
+  it.each([
+    'png',
+    'webp',
+  ] as const)('remove-background cuts out every format, saved as %s with transparency', async (format) => {
+    const { files, statuses } = await run(
+      quickToolPipeline('remove-background', { format }),
+      ALL_FORMAT_FIXTURES,
+      // The model's stand-in sees the red half of each fixture as the subject.
+      { services: { segmenter: redSubjectSegmenter() } },
+    )
+    expect(statuses('step')).toEqual(Array(6).fill('processed'))
+    for (const file of files(OUTPUT_NODE_ID)) {
+      expect(file.name.endsWith(`.${format}`)).toBe(true)
+      const image = await decodeFile(file.bytes)
+      expect(image).toMatchObject({ format, width: 48, height: 32 })
+      expect(near(pixelAt(image, 4, 16), RED, 64)).toBe(true)
+      expect(pixelAt(image, 44, 16)[3]).toBe(0)
     }
   })
 

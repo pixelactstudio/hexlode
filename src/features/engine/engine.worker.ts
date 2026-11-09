@@ -3,6 +3,9 @@
  * An engine worker. Carries source items through the pipeline, one at a time, reading and writing
  * the step cache, output files and waiting items in OPFS.
  */
+
+import { createSegmenterClient } from '#/features/background-removal/segmenter-client'
+import type { Segmenter } from '#/features/background-removal/types'
 import { createFlowPlan, type FlowDeps, flowCombining, flowSource } from '#/features/engine/flow'
 import { appDirectory } from '#/features/engine/opfs/files'
 import { createOpfsOutputSink, createOpfsSpillStore } from '#/features/engine/opfs/run-stores'
@@ -23,6 +26,8 @@ const post = (message: WorkerResponse) => scope.postMessage(message)
 const kinds = { image: imageKind, data: fileKind, document: fileKind }
 
 let current: Omit<FlowDeps, 'emit' | 'signal'> | undefined
+/** Set when the run's pipeline runs an on-device model. */
+let segmenter: Segmenter | undefined
 /** Why the current run could not be set up. Each task of the run fails with it. */
 let beginFailure: Error | undefined
 let queue = Promise.resolve()
@@ -47,6 +52,7 @@ async function setUp(
     plan: createFlowPlan(pipeline, productRegistry),
     services: {
       codecs: jsquashCodecs,
+      segmenter,
       output: createOpfsOutputSink(root, runId, (written) => post({ type: 'output', written })),
     },
     spill: createOpfsSpillStore(root, runId, (item) =>
@@ -73,6 +79,10 @@ function depsFor(taskId: string): FlowDeps {
 }
 
 async function handle(request: WorkerRequest) {
+  if (request.type === 'inference') {
+    segmenter = createSegmenterClient(request.port)
+    return
+  }
   if (request.type === 'begin') {
     await begin(request.runId, request.pipeline as Pipeline, request.stepCache)
     return

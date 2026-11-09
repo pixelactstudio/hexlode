@@ -51,6 +51,11 @@ export const workerRequestSchema = z.discriminatedUnion('type', [
     }),
   }),
   z.object({ type: z.literal('combining'), taskId: z.string().min(1), nodeId: z.string().min(1) }),
+  /** A port to the shared inference worker, for nodes that run an on-device model. */
+  z.object({
+    type: z.literal('inference'),
+    port: z.custom<MessagePort>((value) => value instanceof MessagePort),
+  }),
 ])
 
 const stepCacheEntry = z.object({

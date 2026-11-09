@@ -408,6 +408,64 @@ function StripDemo() {
   )
 }
 
+const CUT_OUT_STAGES = [
+  { label: 'Photo', background: 'photo' },
+  { label: 'Transparent', background: 'checks' },
+  { label: 'On white', background: 'white' },
+] as const
+
+/**
+ * A Daruma doll photographed in a landscape. A scan passes over it and takes the landscape away,
+ * leaving the doll on transparency, then on white, as a product photo.
+ */
+function RemoveBackgroundDemo() {
+  const { ref, step } = useLoop(CUT_OUT_STAGES.length, 2000)
+  const stage = CUT_OUT_STAGES[step]
+  const cut = stage.background !== 'photo'
+  return (
+    <div ref={ref} className="relative h-44 w-66 overflow-hidden rounded-lg shadow-md">
+      <span
+        aria-hidden="true"
+        className="absolute inset-0 bg-[conic-gradient(var(--color-background-muted)_25%,transparent_0_50%,var(--color-background-muted)_0_75%,transparent_0)] bg-[size:16px_16px]"
+      />
+      <motion.span
+        aria-hidden="true"
+        className="absolute inset-0 bg-on-dark"
+        initial={false}
+        animate={{ opacity: stage.background === 'white' ? 1 : 0 }}
+        transition={{ duration: 0.4 }}
+      />
+      <motion.div
+        className="absolute inset-0"
+        initial={false}
+        animate={{ clipPath: cut ? 'inset(0 0 0 100%)' : 'inset(0 0 0 0%)' }}
+        transition={cut ? { duration: 0.8, ease: 'easeInOut' } : { duration: 0 }}
+      >
+        <Photo name="dusk" />
+      </motion.div>
+      {step === 1 ? (
+        <motion.span
+          key="scan"
+          aria-hidden="true"
+          className="absolute inset-y-0 w-px bg-red-vivid shadow-[0_0_12px_var(--color-red-vivid)]"
+          initial={{ left: '0%', opacity: 1 }}
+          animate={{ left: '100%', opacity: [1, 1, 0] }}
+          transition={{ duration: 0.8, ease: 'easeInOut' }}
+        />
+      ) : null}
+      <img
+        src="/home/subject-daruma.webp"
+        alt=""
+        draggable={false}
+        className="absolute bottom-3 left-1/2 h-36 -translate-x-1/2 select-none drop-shadow-md"
+      />
+      <span className="absolute top-2 left-2 rounded-md bg-body/80 px-2 py-0.5 font-semibold text-[11px] text-primary backdrop-blur-sm">
+        <Rolling value={stage.label} />
+      </span>
+    </div>
+  )
+}
+
 export const TOOL_DEMOS: Record<QuickTool, () => React.ReactNode> = {
   convert: ConvertDemo,
   compress: CompressDemo,
@@ -415,4 +473,5 @@ export const TOOL_DEMOS: Record<QuickTool, () => React.ReactNode> = {
   crop: CropDemo,
   rotate: RotateDemo,
   'strip-metadata': StripDemo,
+  'remove-background': RemoveBackgroundDemo,
 }

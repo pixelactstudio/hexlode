@@ -6,8 +6,9 @@ import { ProgressBar } from '@astryxdesign/core/ProgressBar'
 import { HStack, VStack } from '@astryxdesign/core/Stack'
 import { Heading, Text } from '@astryxdesign/core/Text'
 import { Download } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 
+import { ModelConsentDialog } from '#/features/background-removal/model-consent'
 import { describeEstimate } from '#/features/engine/estimate'
 import { FileDrop } from '#/features/runs/file-drop'
 import { ResultsTable, resultRows } from '#/features/runs/results-table'
@@ -149,12 +150,33 @@ export function RunSection({
                 ? `${plural(count, 'image')} ready · ${describeEstimate(state.estimate)}`
                 : `${plural(count, 'image')} ready`
 
+  const [asking, setAsking] = useState(false)
+  const missing = state.models.filter((need) => !need.stored)
   const run = async () => {
+    // A model the pipeline needs downloads only once the person agreed.
+    if (missing.length > 0) {
+      setAsking(true)
+      return
+    }
     await controller.start({ singleFileAsIs: true, pipelineRuns: countRun?.() })
   }
 
   return (
     <VStack gap={3}>
+      <ModelConsentDialog
+        isOpen={asking}
+        needs={missing}
+        progress={state.modelDownload}
+        onDownload={(signal) => controller.downloadModels({ signal })}
+        onDownloaded={() => {
+          setAsking(false)
+          void controller.start({ singleFileAsIs: true, pipelineRuns: countRun?.() })
+        }}
+        onDecline={(cancelledDownload) => {
+          if (!cancelledDownload) controller.declineModels()
+          setAsking(false)
+        }}
+      />
       {state.error ? (
         <Banner status="error" title="The run stopped" description={state.error} />
       ) : null}

@@ -1,6 +1,6 @@
 /**
  * The quick tools. Each is a fixed pipeline on the same engine as the Studio (ADR 0001): Files,
- * one processing node, Output.
+ * one processing node, Output. Remove background also encodes, so transparency is kept.
  */
 
 import type { Pipeline } from '#/features/engine/types'
@@ -54,6 +54,11 @@ export interface StripToolSettings {
   keepColourProfile: boolean
 }
 
+export interface RemoveBackgroundToolSettings {
+  /** Formats that keep transparency. */
+  format: 'png' | 'webp'
+}
+
 export interface QuickToolSettings {
   convert: ConvertToolSettings
   compress: CompressToolSettings
@@ -61,6 +66,7 @@ export interface QuickToolSettings {
   crop: CropToolSettings
   rotate: RotateToolSettings
   'strip-metadata': StripToolSettings
+  'remove-background': RemoveBackgroundToolSettings
 }
 
 export const OUTPUT_NODE_ID = 'output'
@@ -135,7 +141,18 @@ export const QUICK_TOOL_DEFINITIONS: {
     path: '/strip-metadata',
     defaults: { mode: 'all', keepColourProfile: true },
   },
+  'remove-background': {
+    title: 'Remove background',
+    heading: 'Remove image backgrounds',
+    description: 'Cut the subject out onto transparency, with a model that runs on this device.',
+    summary: 'Cut out the subject, leaving a transparent background.',
+    path: '/remove-background',
+    defaults: { format: 'png' },
+  },
 }
+
+/** WebP cut-outs keep a lossless alpha channel; the colour is lossy at this quality. */
+export const REMOVE_BACKGROUND_WEBP_QUALITY = 90
 
 export const LOSSLESS_CAPABLE: TargetFormat[] = ['webp', 'avif', 'jxl']
 export const QUALITY_FORMATS: TargetFormat[] = ['jpeg', 'webp', 'avif', 'jxl']
@@ -184,10 +201,34 @@ function processingNode<T extends QuickTool>(tool: T, settings: QuickToolSetting
   }
 }
 
+/** Remove background saves PNG or WebP, which keep the transparency it made. */
+function cutOutPipeline(settings: RemoveBackgroundToolSettings): Pipeline {
+  const encode =
+    settings.format === 'png'
+      ? { format: 'png' }
+      : { format: 'webp', webp: { quality: REMOVE_BACKGROUND_WEBP_QUALITY, lossless: false } }
+  return {
+    nodes: [
+      { id: 'files', type: 'files', settings: {}, position: { x: 0, y: 0 } },
+      { id: 'step', type: 'remove-background', settings: {}, position: { x: 280, y: 0 } },
+      { id: 'encode', type: 'convert', settings: encode, position: { x: 560, y: 0 } },
+      { id: OUTPUT_NODE_ID, type: 'output', settings: {}, position: { x: 840, y: 0 } },
+    ],
+    connections: [
+      { id: 'files-step', source: 'files', sourcePort: 'out', target: 'step' },
+      { id: 'step-encode', source: 'step', sourcePort: 'out', target: 'encode' },
+      { id: 'encode-output', source: 'encode', sourcePort: 'out', target: OUTPUT_NODE_ID },
+    ],
+  }
+}
+
 export function quickToolPipeline<T extends QuickTool>(
   tool: T,
   settings: QuickToolSettings[T],
 ): Pipeline {
+  if (tool === 'remove-background') {
+    return cutOutPipeline(settings as RemoveBackgroundToolSettings)
+  }
   const step = processingNode(tool, settings)
   return {
     nodes: [

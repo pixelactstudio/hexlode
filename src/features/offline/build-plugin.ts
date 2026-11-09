@@ -10,7 +10,7 @@ import { join, relative } from 'node:path'
 import { build, type Plugin, type Rolldown } from 'vite'
 
 import { SERVICE_WORKER_PATH } from '#/features/offline/constants'
-import { precacheUrls } from '#/features/offline/precache'
+import { cachedOnFirstUse, precacheUrls } from '#/features/offline/precache'
 import type { PrecacheManifest } from '#/features/offline/worker'
 
 export interface ServiceWorkerPluginOptions {
@@ -85,11 +85,12 @@ export function serviceWorker(options: ServiceWorkerPluginOptions): Plugin {
           const url = precacheUrls([output.fileName])[0]
           if (url) contents.set(url, output.type === 'chunk' ? output.code : output.source)
         }
-        const urls = precacheUrls(contents.keys())
+        const all = precacheUrls(contents.keys())
         const manifest: PrecacheManifest = {
-          version: versionOf(urls, contents),
-          urls,
+          version: versionOf(all, contents),
+          urls: all.filter((url) => !cachedOnFirstUse(url)),
           pages: options.pages,
+          onFirstUse: all.filter(cachedOnFirstUse),
         }
         this.emitFile({
           type: 'asset',

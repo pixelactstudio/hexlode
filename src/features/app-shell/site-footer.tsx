@@ -40,6 +40,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     links: [
       { label: 'GitHub', href: REPOSITORY_URL },
       { label: 'Codec licences', href: '/licenses/jsquash.txt' },
+      { label: 'Model licences', href: '/licenses/background-removal.txt' },
     ],
   },
   {

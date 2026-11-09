@@ -52,3 +52,7 @@ them in `hexlode-share` until Strip metadata takes them, and deletes them then.
 - If the worker is missing, as after the site's data was cleared, a share from Android reaches the
   server. The server route answers with Strip metadata and reads none of the photos.
 - The privacy page says what the copy holds and how to remove it.
+- ONNX Runtime's WebAssembly for Remove background (about 41 MB across its two builds) is not
+  downloaded on install, since it is only needed after the user agrees to the model download
+  ([ADR 0017](./0017-on-device-background-removal.md)). The worker keeps it the first time it is
+  used, in the same versioned cache, so background removal works offline from then on.

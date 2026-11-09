@@ -10,8 +10,10 @@ import { PROSE_WIDTH, REPOSITORY_URL } from '#/features/app-shell/constants'
 import { Eyebrow } from '#/features/app-shell/eyebrow'
 import { IconTile, type Tone } from '#/features/app-shell/icon-tile'
 import { PageColumn } from '#/features/app-shell/page-column'
+import { BACKGROUND_MODEL } from '#/features/background-removal/constants'
 import { PRIVACY_UPDATED, STORED_IN_BROWSER } from '#/features/privacy/constants'
 import { EVENTS } from '#/features/usage/events'
+import { formatBytes } from '#/lib/format'
 
 const SUMMARY: {
   icon: typeof Cookie
@@ -126,6 +128,17 @@ export function PrivacyPage() {
           </Paragraph>
         </Section>
 
+        <Section title="Removing backgrounds">
+          <Paragraph>
+            Remove background finds the subject with a model that runs on your device, on the
+            graphics card or the processor, so your images can be processed without uploading them.
+            The first time you use it, Hexlode asks before downloading the model (
+            {formatBytes(BACKGROUND_MODEL.bytes)}) and the engine that runs it. Both come from
+            Hexlode's own server, which checks the model before sending it, and your browser checks
+            it again before keeping it.
+          </Paragraph>
+        </Section>
+
         <Section title="What Hexlode measures">
           <Paragraph>
             Analytics run without cookies and without identifying you. Your IP address becomes an
@@ -177,8 +190,9 @@ export function PrivacyPage() {
         <Section title="Open source">
           <Paragraph>
             Hexlode is open source under the Apache License 2.0, so you can read exactly what it
-            does. Images are encoded and decoded with the jSquash codecs, and HEIC photos are
-            decoded with libheif. Their licences ship with the app.
+            does. Images are encoded and decoded with the jSquash codecs, HEIC photos are decoded
+            with libheif, and backgrounds are removed with the BiRefNet_lite model run by ONNX
+            Runtime Web. Their licences ship with the app.
           </Paragraph>
           <VStack gap={2}>
             <Link href={REPOSITORY_URL} isExternalLink isStandalone>
@@ -186,6 +200,9 @@ export function PrivacyPage() {
             </Link>
             <Link href="/licenses/jsquash.txt" isExternalLink isStandalone>
               Codec licences
+            </Link>
+            <Link href="/licenses/background-removal.txt" isExternalLink isStandalone>
+              Model and runtime licences
             </Link>
           </VStack>
         </Section>

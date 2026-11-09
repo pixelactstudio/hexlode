@@ -17,6 +17,8 @@ export interface PrecacheManifest {
   urls: string[]
   /** Pages downloaded on install, so they open offline before they are first visited. */
   pages: string[]
+  /** Build files kept the first time they are used, not on install. */
+  onFirstUse?: string[]
 }
 
 export interface WorkerDeps {
@@ -35,6 +37,7 @@ export function createOfflineWorker(manifest: PrecacheManifest, deps: WorkerDeps
   const appCache = `${APP_CACHE_PREFIX}${manifest.version}`
   const pageCache = `${PAGE_CACHE_PREFIX}${manifest.version}`
   const precached = new Set(manifest.urls)
+  const onFirstUse = new Set(manifest.onFirstUse ?? [])
 
   /**
    * Keeps a copy of a page, unless it loads build files this worker lacks: a page served by a
@@ -87,6 +90,18 @@ export function createOfflineWorker(manifest: PrecacheManifest, deps: WorkerDeps
     return cached ?? deps.fetch(request)
   }
 
+  /** The copy kept on an earlier use, or the network's answer, which is then kept. */
+  async function answerFirstUse(request: Request, waitUntil: WaitUntil) {
+    const cached = await deps.caches.match(request.url, { cacheName: appCache })
+    if (cached) return cached
+    const response = await deps.fetch(request)
+    if (response.ok) {
+      const copy = response.clone()
+      waitUntil(deps.caches.open(appCache).then((cache) => cache.put(request.url, copy)))
+    }
+    return response
+  }
+
   return {
     /** Downloads every build file and the main pages. Fails, so the worker retries later, if a build file is missing. */
     async install() {
@@ -122,6 +137,7 @@ export function createOfflineWorker(manifest: PrecacheManifest, deps: WorkerDeps
       if (NETWORK_ONLY_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) return undefined
       if (request.mode === 'navigate') return answerPage(request, waitUntil)
       if (precached.has(url.pathname)) return answerFile(request)
+      if (onFirstUse.has(url.pathname)) return answerFirstUse(request, waitUntil)
       return undefined
     },
   }

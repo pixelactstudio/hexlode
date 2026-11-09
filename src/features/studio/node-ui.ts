@@ -22,6 +22,7 @@ import {
   RotateCw,
   Scaling,
   ScanSearch,
+  Scissors,
   Shrink,
   SlidersHorizontal,
   Sparkles,
@@ -72,6 +73,7 @@ export const NODE_ICONS: Record<string, ComponentType<SVGProps<SVGSVGElement>>> 
   palette: Palette,
   'contact-sheet': LayoutGrid,
   'images-to-pdf': FileText,
+  'remove-background': Scissors,
 }
 
 /** Node library categories, in the order of the node catalogue. */

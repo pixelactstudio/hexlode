@@ -77,6 +77,30 @@ describe('installing', () => {
   })
 })
 
+describe('files kept on first use', () => {
+  const RUNTIME = '/assets/ort-wasm-simd-threaded-1.wasm'
+  const WITH_RUNTIME: PrecacheManifest = { ...MANIFEST, onFirstUse: [RUNTIME] }
+
+  it('leaves them out of the install, so the first visit stays small', async () => {
+    const net = network({ ...FILES, [RUNTIME]: 'runtime' })
+    const worker = createOfflineWorker(WITH_RUNTIME, { caches, fetch: net.fetch, origin: ORIGIN })
+    await worker.install()
+    expect(net.state.requested).not.toContain(RUNTIME)
+    expect(await caches.match(RUNTIME, { cacheName: 'hexlode-app-v1' })).toBeUndefined()
+  })
+
+  it('keeps one once it is used, and answers from the copy offline', async () => {
+    const net = network({ ...FILES, [RUNTIME]: 'runtime' })
+    const worker = createOfflineWorker(WITH_RUNTIME, { caches, fetch: net.fetch, origin: ORIGIN })
+    await worker.install()
+    const first = await respond(worker, new Request(new URL(RUNTIME, ORIGIN)))
+    expect(await first?.text()).toBe('runtime')
+    net.state.online = false
+    const offline = await respond(worker, new Request(new URL(RUNTIME, ORIGIN)))
+    expect(await offline?.text()).toBe('runtime')
+  })
+})
+
 describe('activating', () => {
   it('deletes the caches of earlier builds and keeps every other cache', async () => {
     for (const name of ['hexlode-app-v0', 'hexlode-pages-v0', 'hexlode-share', 'other-models']) {

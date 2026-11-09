@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
+import {
+  brightDisc,
+  storeStandInModel,
+} from '#/features/background-removal/__tests__/stand-in-model'
+import { BACKGROUND_MODEL } from '#/features/background-removal/constants'
+import {
+  createInferenceHost,
+  createInferenceWorker,
+} from '#/features/background-removal/inference-host'
+import { deleteStoredModel } from '#/features/background-removal/model-files'
 import { jsquashCodecs } from '#/features/images/codecs'
 import { chain, fixtureBytes } from '#/features/nodes/__tests__/harness'
 import { createPreviewer } from '#/features/previews/previewer'
@@ -106,6 +116,41 @@ describe('live previews', () => {
       status: 'processed',
       format: 'pdf',
     })
+    previewer.dispose()
+  })
+
+  it('previews Remove background with the model in this browser', async () => {
+    await storeStandInModel()
+    const inference = createInferenceHost(createInferenceWorker)
+    const previewer = createPreviewer(createWorker, { connectInference: () => inference.connect() })
+    const png = await jsquashCodecs.encode(
+      { format: 'png', options: { optimisationLevel: 0, interlace: false } },
+      brightDisc(),
+    )
+    await previewer.setSample(new Blob([png.slice()]), 'disc.png')
+    const result = (await previewer.render(chain(['remove-background']))) ?? []
+    const preview = result.find((entry) => entry.nodeId === 'remove-background-1')
+    expect(preview).toMatchObject({ status: 'processed', format: 'png', width: 64, height: 48 })
+    const thumbnail = await decodeBlob(preview?.thumbnail as Blob)
+    expect(thumbnail.data[3]).toBe(0)
+    expect(thumbnail.data[(24 * 64 + 32) * 4 + 3]).toBe(255)
+    expect(inference.stats().runs).toBe(1)
+    previewer.dispose()
+    inference.dispose()
+    await deleteStoredModel(BACKGROUND_MODEL)
+  })
+
+  it('leaves the inference worker alone for pipelines without a model', async () => {
+    let connected = 0
+    const previewer = createPreviewer(createWorker, {
+      connectInference: () => {
+        connected += 1
+        return new MessageChannel().port1
+      },
+    })
+    await previewer.setSample(new Blob([await fixtureBytes('photo.png')]), 'photo.png')
+    await previewer.render(chain(['resize', { mode: 'percent', percent: 50 }]))
+    expect(connected).toBe(0)
     previewer.dispose()
   })
 })

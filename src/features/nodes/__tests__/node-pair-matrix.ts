@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
+import { redSubjectSegmenter } from '#/features/background-removal/__tests__/stand-in-segmenter'
 import { type ConnectionCheck, checkConnection } from '#/features/engine/compatibility'
 import { createInlineHost } from '#/features/engine/inline-host'
 import { createMemoryStepCache } from '#/features/engine/memory-step-cache'
@@ -26,6 +27,8 @@ import { TEST_ONLY_NODES } from './test-only-nodes'
 const registry: NodeRegistry = createRegistry([...PRODUCT_NODES, ...TEST_ONLY_NODES])
 const types = registry.list().map((node) => node.type)
 const cache = createMemoryStepCache()
+/** Remove background reaches the inference worker through this service; a stand-in here. */
+const segmenter = redSubjectSegmenter()
 
 function node(id: string, type: string) {
   return { id, type, settings: {}, position: { x: 0, y: 0 } }
@@ -108,7 +111,7 @@ async function runCounts(pipeline: Pipeline) {
     host: createInlineHost({
       registry,
       cache,
-      services: { codecs: jsquashCodecs },
+      services: { codecs: jsquashCodecs, segmenter },
       kinds: { image: imageKind, data: fileKind, document: fileKind },
     }),
     onEvent: (event) => events.push(event),
