@@ -44,6 +44,23 @@ describe('live previews', () => {
     previewer.dispose()
   })
 
+  it('previews a HEIC sample upright', async () => {
+    const previewer = createPreviewer(createWorker)
+    const bytes = await fixtureBytes('oriented.heic')
+    expect(await previewer.setSample(new Blob([bytes]), 'oriented.heic')).toEqual({
+      name: 'oriented.heic',
+      width: 32,
+      height: 48,
+      format: 'heic',
+    })
+    const result = (await previewer.render(chain(['crop', { aspect: '1:1' }]))) ?? []
+    const crop = result.find((preview) => preview.nodeId === 'crop-1')
+    expect(crop).toMatchObject({ status: 'processed', width: 32, height: 32 })
+    const thumbnail = await decodeBlob(crop?.thumbnail as Blob)
+    expect([thumbnail.width, thumbnail.height]).toEqual([32, 32])
+    previewer.dispose()
+  })
+
   it('shows why a node did not receive the sample', async () => {
     const previewer = createPreviewer(createWorker)
     await previewer.setSample(new Blob([await fixtureBytes('photo.jpg')]), 'photo.jpg')

@@ -81,13 +81,14 @@ when it has transparency, and the results say so. Strip metadata keeps HEIC phot
 
 Each quick tool is a fixed pipeline that runs on the same engine as the Studio. A quick tool page
 opens with a row of all six tools for switching, then the tool's name and one line, then two
-numbered panels, side by side on wide screens and stacked on phones. The first holds the
-drop area and the list of added images, with a thumbnail, a full-size preview and a remove button
-for each. The second holds the settings for that job and, under them, the run button, progress and
-the download button. The two panels are always the same height, and the drop area grows to fill
-its panel. A results list with before and after sizes follows the panels. Crop shows the chosen
-shape and position on a landscape and a portrait photo. The page renders on the server with the
-tool in place, so it never waits for scripts before showing the drop area and settings.
+numbered panels, side by side on wide screens and stacked on phones. The first holds the drop area
+and the list of added images, with a thumbnail, a full-size preview and a remove button for each.
+Files the browser cannot show itself, such as HEIC, JPEG XL and QOI, get a preview drawn on the
+device. The second holds the settings for that job and, under them, the run button, progress and
+the download button. The two panels are always the same height, and the drop area grows to fill its
+panel. A results list with before and after sizes follows the panels. Crop shows the chosen shape
+and position on a landscape and a portrait photo. The page renders on the server with the tool in
+place, so it never waits for scripts before showing the drop area and settings.
 
 Settings keep their place when options change, and the panels keep their height: a setting that
 does not apply is shown disabled with the reason, not hidden, and text or fields that change with

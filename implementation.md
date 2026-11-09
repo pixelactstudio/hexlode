@@ -153,6 +153,8 @@ the worker. Hexlode decodes HEIC but does not write it
    transparency, with a run warning.
 5. HEIC joins the formats in item types, the Files node, file intake, the file picker, the drop
    area, the Filter node's format rule, the home page and the Convert copy.
+6. The list of added files draws previews of HEIC, JPEG XL and QOI files in a worker, since
+   browsers other than Safari cannot show them.
 
 Exit gate: iPhone-style photos (grid tiles, `irot` rotation with an EXIF orientation, GPS, a
 Display P3 profile, transparency) decode with the right dimensions, orientation and metadata, and
