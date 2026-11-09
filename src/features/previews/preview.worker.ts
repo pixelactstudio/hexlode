@@ -3,6 +3,9 @@
  * Renders live previews: runs the pipeline on the sample image and returns a thumbnail per node.
  * Keeps a step cache in memory, so a settings change renders only that node and those after it.
  */
+
+import { createSegmenterClient } from '#/features/background-removal/segmenter-client'
+import type { Segmenter } from '#/features/background-removal/types'
 import {
   PREVIEW_CACHE_BUDGET_BYTES,
   PREVIEW_COMPARE_EDGE,
@@ -35,6 +38,8 @@ const thumbnails = new Map<string, Blob>()
 let sample: { item: ImageItem; key: string; before?: Blob } | undefined
 let sampleCounter = 0
 let pendingRender: Extract<PreviewRequest, { type: 'render' }> | undefined
+/** Set once a pipeline runs an on-device model. */
+let segmenter: Segmenter | undefined
 let busy = false
 
 async function renderPixels(item: ImageItem, edge: number) {
@@ -82,7 +87,7 @@ async function render(pipeline: Pipeline): Promise<NodePreview[]> {
   )
   const deps = {
     plan,
-    services: { codecs: jsquashCodecs, output: { write: async () => undefined } },
+    services: { codecs: jsquashCodecs, segmenter, output: { write: async () => undefined } },
     spill: createMemorySpillStore(),
     cache,
     kinds: { image: imageKind, data: fileKind, document: fileKind },
@@ -177,6 +182,10 @@ scope.onmessage = (event: MessageEvent<unknown>) => {
   const parsed = previewRequestSchema.safeParse(event.data)
   if (!parsed.success) return
   const request = parsed.data
+  if (request.type === 'inference') {
+    segmenter = createSegmenterClient(request.port)
+    return
+  }
   if (request.type === 'render') {
     if (pendingRender) {
       post({ type: 'render', requestId: pendingRender.requestId, nodes: [], superseded: true })

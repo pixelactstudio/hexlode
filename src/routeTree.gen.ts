@@ -15,6 +15,7 @@ import { Route as ConvertRouteImport } from './routes/convert'
 import { Route as CropRouteImport } from './routes/crop'
 import { Route as ManifestDotwebmanifestRouteImport } from './routes/manifest[.]webmanifest'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as RemoveBackgroundRouteImport } from './routes/remove-background'
 import { Route as ResizeRouteImport } from './routes/resize'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RotateRouteImport } from './routes/rotate'
@@ -22,6 +23,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StripMetadataRouteImport } from './routes/strip-metadata'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ModelsFileRouteImport } from './routes/models.$file'
 import { Route as ToolsPipelineIdRouteImport } from './routes/tools.$pipelineId'
 import { Route as ToolsSharedRouteImport } from './routes/tools.shared'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -54,6 +56,11 @@ const ManifestDotwebmanifestRoute = ManifestDotwebmanifestRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RemoveBackgroundRoute = RemoveBackgroundRouteImport.update({
+  id: '/remove-background',
+  path: '/remove-background',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResizeRoute = ResizeRouteImport.update({
@@ -91,6 +98,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ModelsFileRoute = ModelsFileRouteImport.update({
+  id: '/models/$file',
+  path: '/models/$file',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ToolsPipelineIdRoute = ToolsPipelineIdRouteImport.update({
   id: '/tools/$pipelineId',
   path: '/tools/$pipelineId',
@@ -114,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/crop': typeof CropRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/privacy': typeof PrivacyRoute
+  '/remove-background': typeof RemoveBackgroundRoute
   '/resize': typeof ResizeRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/rotate': typeof RotateRoute
@@ -121,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
   '/api/health': typeof ApiHealthRoute
+  '/models/$file': typeof ModelsFileRoute
   '/tools/$pipelineId': typeof ToolsPipelineIdRoute
   '/tools/shared': typeof ToolsSharedRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -132,6 +146,7 @@ export interface FileRoutesByTo {
   '/crop': typeof CropRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/privacy': typeof PrivacyRoute
+  '/remove-background': typeof RemoveBackgroundRoute
   '/resize': typeof ResizeRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/rotate': typeof RotateRoute
@@ -139,6 +154,7 @@ export interface FileRoutesByTo {
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
   '/api/health': typeof ApiHealthRoute
+  '/models/$file': typeof ModelsFileRoute
   '/tools/$pipelineId': typeof ToolsPipelineIdRoute
   '/tools/shared': typeof ToolsSharedRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -151,6 +167,7 @@ export interface FileRoutesById {
   '/crop': typeof CropRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/privacy': typeof PrivacyRoute
+  '/remove-background': typeof RemoveBackgroundRoute
   '/resize': typeof ResizeRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/rotate': typeof RotateRoute
@@ -158,6 +175,7 @@ export interface FileRoutesById {
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
   '/api/health': typeof ApiHealthRoute
+  '/models/$file': typeof ModelsFileRoute
   '/tools/$pipelineId': typeof ToolsPipelineIdRoute
   '/tools/shared': typeof ToolsSharedRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -171,6 +189,7 @@ export interface FileRouteTypes {
     | '/crop'
     | '/manifest.webmanifest'
     | '/privacy'
+    | '/remove-background'
     | '/resize'
     | '/robots.txt'
     | '/rotate'
@@ -178,6 +197,7 @@ export interface FileRouteTypes {
     | '/strip-metadata'
     | '/studio'
     | '/api/health'
+    | '/models/$file'
     | '/tools/$pipelineId'
     | '/tools/shared'
     | '/api/auth/$'
@@ -189,6 +209,7 @@ export interface FileRouteTypes {
     | '/crop'
     | '/manifest.webmanifest'
     | '/privacy'
+    | '/remove-background'
     | '/resize'
     | '/robots.txt'
     | '/rotate'
@@ -196,6 +217,7 @@ export interface FileRouteTypes {
     | '/strip-metadata'
     | '/studio'
     | '/api/health'
+    | '/models/$file'
     | '/tools/$pipelineId'
     | '/tools/shared'
     | '/api/auth/$'
@@ -207,6 +229,7 @@ export interface FileRouteTypes {
     | '/crop'
     | '/manifest.webmanifest'
     | '/privacy'
+    | '/remove-background'
     | '/resize'
     | '/robots.txt'
     | '/rotate'
@@ -214,6 +237,7 @@ export interface FileRouteTypes {
     | '/strip-metadata'
     | '/studio'
     | '/api/health'
+    | '/models/$file'
     | '/tools/$pipelineId'
     | '/tools/shared'
     | '/api/auth/$'
@@ -226,6 +250,7 @@ export interface RootRouteChildren {
   CropRoute: typeof CropRoute
   ManifestDotwebmanifestRoute: typeof ManifestDotwebmanifestRoute
   PrivacyRoute: typeof PrivacyRoute
+  RemoveBackgroundRoute: typeof RemoveBackgroundRoute
   ResizeRoute: typeof ResizeRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   RotateRoute: typeof RotateRoute
@@ -233,6 +258,7 @@ export interface RootRouteChildren {
   StripMetadataRoute: typeof StripMetadataRoute
   StudioRoute: typeof StudioRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ModelsFileRoute: typeof ModelsFileRoute
   ToolsPipelineIdRoute: typeof ToolsPipelineIdRoute
   ToolsSharedRoute: typeof ToolsSharedRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -280,6 +306,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/remove-background': {
+      id: '/remove-background'
+      path: '/remove-background'
+      fullPath: '/remove-background'
+      preLoaderRoute: typeof RemoveBackgroundRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/resize': {
@@ -331,6 +364,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/models/$file': {
+      id: '/models/$file'
+      path: '/models/$file'
+      fullPath: '/models/$file'
+      preLoaderRoute: typeof ModelsFileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tools/$pipelineId': {
       id: '/tools/$pipelineId'
       path: '/tools/$pipelineId'
@@ -362,6 +402,7 @@ const rootRouteChildren: RootRouteChildren = {
   CropRoute: CropRoute,
   ManifestDotwebmanifestRoute: ManifestDotwebmanifestRoute,
   PrivacyRoute: PrivacyRoute,
+  RemoveBackgroundRoute: RemoveBackgroundRoute,
   ResizeRoute: ResizeRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   RotateRoute: RotateRoute,
@@ -369,6 +410,7 @@ const rootRouteChildren: RootRouteChildren = {
   StripMetadataRoute: StripMetadataRoute,
   StudioRoute: StudioRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ModelsFileRoute: ModelsFileRoute,
   ToolsPipelineIdRoute: ToolsPipelineIdRoute,
   ToolsSharedRoute: ToolsSharedRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

@@ -15,9 +15,10 @@ const COLOUR_SETTINGS = [
 ] as const
 
 describe('node settings', () => {
-  it('has all 33 nodes of the catalogue, once each', () => {
-    expect(PRODUCT_NODES).toHaveLength(33)
-    expect(byType.size).toBe(33)
+  it('has all 34 nodes of the catalogue, once each', () => {
+    // Version 1's 33, and Remove background from version 2.
+    expect(PRODUCT_NODES).toHaveLength(34)
+    expect(byType.size).toBe(34)
   })
 
   it.each(

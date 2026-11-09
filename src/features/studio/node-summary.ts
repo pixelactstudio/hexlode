@@ -136,6 +136,8 @@ function batchTwo(type: string, settings: Settings): string | undefined {
     }
     case 'background':
       return `Fills transparency with ${settings.colour}`
+    case 'remove-background':
+      return 'Cuts the subject out onto transparency'
     case 'text-watermark':
       return `“${String(settings.text).trim()}”, ${settings.tile ? 'tiled' : placeName(settings.position)}`
     case 'image-watermark': {

@@ -51,7 +51,11 @@ function browserProvider() {
 
 export default defineConfig({
   resolve: { tsconfigPaths: true },
-  optimizeDeps: { exclude: JSQUASH_PACKAGES },
+  // ONNX Runtime is told where its WebAssembly is, so pre-bundling is safe and avoids a reload.
+  optimizeDeps: {
+    exclude: JSQUASH_PACKAGES,
+    include: ['onnxruntime-web/webgpu', 'onnxruntime-web/wasm'],
+  },
   worker: { format: 'es' },
   test: {
     coverage: {
@@ -74,7 +78,22 @@ export default defineConfig({
           name: 'unit',
           environment: 'node',
           include: ['src/**/__tests__/**/*.test.ts'],
-          exclude: ['src/**/__tests__/**/*.browser.test.ts', 'src/**/__tests__/**/*.scale.test.ts'],
+          exclude: [
+            'src/**/__tests__/**/*.browser.test.ts',
+            'src/**/__tests__/**/*.scale.test.ts',
+            'src/**/__tests__/**/*.model.test.ts',
+          ],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          // The real background removal model on licensed photos. Opt-in: it downloads 94 MB once
+          // and needs about 2.5 GB of memory (ADR 0017).
+          name: 'model',
+          environment: 'node',
+          include: ['src/**/__tests__/**/*.model.test.ts'],
+          testTimeout: 10 * 60_000,
         },
       },
       {

@@ -1,5 +1,5 @@
 /** When the privacy page last changed in substance. Update it with the page. */
-export const PRIVACY_UPDATED = '4 October 2026'
+export const PRIVACY_UPDATED = '10 November 2026'
 
 /** Everything Hexlode keeps in the browser, for the privacy page. */
 export const STORED_IN_BROWSER = [
@@ -16,6 +16,11 @@ export const STORED_IN_BROWSER = [
     label: 'The pipeline open in the Studio',
     description:
       'Its nodes, settings and name, so a reload does not lose your work, kept for that tab only. Unsaved changes are also kept for a day, so a new tab can offer them back. Never your images.',
+  },
+  {
+    label: 'The background removal model',
+    description:
+      "Only after you agree to download it for Remove background. It comes from Hexlode's own server and stays in your browser's cache, so later runs need no download.",
   },
   {
     label: 'Your colour mode',

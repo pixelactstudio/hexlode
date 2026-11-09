@@ -8,6 +8,7 @@ import { entryKey, outputKey } from '#/features/engine/keys'
 import type { StepCacheEntry } from '#/features/engine/step-cache'
 import type { ImageFormat, ItemMeta, NodeRegistry, Pipeline } from '#/features/engine/types'
 import { DECODE_MS_PER_MEGAPIXEL, megapixels } from '#/features/nodes/cost'
+import { formatBytes } from '#/lib/format'
 
 export interface EstimateOptions {
   pipeline: Pipeline
@@ -17,6 +18,17 @@ export interface EstimateOptions {
   lookup?: (entryKey: string) => StepCacheEntry | undefined
   /** Measured time divided by estimated time in earlier runs on this device. */
   speedFactor?: number
+  /** What the page knows about each on-device model the pipeline may run, by model ID. */
+  models?: Record<string, ModelTiming>
+}
+
+export interface ModelTiming {
+  /** One run on this device's backend. */
+  msPerRun: number
+  /** Reading the model and preparing it for the backend, once per run. */
+  startMs: number
+  /** The one-time download, while the model is not in this browser yet. */
+  download?: { bytes: number; ms: number }
 }
 
 export interface Estimate {
@@ -26,6 +38,8 @@ export interface Estimate {
   skipped: number
   cached: number
   seconds: number
+  /** Bytes of models the run must download first, included in `seconds`. */
+  downloadBytes: number
   /** Entry keys of every node step the run would take. */
   entryKeys: string[]
 }
@@ -40,8 +54,17 @@ interface State {
 
 export function estimateRun(options: EstimateOptions): Estimate {
   const plan = createFlowPlan(options.pipeline, options.registry)
-  const totals = { decodes: 0, encodes: 0, skipped: 0, cached: 0, ms: 0 }
+  const totals = { decodes: 0, encodes: 0, skipped: 0, cached: 0, ms: 0, serialMs: 0 }
   const entryKeys: string[] = []
+  const modelsUsed = new Set<string>()
+
+  /** Model runs wait for the one inference worker, so they add up instead of being shared. */
+  const countModel = (model: { id: string; runs: number } | undefined, weight: number) => {
+    const timing = model ? options.models?.[model.id] : undefined
+    if (!model || !timing) return
+    modelsUsed.add(model.id)
+    totals.serialMs += timing.msPerRun * model.runs * weight
+  }
 
   const visit = (nodeId: string, state: State) => {
     const planned = plan.nodes.get(nodeId)
@@ -81,6 +104,7 @@ export function estimateRun(options: EstimateOptions): Estimate {
       }
       totals.encodes += cost.encodes * state.weight
       totals.ms += cost.ms * state.weight
+      countModel(cost.model, state.weight)
       const simulated = definition.simulate?.(settings, state.meta)
       const ports = definition.ports(settings)
       outputs = (
@@ -134,6 +158,7 @@ export function estimateRun(options: EstimateOptions): Estimate {
         state.weight
     }
     totals.ms += (cost?.ms ?? 0) * state.weight
+    countModel(cost?.model, state.weight)
     for (const output of passed) {
       forward(nodeId, output.port, { ...state, meta: output.meta, decoded: false })
     }
@@ -154,6 +179,16 @@ export function estimateRun(options: EstimateOptions): Estimate {
     })
   }
 
+  let startMs = 0
+  let downloadMs = 0
+  let downloadBytes = 0
+  for (const id of modelsUsed) {
+    const timing = options.models?.[id]
+    startMs += timing?.startMs ?? 0
+    downloadMs += timing?.download?.ms ?? 0
+    downloadBytes += timing?.download?.bytes ?? 0
+  }
+  const workMs = totals.ms / Math.max(1, options.workers) + totals.serialMs + startMs
   const round = (value: number) => Math.round(value)
   return {
     items: options.sources.length,
@@ -161,7 +196,9 @@ export function estimateRun(options: EstimateOptions): Estimate {
     encodes: round(totals.encodes),
     skipped: round(totals.skipped),
     cached: round(totals.cached),
-    seconds: (totals.ms * (options.speedFactor ?? 1)) / Math.max(1, options.workers) / 1000,
+    // The download depends on the connection, not on how fast this device computes.
+    seconds: (workMs * (options.speedFactor ?? 1) + downloadMs) / 1000,
+    downloadBytes,
     entryKeys,
   }
 }
@@ -178,10 +215,15 @@ function describeDuration(seconds: number) {
 }
 
 /** "about 2,000 encodes, roughly 12 minutes on this device" */
-export function describeEstimate(estimate: Pick<Estimate, 'encodes' | 'seconds'>) {
+export function describeEstimate(
+  estimate: Pick<Estimate, 'encodes' | 'seconds'> & { downloadBytes?: number },
+) {
   const encodes =
     estimate.encodes === 0
       ? 'no encodes'
       : `about ${count.format(estimate.encodes)} encode${estimate.encodes === 1 ? '' : 's'}`
-  return `${encodes}, ${describeDuration(estimate.seconds)} on this device`
+  const download = estimate.downloadBytes
+    ? `, after a one-time ${formatBytes(estimate.downloadBytes)} download`
+    : ''
+  return `${encodes}, ${describeDuration(estimate.seconds)} on this device${download}`
 }

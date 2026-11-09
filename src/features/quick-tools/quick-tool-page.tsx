@@ -31,7 +31,7 @@ const TOOLS = QUICK_TOOL_GROUPS.flatMap((group) => group.tools)
 function ToolTabs({ current }: { current: QuickTool }) {
   return (
     <nav aria-label="Quick tools" className="-mx-6 overflow-x-auto px-6 sm:mx-0 sm:px-0">
-      <span className="flex min-w-max overflow-hidden rounded-lg border border-border sm:grid sm:min-w-0 sm:grid-cols-6">
+      <span className="flex min-w-max overflow-hidden rounded-lg border border-border sm:grid sm:min-w-0 sm:grid-cols-7">
         {TOOLS.map((tool, index) => {
           const isCurrent = tool === current
           return (
@@ -125,6 +125,8 @@ function runLabel(tool: QuickTool, count: number) {
   const images = count === 1 ? '1 image' : `${formatCount(count)} images`
   if (tool === 'strip-metadata')
     return count > 0 ? `Strip metadata from ${images}` : 'Strip metadata'
+  if (tool === 'remove-background')
+    return count > 0 ? `Remove background from ${images}` : 'Remove background'
   const verb = QUICK_TOOL_DEFINITIONS[tool].title
   return count > 0 ? `${verb} ${images}` : verb
 }

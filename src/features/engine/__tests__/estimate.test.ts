@@ -108,6 +108,74 @@ describe('estimateRun', () => {
     }
     expect(estimateRun({ ...base, speedFactor: 2 }).seconds).toBeCloseTo(15.84, 2)
   })
+
+  describe('nodes that run an on-device model', () => {
+    const pipeline = chain(['remove-background'])
+    const model = (msPerRun: number, download?: { bytes: number; ms: number }) => ({
+      'birefnet-lite-512': { msPerRun, startMs: 5000, download },
+    })
+
+    it('times model runs one after another, however many workers there are', () => {
+      const base = { pipeline, registry: productRegistry, sources: sources(10), workers: 4 }
+      const slow = estimateRun({ ...base, models: model(10_000) })
+      const fast = estimateRun({ ...base, models: model(1000) })
+      // Ten runs on the one inference worker, 9 seconds slower each, are not shared by 4 workers.
+      expect(slow.seconds - fast.seconds).toBeCloseTo(90, 5)
+    })
+
+    it('starts the model once per run', () => {
+      const base = { pipeline, registry: productRegistry, workers: 1, models: model(0) }
+      const one = estimateRun({ ...base, sources: sources(1) })
+      const two = estimateRun({ ...base, sources: sources(2) })
+      // The second item adds its own pixel work but no second start of 5 seconds.
+      expect(one.seconds).toBeGreaterThan(5)
+      expect(two.seconds - one.seconds).toBeLessThan(5)
+    })
+
+    it('adds the one-time download, which the speed of this device does not change', () => {
+      const base = { pipeline, registry: productRegistry, sources: sources(3), workers: 1 }
+      const stored = estimateRun({ ...base, models: model(2000), speedFactor: 2 })
+      const download = { bytes: 98_484_532, ms: 20_000 }
+      const missing = estimateRun({ ...base, models: model(2000, download), speedFactor: 2 })
+      expect(missing.seconds - stored.seconds).toBeCloseTo(20, 5)
+      expect(missing.downloadBytes).toBe(98_484_532)
+      expect(stored.downloadBytes).toBe(0)
+    })
+
+    it('needs no model run for results the step cache holds', () => {
+      const first = estimateRun({
+        pipeline,
+        registry: productRegistry,
+        sources: sources(2),
+        workers: 1,
+        models: model(10_000, { bytes: 1000, ms: 30_000 }),
+      })
+      const cachedKeys = new Set(first.entryKeys)
+      const again = estimateRun({
+        pipeline,
+        registry: productRegistry,
+        sources: sources(2),
+        workers: 1,
+        models: model(10_000, { bytes: 1000, ms: 30_000 }),
+        lookup: (key) =>
+          cachedKeys.has(key)
+            ? {
+                nodeType: 'remove-background',
+                outputs: [
+                  {
+                    port: 'out',
+                    key: `${key}-0`,
+                    meta: { ...TWELVE_MP, format: 'png', size: 9_000_000 },
+                    reusesInput: false,
+                  },
+                ],
+              }
+            : undefined,
+      })
+      expect(again).toMatchObject({ cached: 2, downloadBytes: 0 })
+      expect(again.seconds).toBeLessThan(1)
+    })
+  })
 })
 
 describe('describeEstimate', () => {
@@ -120,6 +188,12 @@ describe('describeEstimate', () => {
     )
     expect(describeEstimate({ encodes: 0, seconds: 0.2 })).toBe(
       'no encodes, a few seconds on this device',
+    )
+  })
+
+  it('names a download the run waits for', () => {
+    expect(describeEstimate({ encodes: 3, seconds: 80, downloadBytes: 98_484_532 })).toBe(
+      'about 3 encodes, roughly 80 seconds on this device, after a one-time 93.9 MB download',
     )
   })
 })

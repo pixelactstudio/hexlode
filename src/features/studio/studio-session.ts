@@ -3,6 +3,7 @@
  * and live previews on the sample image. Plain TypeScript; the page subscribes.
  */
 
+import { inferenceHost } from '#/features/background-removal/inference-host'
 import type { NodeRegistry, Pipeline } from '#/features/engine/types'
 import {
   createPreviewer,
@@ -115,7 +116,9 @@ export function createStudioSession(registry: NodeRegistry) {
   })
 
   const setSample = async (file: File, source: 'first-file' | 'picked') => {
-    previewer ??= createPreviewer(createPreviewWorker)
+    previewer ??= createPreviewer(createPreviewWorker, {
+      connectInference: () => inferenceHost().connect(),
+    })
     try {
       const sample = await previewer.setSample(file, file.name)
       setPreviews({ sample, sampleFile: file, error: null })
@@ -147,6 +150,15 @@ export function createStudioSession(registry: NodeRegistry) {
     },
     setSample: (file: File) => setSample(file, 'picked'),
     refresh: schedule,
+    /** Downloads the models the pipeline needs once the person agreed, then renders previews. */
+    async downloadModels(options?: { signal?: AbortSignal }) {
+      await runs.downloadModels(options)
+      await render()
+    },
+    /** Sends edits still waiting for the debounce, so the run state describes this pipeline. */
+    async sync() {
+      if (store.getState().pipeline !== sentPipeline) await sendPipeline()
+    },
     /** Runs the pipeline as it is now, sending edits still waiting for the debounce first. */
     async start(options?: StartOptions) {
       if (store.getState().pipeline !== sentPipeline) await sendPipeline()

@@ -12,6 +12,7 @@ import { Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { type ReactNode, useEffect, useState } from 'react'
 
+import { RemoveBackgroundEditor } from '#/features/background-removal/model-status'
 import { MAX_LOGO_BYTES, MAX_RESIZE_DIMENSION } from '#/features/nodes/constants'
 import { CANDIDATE_FORMATS } from '#/features/nodes/definitions/best-format'
 import type { Logo } from '#/features/nodes/definitions/image-watermark'
@@ -1113,4 +1114,5 @@ export const LATER_EDITORS: Record<string, Editor> = {
   palette: PaletteEditor,
   'contact-sheet': ContactSheetEditor,
   'images-to-pdf': ImagesToPdfEditor,
+  'remove-background': RemoveBackgroundEditor,
 }

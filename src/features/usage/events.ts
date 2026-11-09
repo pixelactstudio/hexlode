@@ -20,8 +20,12 @@ export const QUICK_TOOLS = [
   'crop',
   'rotate',
   'strip-metadata',
+  'remove-background',
 ] as const
 const tool = z.enum(QUICK_TOOLS)
+/** An on-device model's ID, such as `birefnet-lite-512`. */
+const model = z.string().regex(/^[a-z0-9-]{1,40}$/)
+const duration = z.number().nonnegative()
 const settingValue: z.ZodType<unknown> = z.lazy(() =>
   z.union([
     z.number(),
@@ -99,6 +103,37 @@ export const EVENTS = {
         outputBytes: count,
         failureCodes: z.array(code),
         warningCodes: z.array(code),
+      })
+      .strict(),
+  },
+  model_downloaded: {
+    description:
+      'An on-device model was downloaded once the person agreed, or the download was declined, cancelled or failed: its size, how long it took and an error code.',
+    properties: z
+      .object({
+        surface,
+        model,
+        status: z.enum(['complete', 'declined', 'cancelled', 'failed']),
+        bytes: count,
+        durationMs: duration,
+        errorCode: code.optional(),
+      })
+      .strict(),
+  },
+  model_ran: {
+    description:
+      'A run used an on-device model: whether WebGPU or WebAssembly ran it, how many times, how long it took to start and to run, and failure codes.',
+    properties: z
+      .object({
+        surface,
+        tool: tool.optional(),
+        builtInTool: builtInTool.optional(),
+        model,
+        backend: z.enum(['webgpu', 'wasm']).optional(),
+        runs: count,
+        startMs: duration.optional(),
+        meanRunMs: duration,
+        failureCodes: z.array(code),
       })
       .strict(),
   },

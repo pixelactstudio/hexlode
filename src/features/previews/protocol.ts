@@ -7,6 +7,11 @@ export const previewRequestSchema = z.discriminatedUnion('type', [
     file: z.custom<Blob>((value) => value instanceof Blob),
     name: z.string(),
   }),
+  /** A port to the shared inference worker, sent before the first render that needs a model. */
+  z.object({
+    type: z.literal('inference'),
+    port: z.custom<MessagePort>((value) => value instanceof MessagePort),
+  }),
   z.object({
     type: z.literal('render'),
     requestId: z.number().int(),
