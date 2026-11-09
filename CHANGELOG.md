@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/pixelactstudio/hexlode/compare/v0.3.0...v0.4.0) (2026-11-09)
+
+
+### Features
+
+* add pipeline links, ready-made tools, offline use, HEIC input and background removal ([#38](https://github.com/pixelactstudio/hexlode/issues/38)) ([8d41805](https://github.com/pixelactstudio/hexlode/commit/8d4180557b0da25503f101013adb85293d06b54b))
+
 ## [0.3.0](https://github.com/pixelactstudio/hexlode/compare/v0.2.0...v0.3.0) (2026-11-03)
 
 
