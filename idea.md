@@ -224,7 +224,7 @@ Items are images, data (JSON or text) or documents (PDF). Batch numbers match th
 | Crop | Crops to an aspect preset (1:1, 4:5, 16:9 and others), from the centre or a chosen position. Turns the image upright first. | 1 |
 | Rotate / Flip | Rotates and flips, including automatic rotation from the camera orientation tag. | 1 |
 | Auto-trim | Removes plain-colour or transparent borders. | 2 |
-| Pad / Extend | Adds space to reach an aspect ratio, filled with a colour or a blurred copy of the image. | 2 |
+| Pad / Extend | Adds space to reach an aspect ratio, with an optional margin on every side, filled with a colour or a blurred copy of the image. | 2 |
 | Pixel-art upscale | Enlarges pixel art 2x to 4x with sharp edges. | 2 |
 | Split / Tile | Cuts one image into a grid of images. | 2 |
 

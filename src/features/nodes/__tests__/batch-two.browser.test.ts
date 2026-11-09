@@ -285,6 +285,30 @@ describe('Pad / Extend', () => {
     const { files } = await run(chain(['pad', { aspect: '3:2' }]), ['photo.jpg'])
     expect(files()[0].bytes.length).toBe(666)
   })
+
+  it('keeps a margin around the image, as a share of its longer edge', async () => {
+    // photo.png is 48 × 32: 25% of 48 is 12 on every side, so 72 × 56 before the square.
+    const { files } = await run(chain(['pad', { aspect: '1:1', colour: '#ffffff', margin: 25 }]), [
+      'photo.png',
+    ])
+    const image = await decodeFile(files()[0].bytes)
+    expect(image).toMatchObject({ width: 72, height: 72 })
+    expect(pixelAt(image, 11, 30)).toEqual(WHITE)
+    expect(pixelAt(image, 16, 19)).toEqual(WHITE)
+    expect(pixelAt(image, 16, 20)).toEqual(RED)
+    expect(pixelAt(image, 56, 51)).toEqual(BLUE)
+    expect(pixelAt(image, 60, 51)).toEqual(WHITE)
+  })
+
+  it('adds a margin even when the image already has the ratio', async () => {
+    const { files } = await run(chain(['pad', { aspect: '3:2', colour: '#ffffff', margin: 10 }]), [
+      'photo.png',
+    ])
+    const image = await decodeFile(files()[0].bytes)
+    expect(image.width / image.height).toBeCloseTo(3 / 2, 1)
+    expect(image.width).toBeGreaterThan(48)
+    expect(pixelAt(image, 0, 0)).toEqual(WHITE)
+  })
 })
 
 describe('Pixel-art upscale', () => {

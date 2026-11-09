@@ -199,6 +199,14 @@ const PadEditor: Editor = ({ settings, onChange, isDisabled }) => {
         isDisabled={isDisabled}
         hint="Photos are turned upright first."
       />
+      <Percent
+        label="Margin"
+        description="Space on every side, in percent of the image's longer edge."
+        max={50}
+        value={settings.margin}
+        onChange={(margin) => onChange({ margin })}
+        isDisabled={isDisabled}
+      />
     </VStack>
   )
 }

@@ -22,6 +22,8 @@ const schema = z.object({
   ...aspectFields,
   fill: z.enum(['colour', 'blur']).default('colour'),
   colour: colour('#ffffff'),
+  /** Space kept around the image on every side, in percent of its longer edge. */
+  margin: z.number().min(0).max(50).default(0),
 })
 
 type PadSettings = z.infer<typeof schema>
@@ -34,12 +36,15 @@ const BLUR_FILL_SIGMA = 0.04
 /** The canvas that gives an upright image the chosen ratio, and where the image sits on it. */
 function planPad(settings: PadSettings, width: number, height: number) {
   const ratio = ratioOf(settings)
+  const margin = Math.round((settings.margin / 100) * Math.max(width, height))
+  const inner = { width: width + margin * 2, height: height + margin * 2 }
   // Narrower than the ratio: add width. Otherwise add height.
   const size =
-    width / height < ratio
-      ? { width: Math.max(width, Math.round(height * ratio)), height }
-      : { width, height: Math.max(height, Math.round(width / ratio)) }
-  return { ...size, ...placeAt(settings.position, size.width - width, size.height - height) }
+    inner.width / inner.height < ratio
+      ? { width: Math.max(inner.width, Math.round(inner.height * ratio)), height: inner.height }
+      : { width: inner.width, height: Math.max(inner.height, Math.round(inner.width / ratio)) }
+  const spot = placeAt(settings.position, size.width - inner.width, size.height - inner.height)
+  return { ...size, x: spot.x + margin, y: spot.y + margin }
 }
 
 /** The image scaled to cover the canvas, blurred. */
@@ -72,7 +77,7 @@ export const padNode = defineNode({
   label: 'Pad / Extend',
   category: 'size',
   description:
-    'Adds space to reach an aspect ratio, filled with a colour or a blurred copy of the image.',
+    'Adds space to reach an aspect ratio, and an optional margin, filled with a colour or a blurred copy of the image.',
   schema,
   ports: () => OUTPUT_PORT,
   accepts: () => ALL_IMAGE_TYPES,
