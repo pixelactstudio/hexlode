@@ -9,7 +9,10 @@ import { COLOUR_MODES } from '#/features/theme/constants'
 const count = z.number().int().nonnegative()
 const code = z.string().regex(/^[a-z0-9_]{1,40}$/)
 const nodeType = z.string().regex(/^[a-z0-9.-]{1,40}$/)
-const surface = z.enum(['quick-tool', 'pipeline-tool', 'studio'])
+export const SURFACES = ['quick-tool', 'pipeline-tool', 'built-in-tool', 'studio'] as const
+const surface = z.enum(SURFACES)
+/** A built-in tool's slug, as in `/tools/<slug>`. */
+const builtInTool = z.string().regex(/^[a-z0-9-]{1,40}$/)
 export const QUICK_TOOLS = [
   'convert',
   'compress',
@@ -44,8 +47,9 @@ export const EVENTS = {
     description: 'A page was opened.',
     properties: z
       .object({
-        page: z.enum(['home', 'quick-tool', 'pipeline-tool', 'studio', 'privacy']),
+        page: z.enum(['home', 'quick-tool', 'pipeline-tool', 'built-in-tool', 'studio', 'privacy']),
         tool: tool.optional(),
+        builtInTool: builtInTool.optional(),
       })
       .strict(),
   },
@@ -60,16 +64,19 @@ export const EVENTS = {
       .strict(),
   },
   run_started: {
-    description: 'A run started: the pipeline shape and settings, the item count and the estimate.',
+    description:
+      'A run started: the pipeline shape and settings, the item count, the estimate and, for a saved pipeline, how many times it has run.',
     properties: z
       .object({
         surface,
         tool: tool.optional(),
+        builtInTool: builtInTool.optional(),
         itemCount: count,
         workers: count,
         estimatedEncodes: count,
         estimatedSeconds: z.number().nonnegative(),
         pipeline: shape,
+        pipelineRuns: count.optional(),
       })
       .strict(),
   },
@@ -80,6 +87,7 @@ export const EVENTS = {
       .object({
         surface,
         tool: tool.optional(),
+        builtInTool: builtInTool.optional(),
         status: z.enum(['complete', 'cancelled', 'failed']),
         itemCount: count,
         processed: count,
@@ -137,6 +145,18 @@ export const EVENTS = {
     properties: z
       .object({
         action: z.enum(['export', 'import']),
+        result: z.enum(['ok', 'error']),
+        nodeCount: count,
+        errorCode: code.optional(),
+      })
+      .strict(),
+  },
+  pipeline_link: {
+    description:
+      'A pipeline link was copied or opened, with an error code when it could not be made or read.',
+    properties: z
+      .object({
+        action: z.enum(['copy', 'open']),
         result: z.enum(['ok', 'error']),
         nodeCount: count,
         errorCode: code.optional(),

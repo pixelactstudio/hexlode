@@ -34,6 +34,7 @@ export const savedPipelinesSchema = z.array(
     name: z.string().max(MAX_PIPELINE_NAME_LENGTH),
     createdAt: z.number(),
     updatedAt: z.number(),
+    runs: z.number().int().nonnegative().optional(),
     pipeline: pipelineSchema,
   }),
 )

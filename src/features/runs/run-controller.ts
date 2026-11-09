@@ -14,12 +14,12 @@ import { recordRunSpeed, speedFactor } from '#/features/runs/calibration'
 import { createEngineWorker, engineRuntime } from '#/features/runs/engine-runtime'
 import { createRunStats, type RunSnapshot } from '#/features/runs/run-stats'
 import { type InputFile, prepareSources, type RefusedFile } from '#/features/runs/sources'
-import type { QUICK_TOOLS } from '#/features/usage/events'
+import type { QUICK_TOOLS, SURFACES } from '#/features/usage/events'
 import { pipelineShape } from '#/features/usage/pipeline-shape'
 import { track } from '#/features/usage/usage'
 import { downloadBlob } from '#/lib/download'
 
-type Surface = 'quick-tool' | 'pipeline-tool' | 'studio'
+export type Surface = (typeof SURFACES)[number]
 
 export interface RunControllerState {
   files: InputFile[]
@@ -37,6 +37,8 @@ export interface RunControllerState {
 export interface StartOptions {
   folders?: Map<string, FolderTarget>
   singleFileAsIs?: boolean
+  /** For a saved pipeline, how many times it has run with this run, for the run event. */
+  pipelineRuns?: number
 }
 
 function filesNodeId(pipeline: Pipeline, registry: NodeRegistry) {
@@ -55,9 +57,11 @@ export function createRunController(options: {
   registry: NodeRegistry
   surface: Surface
   tool?: (typeof QUICK_TOOLS)[number]
+  /** The slug of the built-in tool that runs, for the run events. */
+  builtInTool?: string
   outputNodeId?: string
 }) {
-  const { registry, surface, tool } = options
+  const { registry, surface, tool, builtInTool } = options
   const stats = createRunStats({ outputNodeId: options.outputNodeId })
   const listeners = new Set<() => void>()
   let pipeline: Pipeline | undefined
@@ -205,11 +209,13 @@ export function createRunController(options: {
     track('run_started', {
       surface,
       tool,
+      builtInTool,
       itemCount: state.sources.length,
       workers: state.workers,
       estimatedEncodes: estimate?.encodes ?? 0,
       estimatedSeconds: Math.round(estimate?.seconds ?? 0),
       pipeline: pipelineShape(runPipelineNow, registry),
+      ...(startOptions.pipelineRuns ? { pipelineRuns: startOptions.pipelineRuns } : {}),
     })
     const autoDownload = new Set(
       runPipelineNow.nodes
@@ -239,6 +245,7 @@ export function createRunController(options: {
     track('run_finished', {
       surface,
       tool,
+      builtInTool,
       status: result.status,
       itemCount: state.sources.length,
       processed: outputStats.reduce((sum, node) => sum + node.processed, 0),

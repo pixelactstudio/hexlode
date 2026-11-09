@@ -15,6 +15,7 @@ import {
   downloadDelivery,
   type RunController,
   type RunControllerState,
+  type Surface,
 } from '#/features/runs/run-controller'
 import { SourceList } from '#/features/runs/source-list'
 import { formatBytes, formatCount, formatDuration } from '#/lib/format'
@@ -112,12 +113,15 @@ export function RunSection({
   outputNodeId,
   runLabel,
   surface,
+  countRun,
 }: {
   controller: RunController
   state: RunControllerState
   outputNodeId: string
   runLabel: string
-  surface: 'quick-tool' | 'pipeline-tool'
+  surface: Exclude<Surface, 'studio'>
+  /** For a saved pipeline: counts this run and returns how many times it has run. */
+  countRun?: () => number | undefined
 }) {
   const { stats, sources, running } = state
   const delivery = stats.deliveries[outputNodeId]
@@ -140,7 +144,7 @@ export function RunSection({
             : `${plural(count, 'image')} ready`
 
   const run = async () => {
-    await controller.start({ singleFileAsIs: true })
+    await controller.start({ singleFileAsIs: true, pipelineRuns: countRun?.() })
   }
 
   return (

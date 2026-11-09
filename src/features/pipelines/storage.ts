@@ -58,11 +58,24 @@ export function createPipelineStore(storage: KeyValueStorage | undefined, now = 
         pipeline: pipeline.pipeline,
         createdAt: existing?.createdAt ?? now(),
         updatedAt: now(),
+        ...(existing?.runs ? { runs: existing.runs } : {}),
       }
       write(
         existing ? read().map((item) => (item.id === saved.id ? saved : item)) : [...read(), saved],
       )
       return saved
+    },
+    /** Counts one more run of a saved pipeline and returns the new count, or undefined. */
+    recordRun(id: string): number | undefined {
+      const existing = read().find((saved) => saved.id === id)
+      if (!existing) return undefined
+      const runs = (existing.runs ?? 0) + 1
+      try {
+        write(read().map((item) => (item.id === id ? { ...item, runs } : item)))
+      } catch {
+        // A full storage must never stop a run; the count is only for analytics.
+      }
+      return runs
     },
     remove(id: string) {
       write(read().filter((pipeline) => pipeline.id !== id))

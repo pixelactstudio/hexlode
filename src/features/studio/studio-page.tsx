@@ -16,13 +16,14 @@ import { Text } from '@astryxdesign/core/Text'
 import { useToast } from '@astryxdesign/core/Toast'
 import { useNavigate } from '@tanstack/react-router'
 import { ReactFlowProvider, useReactFlow } from '@xyflow/react'
-import { CircleHelp, Download, Play, Plus, Redo2, Save, Settings, Undo2 } from 'lucide-react'
+import { CircleHelp, Download, Link2, Play, Plus, Redo2, Save, Settings, Undo2 } from 'lucide-react'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 import { describeEstimate } from '#/features/engine/estimate'
 import type { FolderTarget } from '#/features/engine/opfs/run-stores'
 import { pickOutputFolder } from '#/features/image-input/folder'
 import { productRegistry } from '#/features/nodes/registry'
+import { useSharePipeline } from '#/features/pipeline-tools/use-share-pipeline'
 import { draftStore, type RecoverableDraft } from '#/features/pipelines/draft'
 import {
   exportPipelineFile,
@@ -149,6 +150,7 @@ function Studio({
   )
   const flow = useReactFlow()
   const showToast = useToast()
+  const share = useSharePipeline()
   const navigate = useNavigate()
   const importInput = useRef<HTMLInputElement>(null)
   const [dialog, setDialog] = useState<
@@ -278,7 +280,8 @@ function Studio({
         return
       }
     }
-    await session.start({ folders })
+    const pipelineRuns = studio.savedId ? pipelineStore().recordRun(studio.savedId) : undefined
+    await session.start({ folders, pipelineRuns })
   }
 
   /**
@@ -411,6 +414,14 @@ function Studio({
             size="sm"
             onClick={() => setDialog('save')}
           />
+          <IconButton
+            label="Copy pipeline link"
+            tooltip="Copy a link that opens this pipeline as a tool"
+            icon={<Link2 size={16} />}
+            variant="ghost"
+            size="sm"
+            onClick={() => void share({ name: studio.name, pipeline: studio.pipeline })}
+          />
           {studio.dirty ? (
             <StatusDot variant="warning" label="Unsaved changes" tooltip="Unsaved changes" />
           ) : null}
@@ -423,6 +434,10 @@ function Studio({
               { type: 'divider' },
               { label: 'Import .hexlode file…', onClick: () => importInput.current?.click() },
               { label: 'Export .hexlode file', onClick: exportFile },
+              {
+                label: 'Copy pipeline link',
+                onClick: () => void share({ name: studio.name, pipeline: studio.pipeline }),
+              },
               ...(studio.savedId
                 ? [
                     { type: 'divider' as const },

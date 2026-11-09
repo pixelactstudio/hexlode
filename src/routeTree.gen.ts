@@ -23,6 +23,7 @@ import { Route as StripMetadataRouteImport } from './routes/strip-metadata'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ToolsPipelineIdRouteImport } from './routes/tools.$pipelineId'
+import { Route as ToolsSharedRouteImport } from './routes/tools.shared'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -95,6 +96,11 @@ const ToolsPipelineIdRoute = ToolsPipelineIdRouteImport.update({
   path: '/tools/$pipelineId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToolsSharedRoute = ToolsSharedRouteImport.update({
+  id: '/tools/shared',
+  path: '/tools/shared',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/studio': typeof StudioRoute
   '/api/health': typeof ApiHealthRoute
   '/tools/$pipelineId': typeof ToolsPipelineIdRoute
+  '/tools/shared': typeof ToolsSharedRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
@@ -133,6 +140,7 @@ export interface FileRoutesByTo {
   '/studio': typeof StudioRoute
   '/api/health': typeof ApiHealthRoute
   '/tools/$pipelineId': typeof ToolsPipelineIdRoute
+  '/tools/shared': typeof ToolsSharedRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
@@ -151,6 +159,7 @@ export interface FileRoutesById {
   '/studio': typeof StudioRoute
   '/api/health': typeof ApiHealthRoute
   '/tools/$pipelineId': typeof ToolsPipelineIdRoute
+  '/tools/shared': typeof ToolsSharedRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
@@ -170,6 +179,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/api/health'
     | '/tools/$pipelineId'
+    | '/tools/shared'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/api/health'
     | '/tools/$pipelineId'
+    | '/tools/shared'
     | '/api/auth/$'
   id:
     | '__root__'
@@ -204,6 +215,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/api/health'
     | '/tools/$pipelineId'
+    | '/tools/shared'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
@@ -222,6 +234,7 @@ export interface RootRouteChildren {
   StudioRoute: typeof StudioRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ToolsPipelineIdRoute: typeof ToolsPipelineIdRoute
+  ToolsSharedRoute: typeof ToolsSharedRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -325,6 +338,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToolsPipelineIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tools/shared': {
+      id: '/tools/shared'
+      path: '/tools/shared'
+      fullPath: '/tools/shared'
+      preLoaderRoute: typeof ToolsSharedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -350,6 +370,7 @@ const rootRouteChildren: RootRouteChildren = {
   StudioRoute: StudioRoute,
   ApiHealthRoute: ApiHealthRoute,
   ToolsPipelineIdRoute: ToolsPipelineIdRoute,
+  ToolsSharedRoute: ToolsSharedRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
