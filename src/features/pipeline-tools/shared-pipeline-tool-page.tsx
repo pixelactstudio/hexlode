@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react'
 import { productRegistry } from '#/features/nodes/registry'
 import { openInStudio } from '#/features/pipeline-tools/open-in-studio'
 import { Missing, PipelineToolBody } from '#/features/pipeline-tools/pipeline-tool-page'
+import { PIPELINE_LINK_PATH } from '#/features/pipelines/constants'
 import { PipelineFileError } from '#/features/pipelines/pipeline-file'
 import { readPipelineLink } from '#/features/pipelines/pipeline-link'
 import { pipelineStore } from '#/features/pipelines/storage'
@@ -119,7 +120,7 @@ export function SharedPipelineToolPage() {
         </HStack>
       }
     >
-      <PipelineToolBody pipeline={named.pipeline} />
+      <PipelineToolBody path={PIPELINE_LINK_PATH} pipeline={named.pipeline} />
     </ToolPageFrame>
   )
 }

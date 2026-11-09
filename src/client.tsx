@@ -2,6 +2,7 @@ import { StartClient } from '@tanstack/react-start/client'
 import { StrictMode, startTransition } from 'react'
 import { hydrateRoot } from 'react-dom/client'
 
+import { registerServiceWorker } from '#/features/offline/register'
 import { PUBLIC_CONFIG_META } from '#/features/usage/constants'
 import { startErrorReporting } from '#/features/usage/error-reports'
 import { startAnalytics } from '#/features/usage/usage'
@@ -23,3 +24,5 @@ startTransition(() => {
     </StrictMode>,
   )
 })
+
+registerServiceWorker()

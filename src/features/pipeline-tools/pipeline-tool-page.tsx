@@ -8,6 +8,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 
 import { PageColumn } from '#/features/app-shell/page-column'
 import type { Pipeline } from '#/features/engine/types'
+import { useArrivingFiles } from '#/features/handover/use-arriving-files'
 import { productRegistry } from '#/features/nodes/registry'
 import { useSharePipeline } from '#/features/pipeline-tools/use-share-pipeline'
 import { validatePipeline } from '#/features/pipelines/pipeline-file'
@@ -79,6 +80,7 @@ function AdjustableSettings({
  * tool lets people change and the run button on the right, the results below.
  */
 export function PipelineToolBody({
+  path,
   pipeline,
   surface = 'pipeline-tool',
   builtInTool,
@@ -87,6 +89,8 @@ export function PipelineToolBody({
   problem,
   onPipelineChange,
 }: {
+  /** The page's own address, such as `/tools/<id>`, for files handed over from the open page. */
+  path: string
   pipeline: Pipeline
   surface?: Exclude<Surface, 'studio' | 'quick-tool'>
   builtInTool?: string
@@ -115,6 +119,8 @@ export function PipelineToolBody({
   useEffect(() => {
     void controller.setPipeline(current)
   }, [controller, current])
+  // Files chosen on the open page for this tool arrive already added.
+  useArrivingFiles({ path, onFiles: (files) => void controller.addFiles(files) })
   const count = state.sources.length
 
   if (outputs.length === 0) {
@@ -229,6 +235,7 @@ export function PipelineToolPage({ pipelineId }: { pipelineId: string }) {
       }
     >
       <PipelineToolBody
+        path={`/tools/${saved.id}`}
         pipeline={saved.pipeline}
         countRun={() => pipelineStore().recordRun(saved.id)}
       />

@@ -113,6 +113,19 @@ export function PrivacyPage() {
           </List>
         </Section>
 
+        <Section title="Working offline">
+          <Paragraph>
+            After your first visit, your browser keeps a copy of Hexlode so it opens and runs
+            without a connection. The copy holds Hexlode's own files, never your images or anything
+            you type, and a new version of Hexlode replaces it. With the copy, Hexlode can process
+            images on your device without a connection.
+          </Paragraph>
+          <Paragraph>
+            To remove the copy, clear this site's data in your browser's settings. The app keeps
+            working online and saves a fresh copy on your next visit.
+          </Paragraph>
+        </Section>
+
         <Section title="What Hexlode measures">
           <Paragraph>
             Analytics run without cookies and without identifying you. Your IP address becomes an

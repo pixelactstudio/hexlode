@@ -63,6 +63,7 @@ export function BuiltInToolPage({ tool }: { tool: BuiltInTool }) {
       }
     >
       <PipelineToolBody
+        path={`/tools/${tool.slug}`}
         pipeline={tool.pipeline}
         surface="built-in-tool"
         builtInTool={tool.slug}

@@ -1,6 +1,6 @@
 # Hexlode implementation plan
 
-> Updated: 2026-11-04
+> Updated: 2026-11-10
 > Product: [idea.md](./idea.md). Vocabulary: [CONTEXT.md](./CONTEXT.md). Decisions: [docs/adr/](./docs/adr/).
 
 ## Goal
@@ -128,11 +128,17 @@ by one per run of a saved pipeline.
 
 ## Phase 5: offline and installable
 
-1. A service worker caches the built scripts, styles and codec WASM after the first visit. Pages
-   load from the network first and fall back to the cache offline. A badge shows when the app is
-   offline.
-2. Installed on desktop Chromium, Hexlode opens images and `.hexlode` files from the file manager.
-   Installed on Android, photos shared to Hexlode open in Strip metadata, set to remove location.
+1. A service worker caches the built scripts, styles, fonts and codec WASM after the first visit,
+   with the main pages. A Vite plugin writes `/sw.js` from the client build, in production builds
+   only. Pages load from the network first and fall back to their cached copy offline, or to the
+   app shell, `/app-shell`, a route the server renders without its page. A badge shows when the app
+   is offline ([ADR 0015](./docs/adr/0015-service-worker-for-offline-use.md)).
+2. Installed on desktop Chromium, Hexlode opens images and `.hexlode` files from the file manager:
+   the manifest's file handlers open `/open`, which reads `window.launchQueue`, sends a `.hexlode`
+   file to the Studio and asks which tool takes the images. Installed on Android, photos shared to
+   Hexlode go to the manifest's share target, which the service worker answers; they open in Strip
+   metadata, set to remove location. Quick tool and pipeline tool pages take files handed to them
+   in memory (`src/features/handover/`).
 
 Exit gate: a browser test loads a quick tool and the Studio offline after one online visit, files
 from a share or a file launch land in the right page, and the privacy page explains the cache.
@@ -211,14 +217,17 @@ removed.
   `vitest.config.ts` sit a few points under current coverage; raise them as coverage grows.
 - Test-only node types with data and document items, one-to-many and many-to-one behaviour prove
   what batches 2 and 3 need. They join the node pair matrix but never the product registry.
+- `pnpm test:e2e` drives the production build in Chromium with Playwright, so run `pnpm build`
+  first. It loads the app offline after one visit, runs an image through a quick tool, and checks
+  shares and file launches. CI runs it after the build.
 - The batch of 500 images of 12 megapixels runs with `pnpm test:scale`. It takes minutes, so it is
   outside `pnpm validate`; run it before closing a phase.
 - `pnpm validate` passes before every commit.
 - CI (`.github/workflows/`) runs on every pull request: Biome, types, commit messages, the
   generated theme and route tree, actionlint and hadolint; unit tests on Linux, macOS and Windows;
-  browser tests in three engines; coverage; the build with a smoke test of the server; and the
-  Docker image with a smoke test of the container, its health check, runtime settings and an ARM
-  build. CodeQL, `pnpm audit`, dependency review and PR titles run in their own workflows. A push
+  browser tests in three engines; coverage; the build with a smoke test of the server and the
+  end-to-end tests; and the Docker image with a smoke test of the container, its health check,
+  runtime settings and an ARM build. CodeQL, `pnpm audit`, dependency review and PR titles run in their own workflows. A push
   to `main` only publishes the `main` image and deploys staging, since the pull request already
   ran the checks;
   CodeQL, the audit and the scale test also run on a schedule.

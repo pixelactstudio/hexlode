@@ -74,7 +74,23 @@ export default defineConfig({
           name: 'unit',
           environment: 'node',
           include: ['src/**/__tests__/**/*.test.ts'],
-          exclude: ['src/**/__tests__/**/*.browser.test.ts', 'src/**/__tests__/**/*.scale.test.ts'],
+          exclude: [
+            'src/**/__tests__/**/*.browser.test.ts',
+            'src/**/__tests__/**/*.scale.test.ts',
+            'src/**/__tests__/**/*.e2e.test.ts',
+          ],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          // Drives the production build in Chromium through Playwright. Run `pnpm build` first.
+          name: 'e2e',
+          environment: 'node',
+          include: ['src/**/__tests__/**/*.e2e.test.ts'],
+          // Generous, so a busy machine slows the first visit's downloads without failing them.
+          testTimeout: 180_000,
+          hookTimeout: 300_000,
         },
       },
       {

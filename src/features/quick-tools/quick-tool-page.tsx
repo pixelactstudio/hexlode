@@ -6,6 +6,7 @@ import { type ReactNode, useEffect, useState } from 'react'
 
 import { Eyebrow } from '#/features/app-shell/eyebrow'
 import { PageColumn } from '#/features/app-shell/page-column'
+import { useArrivingFiles } from '#/features/handover/use-arriving-files'
 import { productRegistry } from '#/features/nodes/registry'
 import { SettingsPanel } from '#/features/quick-tools/settings-panels'
 import { QUICK_TOOL_GROUPS, QUICK_TOOL_ICONS } from '#/features/quick-tools/tool-ui'
@@ -146,6 +147,15 @@ function QuickToolSteps<T extends QuickTool>({ tool }: { tool: T }) {
   useEffect(() => {
     void controller.setPipeline(quickToolPipeline(tool, settings))
   }, [controller, tool, settings])
+  useArrivingFiles({
+    path: definition.path,
+    onFiles: (files) => void controller.addFiles(files),
+    // Only Strip metadata receives shares, so the shared settings are its own.
+    onShare: (share) => {
+      setSettings(share.settings as QuickToolSettings[T])
+      void controller.addFiles(share.files)
+    },
+  })
 
   return (
     <VStack gap={8}>
