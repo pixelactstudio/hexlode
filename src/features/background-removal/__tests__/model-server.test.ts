@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, readFile } from 'node:fs/promises'
+import { chmod, mkdtemp, readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -8,7 +8,9 @@ import { createModelServer } from '#/features/background-removal/model-server'
 
 const fixture = () => readFile(new URL('./fixtures/threshold.onnx', import.meta.url))
 
-async function setUp(options: { corrupt?: boolean } = {}) {
+const POSIX = process.platform !== 'win32'
+
+async function setUp(options: { corrupt?: boolean; directory?: string } = {}) {
   const bytes = new Uint8Array(await fixture())
   const model = {
     ...BACKGROUND_MODEL,
@@ -17,7 +19,7 @@ async function setUp(options: { corrupt?: boolean } = {}) {
     upstream: 'https://models.example/threshold.onnx',
   }
   const fetched: string[] = []
-  const directory = await mkdtemp(join(tmpdir(), 'hexlode-models-'))
+  const directory = options.directory ?? (await mkdtemp(join(tmpdir(), 'hexlode-models-')))
   const server = createModelServer({
     directory,
     models: [model],
@@ -66,6 +68,35 @@ describe('the model server', () => {
     const { fetched, get } = await setUp()
     expect((await get('other.onnx')).status).toBe(404)
     expect((await get('../package.json')).status).toBe(404)
+    expect(fetched).toEqual([])
+  })
+
+  it('never serves a file left in its folder that only has the right size', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'hexlode-models-'))
+    const { model, bytes, fetched, get } = await setUp({ directory })
+    // Planted: as long as the model, but other bytes.
+    await writeFile(
+      join(directory, model.file),
+      bytes.map((value) => value ^ 0xff),
+    )
+    const response = await get()
+    expect(response.status).toBe(200)
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(bytes)
+    expect(fetched).toEqual(['https://models.example/threshold.onnx'])
+  })
+
+  it.skipIf(!POSIX)('keeps the model where only its owner can read or change it', async () => {
+    const { model, directory, get } = await setUp()
+    expect((await get()).status).toBe(200)
+    expect((await stat(directory)).mode & 0o077).toBe(0)
+    expect((await stat(join(directory, model.file))).mode & 0o077).toBe(0)
+  })
+
+  it.skipIf(!POSIX)('refuses a model folder other users can write to', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'hexlode-models-'))
+    await chmod(directory, 0o777)
+    const { fetched, get } = await setUp({ directory })
+    expect((await get()).status).toBe(502)
     expect(fetched).toEqual([])
   })
 })

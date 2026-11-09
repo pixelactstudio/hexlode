@@ -20,6 +20,7 @@ import { fileKind } from '#/features/file-items/file-item'
 import { jsquashCodecs } from '#/features/images/codecs'
 import { imageKind, loadImageItem } from '#/features/images/image-item'
 import { productRegistry } from '#/features/nodes/registry'
+import { fromOwnerPage } from '#/lib/worker-message'
 
 const scope = self as unknown as DedicatedWorkerGlobalScope
 const post = (message: WorkerResponse) => scope.postMessage(message)
@@ -109,6 +110,7 @@ async function handle(request: WorkerRequest) {
 }
 
 scope.onmessage = (event: MessageEvent<unknown>) => {
+  if (!fromOwnerPage(event, scope)) return
   const parsed = workerRequestSchema.safeParse(event.data)
   if (!parsed.success) return
   queue = queue.then(() => handle(parsed.data))

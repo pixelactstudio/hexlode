@@ -31,7 +31,10 @@ Browsers download the model only from Hexlode's own server, at
 states the size. The server route fetches the pinned file from its upstream revision on the first
 request, checks its size and SHA-256 while writing it to `HEXLODE_MODEL_DIR` (the system's
 temporary folder by default), and serves it from disk from then on with a year of caching, since
-the name changes with the file. The browser checks the hash again before keeping the model in Cache
+the name changes with the file. Because the server sends that file to every visitor, the folder must
+belong to the server's user and not be writable by others, the download is created for that user
+only, and a file already in the folder is served only after its SHA-256 matches, checked once after
+each start; a file planted in a shared temporary folder is never sent. The browser checks the hash again before keeping the model in Cache
 Storage, where the page and every worker can read it. ONNX Runtime's WebAssembly is served with the
 app: the build with WebGPU (27 MB) where WebGPU works, the smaller build (14 MB) elsewhere.
 

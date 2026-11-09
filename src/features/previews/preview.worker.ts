@@ -29,6 +29,7 @@ import {
   type PreviewResponse,
   previewRequestSchema,
 } from '#/features/previews/protocol'
+import { fromOwnerPage } from '#/lib/worker-message'
 
 const scope = self as unknown as DedicatedWorkerGlobalScope
 const post = (message: PreviewResponse) => scope.postMessage(message)
@@ -179,6 +180,7 @@ async function pump() {
 let sampleQueue = Promise.resolve()
 
 scope.onmessage = (event: MessageEvent<unknown>) => {
+  if (!fromOwnerPage(event, scope)) return
   const parsed = previewRequestSchema.safeParse(event.data)
   if (!parsed.success) return
   const request = parsed.data

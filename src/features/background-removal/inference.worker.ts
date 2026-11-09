@@ -9,7 +9,6 @@
 
 import webgpuWasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm?url'
 import wasmOnlyUrl from 'onnxruntime-web/ort-wasm-simd-threaded.wasm?url'
-
 import { BACKGROUND_MODEL } from '#/features/background-removal/constants'
 import {
   preferredBackend,
@@ -25,6 +24,7 @@ import {
   type SegmentResponse,
   segmentRequestSchema,
 } from '#/features/background-removal/validators'
+import { fromOwnerPage } from '#/lib/worker-message'
 
 const scope = self as unknown as DedicatedWorkerGlobalScope
 const report = (message: InferenceReport) => scope.postMessage(message)
@@ -99,6 +99,7 @@ function serve(port: MessagePort) {
 }
 
 scope.onmessage = (event: MessageEvent<unknown>) => {
+  if (!fromOwnerPage(event, scope)) return
   const parsed = inferenceControlSchema.safeParse(event.data)
   if (parsed.success) serve(parsed.data.port)
 }
