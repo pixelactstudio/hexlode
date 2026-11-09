@@ -1,20 +1,27 @@
 import { createFileRoute } from '@tanstack/react-router'
 
+import { BuiltInToolPage } from '#/features/built-in-tools/built-in-tool-page'
+import { builtInTool, isBuiltInToolSlug } from '#/features/built-in-tools/tools'
 import { PipelineToolPage } from '#/features/pipeline-tools/pipeline-tool-page'
-import { SITE_NAME, TITLE_SEPARATOR } from '#/features/seo/constants'
+import { breadcrumbData, pageHead } from '#/features/seo/head'
 
 export const Route = createFileRoute('/tools/$pipelineId')({
-  // A saved pipeline lives in one visitor's browser, so there is nothing here to index.
-  head: () => ({
-    meta: [
-      { title: `Pipeline tool${TITLE_SEPARATOR}${SITE_NAME}` },
-      { name: 'robots', content: 'noindex, nofollow' },
-    ],
-  }),
-  component: PipelineToolRoute,
+  head: ({ params }) => {
+    if (isBuiltInToolSlug(params.pipelineId)) {
+      const { meta, links } = pageHead(params.pipelineId)
+      return {
+        meta: [...meta, { 'script:ld+json': breadcrumbData(params.pipelineId) }],
+        links,
+      }
+    }
+    // A saved pipeline lives in one browser, so its address means nothing to search engines.
+    return { meta: [{ title: 'Your tool | Hexlode' }, { name: 'robots', content: 'noindex' }] }
+  },
+  component: ToolRoute,
 })
 
-function PipelineToolRoute() {
+function ToolRoute() {
   const { pipelineId } = Route.useParams()
-  return <PipelineToolPage pipelineId={pipelineId} />
+  const tool = builtInTool(pipelineId)
+  return tool ? <BuiltInToolPage tool={tool} /> : <PipelineToolPage pipelineId={pipelineId} />
 }

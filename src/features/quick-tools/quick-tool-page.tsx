@@ -6,6 +6,7 @@ import { type ReactNode, useEffect, useState } from 'react'
 
 import { Eyebrow } from '#/features/app-shell/eyebrow'
 import { PageColumn } from '#/features/app-shell/page-column'
+import { useArrivingFiles } from '#/features/handover/use-arriving-files'
 import { productRegistry } from '#/features/nodes/registry'
 import { SettingsPanel } from '#/features/quick-tools/settings-panels'
 import { QUICK_TOOL_GROUPS, QUICK_TOOL_ICONS } from '#/features/quick-tools/tool-ui'
@@ -31,7 +32,7 @@ const TOOLS = QUICK_TOOL_GROUPS.flatMap((group) => group.tools)
 function ToolTabs({ current }: { current: QuickTool }) {
   return (
     <nav aria-label="Quick tools" className="-mx-6 overflow-x-auto px-6 sm:mx-0 sm:px-0">
-      <span className="flex min-w-max overflow-hidden rounded-lg border border-border sm:grid sm:min-w-0 sm:grid-cols-6">
+      <span className="flex min-w-max overflow-hidden rounded-lg border border-border sm:grid sm:min-w-0 sm:grid-cols-7">
         {TOOLS.map((tool, index) => {
           const isCurrent = tool === current
           return (
@@ -125,6 +126,8 @@ function runLabel(tool: QuickTool, count: number) {
   const images = count === 1 ? '1 image' : `${formatCount(count)} images`
   if (tool === 'strip-metadata')
     return count > 0 ? `Strip metadata from ${images}` : 'Strip metadata'
+  if (tool === 'remove-background')
+    return count > 0 ? `Remove background from ${images}` : 'Remove background'
   const verb = QUICK_TOOL_DEFINITIONS[tool].title
   return count > 0 ? `${verb} ${images}` : verb
 }
@@ -146,6 +149,15 @@ function QuickToolSteps<T extends QuickTool>({ tool }: { tool: T }) {
   useEffect(() => {
     void controller.setPipeline(quickToolPipeline(tool, settings))
   }, [controller, tool, settings])
+  useArrivingFiles({
+    path: definition.path,
+    onFiles: (files) => void controller.addFiles(files),
+    // Only Strip metadata receives shares, so the shared settings are its own.
+    onShare: (share) => {
+      setSettings(share.settings as QuickToolSettings[T])
+      void controller.addFiles(share.files)
+    },
+  })
 
   return (
     <VStack gap={8}>

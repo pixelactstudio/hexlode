@@ -1,7 +1,9 @@
 /**
  * Main-thread side of live previews. The latest render request wins; older ones resolve to null.
  */
+import { modelsOf } from '#/features/engine/models'
 import type { Pipeline } from '#/features/engine/types'
+import { productRegistry } from '#/features/nodes/registry'
 import {
   type NodePreview,
   type PreviewResponse,
@@ -17,8 +19,14 @@ export interface SampleInfo {
   format: string
 }
 
-export function createPreviewer(createWorker: () => Worker) {
+export interface PreviewerOptions {
+  /** A port to the shared inference worker, asked for once a pipeline runs an on-device model. */
+  connectInference?: () => MessagePort
+}
+
+export function createPreviewer(createWorker: () => Worker, options: PreviewerOptions = {}) {
   const worker = createWorker()
+  let connected = false
   let counter = 0
   let latestRender = 0
   const waiting = new Map<number, (response: PreviewResponse) => void>()
@@ -54,6 +62,15 @@ export function createPreviewer(createWorker: () => Worker) {
     },
     /** Resolves to null when a newer render was requested before this one finished. */
     async render(pipeline: Pipeline): Promise<NodePreview[] | null> {
+      if (
+        !connected &&
+        options.connectInference &&
+        modelsOf(pipeline, productRegistry).length > 0
+      ) {
+        connected = true
+        const port = options.connectInference()
+        worker.postMessage({ type: 'inference', port }, [port])
+      }
       const { requestId, response } = request({ type: 'render', pipeline })
       latestRender = requestId
       const result = await response

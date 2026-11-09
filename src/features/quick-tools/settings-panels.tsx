@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { BACKGROUND_MODEL } from '#/features/background-removal/constants'
 import { ASPECT_PRESETS } from '#/features/nodes/definitions/crop'
 import { AspectShape, CropDiagram } from '#/features/quick-tools/crop-diagram'
 import {
@@ -31,11 +32,13 @@ import {
   QUALITY_FORMATS,
   type QuickTool,
   type QuickToolSettings,
+  type RemoveBackgroundToolSettings,
   type ResizeToolSettings,
   type RotateToolSettings,
   type StripToolSettings,
   type TargetFormat,
 } from '#/features/quick-tools/tools'
+import { formatBytes } from '#/lib/format'
 
 interface PanelProps<T> {
   value: T
@@ -600,6 +603,52 @@ function StripPanel({ value, onChange, isDisabled }: PanelProps<StripToolSetting
   )
 }
 
+export const CUT_OUT_FORMATS = [
+  {
+    value: 'png',
+    label: 'PNG',
+    description: 'Lossless and opens everywhere. Larger files.',
+  },
+  {
+    value: 'webp',
+    label: 'WebP',
+    description: 'Several times smaller, for the web and most apps.',
+  },
+] as const
+
+function RemoveBackgroundPanel({
+  value,
+  onChange,
+  isDisabled,
+}: PanelProps<RemoveBackgroundToolSettings>) {
+  return (
+    <VStack gap={5}>
+      <RadioList
+        label="Save as"
+        value={value.format}
+        onChange={(format) =>
+          onChange({ ...value, format: format as RemoveBackgroundToolSettings['format'] })
+        }
+        isDisabled={isDisabled}
+      >
+        {CUT_OUT_FORMATS.map((format) => (
+          <RadioListItem
+            key={format.value}
+            value={format.value}
+            label={format.label}
+            description={format.description}
+          />
+        ))}
+      </RadioList>
+      <Text type="supporting">
+        A model finds the subject on this device. The first run asks before a one-time{' '}
+        {formatBytes(BACKGROUND_MODEL.bytes)} download from Hexlode's server, which this browser
+        keeps.
+      </Text>
+    </VStack>
+  )
+}
+
 export function SettingsPanel<T extends QuickTool>({
   tool,
   ...props
@@ -615,6 +664,12 @@ export function SettingsPanel<T extends QuickTool>({
       return <CropPanel {...(props as unknown as PanelProps<CropToolSettings>)} />
     case 'rotate':
       return <RotatePanel {...(props as unknown as PanelProps<RotateToolSettings>)} />
+    case 'remove-background':
+      return (
+        <RemoveBackgroundPanel
+          {...(props as unknown as PanelProps<RemoveBackgroundToolSettings>)}
+        />
+      )
     default:
       return <StripPanel {...(props as unknown as PanelProps<StripToolSettings>)} />
   }

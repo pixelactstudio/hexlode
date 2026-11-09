@@ -1,8 +1,17 @@
 import { z } from 'zod'
 
-import { itemType } from '#/features/engine/item-types'
-import type { ImageFormat } from '#/features/engine/types'
-import { asImage, codecsOf, encodeImage, replaceExtension } from '#/features/images/image-item'
+import { itemType, union } from '#/features/engine/item-types'
+import type { EncodableFormat, ImageFormat } from '#/features/engine/types'
+import {
+  asImage,
+  codecsOf,
+  encodeImage,
+  keptFormat,
+  keptFormatWarning,
+  keptTypes,
+  pixelsOf,
+  replaceExtension,
+} from '#/features/images/image-item'
 import type { EncodeOptions } from '#/features/images/types'
 import { ALL_IMAGE_TYPES, OUTPUT_PORT } from '#/features/nodes/constants'
 import { encodeCost, predictedSize } from '#/features/nodes/cost'
@@ -62,7 +71,10 @@ const schema = z.object({
 
 export type ConvertSettings = z.infer<typeof schema>
 
-export function encodeOptionsFor(settings: ConvertSettings, format: ImageFormat): EncodeOptions {
+export function encodeOptionsFor(
+  settings: ConvertSettings,
+  format: EncodableFormat,
+): EncodeOptions {
   if (format === 'qoi') return { format, options: {} }
   return { format, options: settings[format] } as EncodeOptions
 }
@@ -76,17 +88,22 @@ export const convertNode = defineNode({
   ports: () => OUTPUT_PORT,
   accepts: () => ALL_IMAGE_TYPES,
   produces: (settings, input) =>
-    settings.format === 'original' ? input : new Set([itemType('image', settings.format)]),
+    settings.format === 'original'
+      ? settings.keepSmaller
+        ? union([input, keptTypes(input)])
+        : keptTypes(input)
+      : new Set([itemType('image', settings.format)]),
   simulate: (settings, meta) => {
-    const format = settings.format === 'original' ? meta.format : settings.format
+    const format =
+      settings.format === 'original' ? keptFormat(meta.format as ImageFormat) : settings.format
     return [
       {
         port: 'out',
         meta: {
           ...meta,
           format,
-          name: replaceExtension(meta.name, format as ImageFormat),
-          size: predictedSize(meta, format as ImageFormat),
+          name: replaceExtension(meta.name, format),
+          size: predictedSize(meta, format),
         },
       },
     ]
@@ -94,17 +111,21 @@ export const convertNode = defineNode({
   cost: (settings, meta) =>
     encodeCost(
       meta,
-      settings.format === 'original' ? (meta.format as ImageFormat) : settings.format,
+      settings.format === 'original' ? keptFormat(meta.format as ImageFormat) : settings.format,
     ),
   async run(input, settings, context) {
     if (input.mode !== 'each') throw new Error('Convert runs per item.')
     const item = asImage(input.item)
+    const codecs = codecsOf(context)
+    const own = item.meta.format as ImageFormat
     const format =
-      settings.format === 'original' ? (item.meta.format as ImageFormat) : settings.format
+      settings.format === 'original'
+        ? keptFormat(own, await pixelsOf(item, codecs))
+        : settings.format
     const encoded = await encodeImage(
       item,
       encodeOptionsFor(settings, format),
-      codecsOf(context),
+      codecs,
       context.warn,
     )
     const original = item.payload.encoded
@@ -114,6 +135,8 @@ export const convertNode = defineNode({
       original !== undefined &&
       !item.payload.metadataChanged &&
       (encoded.meta.size ?? 0) >= original.byteLength
-    return [{ port: 'out', item: keepOriginal ? item : encoded }]
+    if (keepOriginal) return [{ port: 'out', item }]
+    if (settings.format === 'original' && format !== own) context.warn(keptFormatWarning(format))
+    return [{ port: 'out', item: encoded }]
   },
 })

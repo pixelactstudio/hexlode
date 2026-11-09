@@ -65,6 +65,31 @@ describe('inspectImageHeader', () => {
     })
   })
 
+  it.each([
+    // Coded as 64x64 and cropped to 48x32 by a clean aperture.
+    ['photo.heic', 'image/heic', 48, 32],
+    ['alpha.heic', 'image/heif', 48, 32],
+    // Stored landscape and turned a quarter by its `irot` property, as phones write photos.
+    ['oriented.heic', '', 32, 48],
+    // A 96x64 grid of 32x32 tiles with a 24x16 thumbnail, turned a quarter.
+    ['grid.heic', 'image/heic', 64, 96],
+  ])('reads %s as HEIC with the size it shows at', (name, declaredType, width, height) => {
+    expect(inspectImageHeader(fixture(name), declaredType)).toEqual({
+      format: 'heic',
+      mimeType: 'image/heic',
+      width,
+      height,
+      estimatedDecodeBytes: width * height * 4,
+    })
+  })
+
+  it('refuses a HEIC file that says it is a JPEG', () => {
+    assert.throws(
+      () => inspectImageHeader(fixture('photo.heic'), 'image/jpeg'),
+      (error) => error instanceof ImageValidationError && error.code === 'mime_mismatch',
+    )
+  })
+
   it('reads a JPEG XL codestream whose width follows from an aspect ratio', () => {
     // FF 0A, then SizeHeader: div8=1, h_div8-1=3 (height 32), ratio=4 (3:2, width 48).
     const bits = [1, 1, 1, 0, 0, 0, 0, 0, 1]
@@ -78,7 +103,7 @@ describe('inspectImageHeader', () => {
 
   it('refuses a file that is no supported image', () => {
     expect(() => inspectImageHeader(new TextEncoder().encode('%PDF-1.7 hello').buffer)).toThrow(
-      'Choose a JPEG, PNG, WebP, AVIF, JPEG XL or QOI image.',
+      'Choose a JPEG, PNG, WebP, AVIF, JPEG XL, QOI or HEIC image.',
     )
   })
 

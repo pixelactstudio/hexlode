@@ -16,3 +16,13 @@ export function base64ToBytes(text: string) {
   for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
   return bytes
 }
+
+/** Base64 with `-` and `_` and no padding, safe in links without escaping. */
+export function bytesToBase64Url(bytes: Uint8Array) {
+  return bytesToBase64(bytes).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')
+}
+
+export function base64UrlToBytes(text: string) {
+  const base64 = text.replaceAll('-', '+').replaceAll('_', '/')
+  return base64ToBytes(base64.padEnd(Math.ceil(base64.length / 4) * 4, '='))
+}

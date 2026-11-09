@@ -31,6 +31,11 @@ export interface PoolHostOptions {
   folders?: Map<string, FolderTarget>
   archiveNames?: Map<string, string>
   singleFileAsIs?: boolean
+  /**
+   * A port to the shared inference worker for each new engine worker, when the pipeline runs an
+   * on-device model. Every worker reaches the one copy of the model through its own port.
+   */
+  connectInference?: () => MessagePort
 }
 
 interface Task {
@@ -97,6 +102,10 @@ export function createWorkerPoolHost(options: PoolHostOptions): RunHost & { disp
         task.reject(entry.failure)
         tasks.delete(taskId)
       }
+    }
+    if (options.connectInference) {
+      const port = options.connectInference()
+      worker.postMessage({ type: 'inference', port } satisfies WorkerRequest, [port])
     }
     if (beginMessage) worker.postMessage(beginMessage)
     return entry

@@ -9,6 +9,7 @@ import type {
   ImageValidationErrorCode,
   SupportedImageFormat,
 } from '#/features/image-input/types'
+import { brandsOf, itemProperties, metaChildren, primaryItemId } from '#/lib/isobmff'
 
 type Dimensions = Pick<ImageInfo, 'width' | 'height'>
 
@@ -20,6 +21,8 @@ const JPEG_START_OF_FRAME_MARKERS = new Set([
 ])
 const JXL_CONTAINER_SIGNATURE = [0, 0, 0, 0x0c, 0x4a, 0x58, 0x4c, 0x20, 0x0d, 0x0a, 0x87, 0x0a]
 const AVIF_BRANDS = new Set(['avif', 'avis'])
+/** HEVC-coded HEIF brands, then the generic HEIF brands for files that only name those. */
+const HEIC_BRANDS = new Set(['heic', 'heix', 'heim', 'heis', 'hevc', 'hevx', 'mif1', 'msf1'])
 
 export const IMAGE_MIME_TYPES: Record<SupportedImageFormat, string> = {
   jpeg: 'image/jpeg',
@@ -28,6 +31,7 @@ export const IMAGE_MIME_TYPES: Record<SupportedImageFormat, string> = {
   avif: 'image/avif',
   jxl: 'image/jxl',
   qoi: 'image/qoi',
+  heic: 'image/heic',
 }
 
 export const IMAGE_EXTENSIONS: Record<SupportedImageFormat, string> = {
@@ -37,6 +41,7 @@ export const IMAGE_EXTENSIONS: Record<SupportedImageFormat, string> = {
   avif: 'avif',
   jxl: 'jxl',
   qoi: 'qoi',
+  heic: 'heic',
 }
 
 export class ImageValidationError extends Error {
@@ -138,6 +143,39 @@ function readAvif(bytes: Uint8Array): Dimensions | null {
   malformed('AVIF')
 }
 
+/**
+ * HEIC sizes come from the primary item's properties, in their listed order: `ispe` gives the
+ * coded size, a clean aperture (`clap`) crops it, and a quarter turn (`irot`) swaps it. Decoders
+ * apply all three, so this is the size the image shows and decodes at.
+ */
+function readHeic(bytes: Uint8Array): Dimensions | null {
+  const brands = brandsOf(bytes)
+  if (!brands.some((brand) => HEIC_BRANDS.has(brand))) return null
+  const children = metaChildren(bytes)
+  const primary = children && primaryItemId(bytes, children)
+  if (!children || primary === null) malformed('HEIC')
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  let size: Dimensions | null = null
+  for (const property of itemProperties(bytes, children, primary)) {
+    if (property.type === 'ispe' && property.end - property.start >= 12) {
+      size = {
+        width: view.getUint32(property.start + 4),
+        height: view.getUint32(property.start + 8),
+      }
+    } else if (property.type === 'clap' && size && property.end - property.start >= 16) {
+      const fraction = (at: number) =>
+        Math.round(
+          view.getUint32(property.start + at) / (view.getUint32(property.start + at + 4) || 1),
+        )
+      size = { width: fraction(0), height: fraction(8) }
+    } else if (property.type === 'irot' && size && bytes[property.start] % 2 === 1) {
+      size = { width: size.height, height: size.width }
+    }
+  }
+  if (!size) malformed('HEIC')
+  return size
+}
+
 class BitReader {
   private position = 0
   constructor(private readonly bytes: Uint8Array) {}
@@ -209,6 +247,7 @@ const READERS: [SupportedImageFormat, (bytes: Uint8Array) => Dimensions | null][
   ['avif', readAvif],
   ['jxl', readJxl],
   ['qoi', readQoi],
+  ['heic', readHeic],
 ]
 
 function estimateDecodeBytes(width: number, height: number) {
@@ -229,8 +268,15 @@ function estimateDecodeBytes(width: number, height: number) {
   return estimatedDecodeBytes
 }
 
+const DECLARED_ALIASES: Record<string, string> = {
+  'image/jpg': 'image/jpeg',
+  'image/heif': 'image/heic',
+  'image/heic-sequence': 'image/heic',
+  'image/heif-sequence': 'image/heic',
+}
+
 function normalizeDeclaredType(type: string) {
-  return type === 'image/jpg' ? 'image/jpeg' : type
+  return DECLARED_ALIASES[type] ?? type
 }
 
 /**
@@ -266,6 +312,6 @@ export function inspectImageHeader(buffer: ArrayBuffer, declaredType = '', fileS
   }
   throw new ImageValidationError(
     'unsupported_format',
-    'Choose a JPEG, PNG, WebP, AVIF, JPEG XL or QOI image.',
+    'Choose a JPEG, PNG, WebP, AVIF, JPEG XL, QOI or HEIC image.',
   )
 }

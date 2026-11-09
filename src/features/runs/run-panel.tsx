@@ -6,8 +6,9 @@ import { ProgressBar } from '@astryxdesign/core/ProgressBar'
 import { HStack, VStack } from '@astryxdesign/core/Stack'
 import { Heading, Text } from '@astryxdesign/core/Text'
 import { Download } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 
+import { ModelConsentDialog } from '#/features/background-removal/model-consent'
 import { describeEstimate } from '#/features/engine/estimate'
 import { FileDrop } from '#/features/runs/file-drop'
 import { ResultsTable, resultRows } from '#/features/runs/results-table'
@@ -15,6 +16,7 @@ import {
   downloadDelivery,
   type RunController,
   type RunControllerState,
+  type Surface,
 } from '#/features/runs/run-controller'
 import { SourceList } from '#/features/runs/source-list'
 import { formatBytes, formatCount, formatDuration } from '#/lib/format'
@@ -112,39 +114,69 @@ export function RunSection({
   outputNodeId,
   runLabel,
   surface,
+  countRun,
+  blockedReason,
 }: {
   controller: RunController
   state: RunControllerState
   outputNodeId: string
   runLabel: string
-  surface: 'quick-tool' | 'pipeline-tool'
+  surface: Exclude<Surface, 'studio'>
+  /** For a saved pipeline: counts this run and returns how many times it has run. */
+  countRun?: () => number | undefined
+  /** What still has to be set before the pipeline can run, shown in place of the status. */
+  blockedReason?: string | null
 }) {
   const { stats, sources, running } = state
   const delivery = stats.deliveries[outputNodeId]
-  const canRun = sources.length > 0 && !running && !state.preparing
+  const canRun = sources.length > 0 && !running && !state.preparing && !blockedReason
   const count = sources.length
   const done = stats.status !== 'idle' && stats.status !== 'running'
   const delivered = delivery?.files.length ?? 0
   const totalIn = sources.reduce((sum, source) => sum + (source.meta.size ?? 0), 0)
 
-  const status = running
-    ? `Working on ${formatCount(Math.min(count, stats.finishedItems + 1))} of ${formatCount(count)}…`
-    : done && stats.status === 'complete'
-      ? `${formatCount(delivered)} of ${plural(count, 'image')} done in ${formatDuration(stats.ms)}. ${formatBytes(totalIn)} became ${formatBytes(delivery?.bytes ?? 0)}.`
-      : done && stats.status === 'cancelled'
-        ? 'Cancelled. The images that finished can still be downloaded.'
-        : count === 0
-          ? 'Add images to start.'
-          : state.estimate
-            ? `${plural(count, 'image')} ready · ${describeEstimate(state.estimate)}`
-            : `${plural(count, 'image')} ready`
+  const status =
+    blockedReason && !running
+      ? blockedReason
+      : running
+        ? `Working on ${formatCount(Math.min(count, stats.finishedItems + 1))} of ${formatCount(count)}…`
+        : done && stats.status === 'complete'
+          ? `${formatCount(delivered)} of ${plural(count, 'image')} done in ${formatDuration(stats.ms)}. ${formatBytes(totalIn)} became ${formatBytes(delivery?.bytes ?? 0)}.`
+          : done && stats.status === 'cancelled'
+            ? 'Cancelled. The images that finished can still be downloaded.'
+            : count === 0
+              ? 'Add images to start.'
+              : state.estimate
+                ? `${plural(count, 'image')} ready · ${describeEstimate(state.estimate)}`
+                : `${plural(count, 'image')} ready`
 
+  const [asking, setAsking] = useState(false)
+  const missing = state.models.filter((need) => !need.stored)
   const run = async () => {
-    await controller.start({ singleFileAsIs: true })
+    // A model the pipeline needs downloads only once the person agreed.
+    if (missing.length > 0) {
+      setAsking(true)
+      return
+    }
+    await controller.start({ singleFileAsIs: true, pipelineRuns: countRun?.() })
   }
 
   return (
     <VStack gap={3}>
+      <ModelConsentDialog
+        isOpen={asking}
+        needs={missing}
+        progress={state.modelDownload}
+        onDownload={(signal) => controller.downloadModels({ signal })}
+        onDownloaded={() => {
+          setAsking(false)
+          void controller.start({ singleFileAsIs: true, pipelineRuns: countRun?.() })
+        }}
+        onDecline={(cancelledDownload) => {
+          if (!cancelledDownload) controller.declineModels()
+          setAsking(false)
+        }}
+      />
       {state.error ? (
         <Banner status="error" title="The run stopped" description={state.error} />
       ) : null}

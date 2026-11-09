@@ -1,14 +1,18 @@
 /**
  * Generates the image fixtures in src/features/images/__tests__/fixtures.
  * Run with `node scripts/generate-fixtures.mjs`. The EXIF blocks are assembled byte by byte here,
- * independently of the app's metadata code, so tests can check that code against them.
+ * independently of the app's metadata code, so tests can check that code against them. The HEIC
+ * fixtures also need libheif's `heif-enc` on PATH, as described at the end.
  *
  * Every image is 48x32: the left half red, the right half blue. Images with alpha have a fully
- * transparent top half.
+ * transparent top half. grid.heic is 96x64 in four coloured quarters.
  */
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { execFile } from 'node:child_process'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const out = join(root, 'src/features/images/__tests__/fixtures')
@@ -200,3 +204,80 @@ await save('photo.qoi', await qoiEncode.default(pixels()))
 // A JPEG whose header is valid but whose image data is cut off.
 await save('malformed.jpg', new Uint8Array(jpeg).slice(0, 180))
 console.log('Fixtures written to', out)
+
+/*
+ * HEIC fixtures, laid out the way phone cameras write them: HEVC coded, with EXIF in its own item,
+ * a camera rotation stored as an `irot` property next to the EXIF orientation tag, and the large
+ * photo cut into a grid of tiles with a thumbnail and a Display P3 colour profile. They are
+ * encoded by libheif's `heif-enc` with x265, which must be on PATH (for example through
+ * `nix shell nixpkgs#libheif`). heif-enc copies EXIF and the colour profile from a JPEG input,
+ * and turns its EXIF orientation into `irot` and `imir` while keeping the tag, as phones do.
+ */
+const execute = promisify(execFile)
+const heifEnc = await execute('heif-enc', ['--version']).catch(() => null)
+if (!heifEnc) {
+  console.log('heif-enc is not on PATH, so the HEIC fixtures were left as they are.')
+} else {
+  /** Display P3 (DisplayP3-v4.icc) from github.com/saucecontrol/Compact-ICC-Profiles, CC0 1.0. */
+  const DISPLAY_P3 = Uint8Array.from(
+    atob(
+      'AAAB4GxjbXMEIAAAbW50clJHQiBYWVogB+IAAwAUAAkADgAdYWNzcE1TRlQAAAAAc2F3c2N0cmwAAAAAAAAAAAAAAAAAAPbWAAEAAAAA0y1oYW5kwzc6zlf4VsuhS9h6V6sQYQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKZGVzYwAAAPwAAAAiY3BydAAAASAAAAAid3RwdAAAAUQAAAAUY2hhZAAAAVgAAAAsclhZWgAAAYQAAAAUZ1hZWgAAAZgAAAAUYlhZWgAAAawAAAAUclRSQwAAAcAAAAAgZ1RSQwAAAcAAAAAgYlRSQwAAAcAAAAAgbWx1YwAAAAAAAAABAAAADGVuVVMAAAAGAAAAHABzAFAAMwAAbWx1YwAAAAAAAAABAAAADGVuVVMAAAAGAAAAHABDAEMAMAAAWFlaIAAAAAAAAPbWAAEAAAAA0y1zZjMyAAAAAAABDEIAAAXe///zJQAAB5MAAP2Q///7of///aIAAAPcAADAblhZWiAAAAAAAACD3wAAPb////+7WFlaIAAAAAAAAEq/AACxNwAACrlYWVogAAAAAAAAKDgAABEKAADIuXBhcmEAAAAAAAMAAAACZmkAAPKnAAANWQAAE9AAAApb',
+    ),
+    (character) => character.charCodeAt(0),
+  )
+  const jpegWithIcc = (jpegBytes, icc) => {
+    const payload = [...new TextEncoder().encode('ICC_PROFILE'), 0, 1, 1, ...icc]
+    const length = payload.length + 2
+    const segment = [0xff, 0xe2, length >> 8, length & 0xff, ...payload]
+    return Uint8Array.from([...jpegBytes.slice(0, 2), ...segment, ...jpegBytes.slice(2)])
+  }
+  /** 96x64 in quarters: red top left, green top right, blue bottom left, white bottom right. */
+  const quarters = () => {
+    const width = 96
+    const height = 64
+    const data = new Uint8ClampedArray(width * height * 4)
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const top = y < height / 2
+        const left = x < width / 2
+        const colour = top
+          ? left
+            ? [255, 0, 0]
+            : [0, 255, 0]
+          : left
+            ? [0, 0, 255]
+            : [255, 255, 255]
+        data.set([...colour, 255], (y * width + x) * 4)
+      }
+    }
+    return new ImageData(data, width, height)
+  }
+
+  const work = await mkdtemp(join(tmpdir(), 'hexlode-heic-'))
+  const heic = async (name, input, inputName, options = []) => {
+    const source = join(work, inputName)
+    await writeFile(source, new Uint8Array(input))
+    const target = join(work, name)
+    await execute('heif-enc', ['-q', '90', ...options, '-o', target, source])
+    await save(name, await readFile(target))
+    return readFile(target)
+  }
+  const photo = await heic('photo.heic', jpegWithExif(jpeg, exif()), 'photo.jpg')
+  await heic(
+    'oriented.heic',
+    jpegWithExif(jpeg, exif({ orientation: 6, gps: false })),
+    'oriented.jpg',
+  )
+  const large = await jpegEncode.default(quarters(), { quality: 95 })
+  await heic(
+    'grid.heic',
+    jpegWithIcc(jpegWithExif(large, exif({ orientation: 6 })), DISPLAY_P3),
+    'grid.jpg',
+    ['--cut-tiles', '32', '--thumb', '24'],
+  )
+  await heic('alpha.heic', await pngEncode.default(pixels({ alpha: true })), 'alpha.png')
+  // A HEIC whose boxes are intact but whose coded image is cut off.
+  await save('malformed.heic', new Uint8Array(photo).slice(0, photo.length - 120))
+  await rm(work, { recursive: true, force: true })
+  console.log('HEIC fixtures written with', heifEnc.stdout.trim().split('\n')[0])
+}

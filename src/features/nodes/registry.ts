@@ -22,6 +22,7 @@ import { paletteNode } from '#/features/nodes/definitions/palette'
 import { compareNode, inspectNode } from '#/features/nodes/definitions/passthrough'
 import { pixelArtNode } from '#/features/nodes/definitions/pixel-art'
 import { placeholderNode } from '#/features/nodes/definitions/placeholder'
+import { removeBackgroundNode } from '#/features/nodes/definitions/remove-background'
 import { renameNode } from '#/features/nodes/definitions/rename'
 import { resizeNode } from '#/features/nodes/definitions/resize'
 import { responsiveSetNode } from '#/features/nodes/definitions/responsive-set'
@@ -77,8 +78,11 @@ export const BATCH_THREE = [
   imagesToPdfNode,
 ] as unknown as AnyNodeDefinition[]
 
+/** Nodes added in version 2, in catalogue order. */
+export const VERSION_TWO = [removeBackgroundNode] as unknown as AnyNodeDefinition[]
+
 /** Every product node. */
-export const PRODUCT_NODES = [...BATCH_ONE, ...BATCH_TWO, ...BATCH_THREE]
+export const PRODUCT_NODES = [...BATCH_ONE, ...BATCH_TWO, ...BATCH_THREE, ...VERSION_TWO]
 
 export function createRegistry(nodes: AnyNodeDefinition[]): NodeRegistry {
   const byType = new Map(nodes.map((node) => [node.type, node]))

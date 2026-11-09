@@ -16,6 +16,22 @@ describe('quick tool pipelines', () => {
     expect(pipeline.nodes.map((node) => node.type).at(-1)).toBe('output')
   })
 
+  it('Remove background cuts the subject out, then saves PNG or WebP, which keep transparency', () => {
+    const png = quickToolPipeline('remove-background', { format: 'png' })
+    expect(png.nodes.map((node) => node.type)).toEqual([
+      'files',
+      'remove-background',
+      'convert',
+      'output',
+    ])
+    expect(settingsOf(png, 'convert')).toEqual({ format: 'png' })
+    const webp = quickToolPipeline('remove-background', { format: 'webp' })
+    expect(settingsOf(webp, 'convert')).toEqual({
+      format: 'webp',
+      webp: { quality: 90, lossless: false },
+    })
+  })
+
   it('Convert encodes to the chosen format with its quality', () => {
     const pipeline = quickToolPipeline('convert', { format: 'avif', quality: 45, lossless: false })
     expect(settingsOf(pipeline, 'convert')).toEqual({

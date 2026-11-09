@@ -9,7 +9,10 @@ import { COLOUR_MODES } from '#/features/theme/constants'
 const count = z.number().int().nonnegative()
 const code = z.string().regex(/^[a-z0-9_]{1,40}$/)
 const nodeType = z.string().regex(/^[a-z0-9.-]{1,40}$/)
-const surface = z.enum(['quick-tool', 'pipeline-tool', 'studio'])
+export const SURFACES = ['quick-tool', 'pipeline-tool', 'built-in-tool', 'studio'] as const
+const surface = z.enum(SURFACES)
+/** A built-in tool's slug, as in `/tools/<slug>`. */
+const builtInTool = z.string().regex(/^[a-z0-9-]{1,40}$/)
 export const QUICK_TOOLS = [
   'convert',
   'compress',
@@ -17,8 +20,12 @@ export const QUICK_TOOLS = [
   'crop',
   'rotate',
   'strip-metadata',
+  'remove-background',
 ] as const
 const tool = z.enum(QUICK_TOOLS)
+/** An on-device model's ID, such as `birefnet-lite-512`. */
+const model = z.string().regex(/^[a-z0-9-]{1,40}$/)
+const duration = z.number().nonnegative()
 const settingValue: z.ZodType<unknown> = z.lazy(() =>
   z.union([
     z.number(),
@@ -44,8 +51,17 @@ export const EVENTS = {
     description: 'A page was opened.',
     properties: z
       .object({
-        page: z.enum(['home', 'quick-tool', 'pipeline-tool', 'studio', 'privacy']),
+        page: z.enum([
+          'home',
+          'quick-tool',
+          'pipeline-tool',
+          'built-in-tool',
+          'studio',
+          'privacy',
+          'open',
+        ]),
         tool: tool.optional(),
+        builtInTool: builtInTool.optional(),
       })
       .strict(),
   },
@@ -59,17 +75,27 @@ export const EVENTS = {
       .object({ surface, accepted: count, refused: count, refusalCodes: z.array(code) })
       .strict(),
   },
+  files_opened: {
+    description:
+      'Files were opened in the installed app, from the file manager or a share: how many images and pipeline files.',
+    properties: z
+      .object({ source: z.enum(['file-handler', 'share']), images: count, pipelineFiles: count })
+      .strict(),
+  },
   run_started: {
-    description: 'A run started: the pipeline shape and settings, the item count and the estimate.',
+    description:
+      'A run started: the pipeline shape and settings, the item count, the estimate and, for a saved pipeline, how many times it has run.',
     properties: z
       .object({
         surface,
         tool: tool.optional(),
+        builtInTool: builtInTool.optional(),
         itemCount: count,
         workers: count,
         estimatedEncodes: count,
         estimatedSeconds: z.number().nonnegative(),
         pipeline: shape,
+        pipelineRuns: count.optional(),
       })
       .strict(),
   },
@@ -80,6 +106,7 @@ export const EVENTS = {
       .object({
         surface,
         tool: tool.optional(),
+        builtInTool: builtInTool.optional(),
         status: z.enum(['complete', 'cancelled', 'failed']),
         itemCount: count,
         processed: count,
@@ -91,6 +118,37 @@ export const EVENTS = {
         outputBytes: count,
         failureCodes: z.array(code),
         warningCodes: z.array(code),
+      })
+      .strict(),
+  },
+  model_downloaded: {
+    description:
+      'An on-device model was downloaded once the person agreed, or the download was declined, cancelled or failed: its size, how long it took and an error code.',
+    properties: z
+      .object({
+        surface,
+        model,
+        status: z.enum(['complete', 'declined', 'cancelled', 'failed']),
+        bytes: count,
+        durationMs: duration,
+        errorCode: code.optional(),
+      })
+      .strict(),
+  },
+  model_ran: {
+    description:
+      'A run used an on-device model: whether WebGPU or WebAssembly ran it, how many times, how long it took to start and to run, and failure codes.',
+    properties: z
+      .object({
+        surface,
+        tool: tool.optional(),
+        builtInTool: builtInTool.optional(),
+        model,
+        backend: z.enum(['webgpu', 'wasm']).optional(),
+        runs: count,
+        startMs: duration.optional(),
+        meanRunMs: duration,
+        failureCodes: z.array(code),
       })
       .strict(),
   },
@@ -137,6 +195,18 @@ export const EVENTS = {
     properties: z
       .object({
         action: z.enum(['export', 'import']),
+        result: z.enum(['ok', 'error']),
+        nodeCount: count,
+        errorCode: code.optional(),
+      })
+      .strict(),
+  },
+  pipeline_link: {
+    description:
+      'A pipeline link was copied or opened, with an error code when it could not be made or read.',
+    properties: z
+      .object({
+        action: z.enum(['copy', 'open']),
         result: z.enum(['ok', 'error']),
         nodeCount: count,
         errorCode: code.optional(),

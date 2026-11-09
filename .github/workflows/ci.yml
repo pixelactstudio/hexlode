@@ -160,6 +160,11 @@ jobs:
           PORT=3000 pnpm start > server.log 2>&1 &
           bash scripts/smoke.sh http://localhost:3000 || { cat server.log; exit 1; }
 
+      # The production build in Chromium: offline after one visit, shares and file launches.
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: End-to-end tests
+        run: pnpm test:e2e
+
   docker:
     name: docker image
     runs-on: ubuntu-latest

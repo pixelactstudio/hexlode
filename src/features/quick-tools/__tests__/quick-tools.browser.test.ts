@@ -1,8 +1,10 @@
 /**
  * Exit gate: every quick tool and every available template runs on real JPEG, PNG, WebP, AVIF,
- * JPEG XL and QOI files, and every file it produces decodes.
+ * JPEG XL, QOI and HEIC files, and every file it produces decodes.
  */
 import { describe, expect, it } from 'vitest'
+
+import { redSubjectSegmenter } from '#/features/background-removal/__tests__/stand-in-segmenter'
 
 import {
   ALL_FORMAT_FIXTURES,
@@ -32,12 +34,20 @@ const EXTENSION_FORMAT: Record<string, string> = {
   avif: 'avif',
   jxl: 'jxl',
   qoi: 'qoi',
+  heic: 'heic',
 }
 
 const CASES: [
   QuickTool,
   Record<string, unknown>,
-  expected: { width: number; height: number; format?: string; red?: [x: number, y: number] },
+  expected: {
+    width: number
+    height: number
+    format?: string
+    /** What a HEIC photo becomes when the tool keeps formats: JPEG unless set. */
+    heic?: string
+    red?: [x: number, y: number]
+  },
 ][] = [
   ['convert', {}, { width: 48, height: 32, format: 'webp' }],
   ['convert', { format: 'jxl', lossless: true }, { width: 48, height: 32, format: 'jxl' }],
@@ -51,7 +61,7 @@ const CASES: [
   ['crop', {}, { width: 32, height: 32 }],
   ['crop', { aspect: '16:9', position: 'top' }, { width: 48, height: 27 }],
   ['rotate', { auto: false, rotate: 90 }, { width: 32, height: 48, red: [0, 0] }],
-  ['strip-metadata', {}, { width: 48, height: 32 }],
+  ['strip-metadata', {}, { width: 48, height: 32, heic: 'heic' }],
 ]
 
 describe('quick tools on every input format', () => {
@@ -61,19 +71,41 @@ describe('quick tools on every input format', () => {
       quickToolPipeline(tool, settings as never),
       ALL_FORMAT_FIXTURES,
     )
-    expect(statuses('step')).toEqual(Array(6).fill('processed'))
+    expect(statuses('step')).toEqual(ALL_FORMAT_FIXTURES.map(() => 'processed'))
     const delivered = files(OUTPUT_NODE_ID)
-    expect(delivered).toHaveLength(6)
+    expect(delivered).toHaveLength(ALL_FORMAT_FIXTURES.length)
     for (const [index, file] of delivered.entries()) {
       const image = await decodeFile(file.bytes)
       const sourceFormat = EXTENSION_FORMAT[ALL_FORMAT_FIXTURES[index].split('.').pop() as string]
+      const kept = sourceFormat === 'heic' ? (expected.heic ?? 'jpeg') : sourceFormat
       expect(image).toMatchObject({
         width: expected.width,
         height: expected.height,
-        format: expected.format ?? sourceFormat,
+        format: expected.format ?? kept,
       })
       const [x, y] = expected.red ?? [0, expected.height - 1]
       expect(near(pixelAt(image, x, y), RED, 64)).toBe(true)
+    }
+  })
+
+  it.each([
+    'png',
+    'webp',
+  ] as const)('remove-background cuts out every format, saved as %s with transparency', async (format) => {
+    const { files, statuses } = await run(
+      quickToolPipeline('remove-background', { format }),
+      ALL_FORMAT_FIXTURES,
+      // The model's stand-in sees the red half of each fixture as the subject.
+      { services: { segmenter: redSubjectSegmenter() } },
+    )
+    expect(statuses('step')).toEqual(Array(ALL_FORMAT_FIXTURES.length).fill('processed'))
+    expect(files(OUTPUT_NODE_ID)).toHaveLength(ALL_FORMAT_FIXTURES.length)
+    for (const file of files(OUTPUT_NODE_ID)) {
+      expect(file.name.endsWith(`.${format}`)).toBe(true)
+      const image = await decodeFile(file.bytes)
+      expect(image).toMatchObject({ format, width: 48, height: 32 })
+      expect(near(pixelAt(image, 4, 16), RED, 64)).toBe(true)
+      expect(pixelAt(image, 44, 16)[3]).toBe(0)
     }
   })
 
@@ -82,10 +114,45 @@ describe('quick tools on every input format', () => {
     const { files } = await run(quickToolPipeline('strip-metadata', settings), [
       'photo.jpg',
       'location.png',
+      'photo.heic',
     ])
     for (const file of files(OUTPUT_NODE_ID)) {
       expect((await decodeFile(file.bytes)).metadata).toEqual({})
     }
+  })
+
+  it('Convert turns iPhone-style HEIC photos into upright JPEGs that keep their details', async () => {
+    const { files } = await run(
+      quickToolPipeline('convert', { format: 'jpeg', quality: 85, lossless: false }),
+      ['grid.heic', 'oriented.heic'],
+    )
+    const [grid, oriented] = await Promise.all(
+      files(OUTPUT_NODE_ID).map(async ({ name, bytes }) => ({
+        name,
+        ...(await decodeFile(bytes)),
+      })),
+    )
+    expect(grid).toMatchObject({ name: 'grid.jpg', format: 'jpeg', width: 64, height: 96 })
+    expect(grid.exif).toMatchObject({
+      orientation: 1,
+      hasGps: true,
+      dateTaken: '2026:01:02 03:04:05',
+    })
+    expect(oriented).toMatchObject({ name: 'oriented.jpg', width: 32, height: 48 })
+    expect(near(pixelAt(oriented, 16, 4), RED)).toBe(true)
+  })
+
+  it('Strip metadata removes only location from HEIC photos and keeps them HEIC', async () => {
+    const { files } = await run(
+      quickToolPipeline('strip-metadata', { mode: 'location', keepColourProfile: true }),
+      ['grid.heic'],
+    )
+    const [file] = files(OUTPUT_NODE_ID)
+    expect(file.name).toBe('grid.heic')
+    const image = await decodeFile(file.bytes)
+    expect(image).toMatchObject({ format: 'heic', width: 64, height: 96 })
+    expect(image.exif).toMatchObject({ hasGps: false, copyright: '(c) 2026 Ada Example' })
+    expect(image.metadata.icc?.length).toBe(480)
   })
 })
 

@@ -20,8 +20,9 @@ type Migration = (file: Record<string, unknown>) => Record<string, unknown>
 /** Upgrades a file from the version it is keyed by to the next version. */
 export const MIGRATIONS: Record<number, Migration> = {}
 
-export function exportPipelineFile({ name, pipeline }: NamedPipeline) {
-  const file = {
+/** The pipeline file as plain data, before it is written as text. */
+export function pipelineFileData({ name, pipeline }: NamedPipeline) {
+  return {
     format: PIPELINE_FILE_FORMAT,
     version: PIPELINE_FILE_VERSION,
     name,
@@ -40,7 +41,10 @@ export function exportPipelineFile({ name, pipeline }: NamedPipeline) {
       })),
     },
   }
-  return `${JSON.stringify(file, null, 2)}\n`
+}
+
+export function exportPipelineFile(named: NamedPipeline) {
+  return `${JSON.stringify(pipelineFileData(named), null, 2)}\n`
 }
 
 /** Checks a pipeline against the registry: node types, their settings and the connections. */

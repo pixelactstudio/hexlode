@@ -16,13 +16,18 @@ import { Text } from '@astryxdesign/core/Text'
 import { useToast } from '@astryxdesign/core/Toast'
 import { useNavigate } from '@tanstack/react-router'
 import { ReactFlowProvider, useReactFlow } from '@xyflow/react'
-import { CircleHelp, Download, Play, Plus, Redo2, Save, Settings, Undo2 } from 'lucide-react'
+import { CircleHelp, Download, Link2, Play, Plus, Redo2, Save, Settings, Undo2 } from 'lucide-react'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
+import {
+  ModelConsentDialog,
+  ModelDownloadContext,
+} from '#/features/background-removal/model-consent'
 import { describeEstimate } from '#/features/engine/estimate'
 import type { FolderTarget } from '#/features/engine/opfs/run-stores'
 import { pickOutputFolder } from '#/features/image-input/folder'
 import { productRegistry } from '#/features/nodes/registry'
+import { useSharePipeline } from '#/features/pipeline-tools/use-share-pipeline'
 import { draftStore, type RecoverableDraft } from '#/features/pipelines/draft'
 import {
   exportPipelineFile,
@@ -149,6 +154,7 @@ function Studio({
   )
   const flow = useReactFlow()
   const showToast = useToast()
+  const share = useSharePipeline()
   const navigate = useNavigate()
   const importInput = useRef<HTMLInputElement>(null)
   const [dialog, setDialog] = useState<
@@ -158,6 +164,8 @@ function Studio({
   const [recovery, setRecovery] = useState<RecoverableDraft | null>(null)
   const [nodeRequest, setNodeRequest] = useState<AddNodeRequest | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
+  /** Why the model download was offered: to run, or for live previews from the inspector. */
+  const [consent, setConsent] = useState<'run' | 'preview' | null>(null)
   const [libraryCollapsed, setLibraryCollapsed] = useState(false)
 
   useEffect(() => {
@@ -269,6 +277,12 @@ function Studio({
   const hasOutput = studio.pipeline.nodes.some((node) => node.type === 'output')
 
   const start = async () => {
+    // A model the pipeline needs downloads only once the person agreed.
+    await session.sync()
+    if (runs.getState().models.some((need) => !need.stored)) {
+      setConsent('run')
+      return
+    }
     const folders = new Map<string, FolderTarget>()
     for (const node of studio.pipeline.nodes) {
       if (node.type !== 'output' || node.settings.destination !== 'folder') continue
@@ -278,7 +292,8 @@ function Studio({
         return
       }
     }
-    await session.start({ folders })
+    const pipelineRuns = studio.savedId ? pipelineStore().recordRun(studio.savedId) : undefined
+    await session.start({ folders, pipelineRuns })
   }
 
   /**
@@ -411,6 +426,14 @@ function Studio({
             size="sm"
             onClick={() => setDialog('save')}
           />
+          <IconButton
+            label="Copy pipeline link"
+            tooltip="Copy a link that opens this pipeline as a tool"
+            icon={<Link2 size={16} />}
+            variant="ghost"
+            size="sm"
+            onClick={() => void share({ name: studio.name, pipeline: studio.pipeline })}
+          />
           {studio.dirty ? (
             <StatusDot variant="warning" label="Unsaved changes" tooltip="Unsaved changes" />
           ) : null}
@@ -423,6 +446,10 @@ function Studio({
               { type: 'divider' },
               { label: 'Import .hexlode file…', onClick: () => importInput.current?.click() },
               { label: 'Export .hexlode file', onClick: exportFile },
+              {
+                label: 'Copy pipeline link',
+                onClick: () => void share({ name: studio.name, pipeline: studio.pipeline }),
+              },
               ...(studio.savedId
                 ? [
                     { type: 'divider' as const },
@@ -498,7 +525,9 @@ function Studio({
   )
 
   return (
-    <>
+    <ModelDownloadContext.Provider
+      value={{ needs: run.models, request: () => setConsent('preview') }}
+    >
       <Layout
         height="fill"
         header={header}
@@ -645,7 +674,21 @@ function Studio({
         isOpen={dialog === 'settings'}
         onOpenChange={(open) => setDialog(open ? 'settings' : null)}
       />
-    </>
+      <ModelConsentDialog
+        isOpen={consent !== null}
+        needs={run.models.filter((need) => !need.stored)}
+        progress={run.modelDownload}
+        onDownload={(signal) => session.downloadModels({ signal })}
+        onDownloaded={() => {
+          setConsent(null)
+          if (consent === 'run') void start()
+        }}
+        onDecline={(cancelledDownload) => {
+          if (!cancelledDownload) runs.declineModels()
+          setConsent(null)
+        }}
+      />
+    </ModelDownloadContext.Provider>
   )
 }
 

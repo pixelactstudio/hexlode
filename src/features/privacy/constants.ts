@@ -1,5 +1,5 @@
 /** When the privacy page last changed in substance. Update it with the page. */
-export const PRIVACY_UPDATED = '4 October 2026'
+export const PRIVACY_UPDATED = '10 November 2026'
 
 /** Everything Hexlode keeps in the browser, for the privacy page. */
 export const STORED_IN_BROWSER = [
@@ -18,7 +18,22 @@ export const STORED_IN_BROWSER = [
       'Its nodes, settings and name, so a reload does not lose your work, kept for that tab only. Unsaved changes are also kept for a day, so a new tab can offer them back. Never your images.',
   },
   {
+    label: 'The background removal model',
+    description:
+      "Only after you agree to download it for Remove background. It comes from Hexlode's own server and stays in your browser's cache, so later runs need no download.",
+  },
+  {
     label: 'Your colour mode',
     description: 'Dark, light or system, once you pick one in the top bar.',
+  },
+  {
+    label: 'A copy of the app',
+    description:
+      "Hexlode's own pages, scripts, styles, fonts and image codecs, saved after your first visit so the app opens and runs without a connection. Never your images. Each new version of Hexlode replaces it.",
+  },
+  {
+    label: 'Photos shared to the app',
+    description:
+      'On Android, photos you share to the installed app wait here until Strip metadata opens them, then they are deleted.',
   },
 ] as const

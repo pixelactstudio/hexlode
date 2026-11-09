@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
+import { redSubjectSegmenter } from '#/features/background-removal/__tests__/stand-in-segmenter'
 import { type ConnectionCheck, checkConnection } from '#/features/engine/compatibility'
 import { createInlineHost } from '#/features/engine/inline-host'
 import { createMemoryStepCache } from '#/features/engine/memory-step-cache'
@@ -26,6 +27,8 @@ import { TEST_ONLY_NODES } from './test-only-nodes'
 const registry: NodeRegistry = createRegistry([...PRODUCT_NODES, ...TEST_ONLY_NODES])
 const types = registry.list().map((node) => node.type)
 const cache = createMemoryStepCache()
+/** Remove background reaches the inference worker through this service; a stand-in here. */
+const segmenter = redSubjectSegmenter()
 
 function node(id: string, type: string) {
   return { id, type, settings: {}, position: { x: 0, y: 0 } }
@@ -86,14 +89,17 @@ function pairPipeline(source: string, target: string, port: string) {
  * content, such as Deduplicate, then send several formats down each of their outputs.
  */
 async function matrixSources() {
-  const fixtures = await Promise.all(
-    ALL_FORMAT_FIXTURES.map(async (name) => ({ name, bytes: await fixtureBytes(name) })),
-  )
-  const different = await pngInput('noise.png', noisyPixels(48))
+  inputs ??= Promise.all([
+    ...ALL_FORMAT_FIXTURES.map(async (name) => ({ name, bytes: await fixtureBytes(name) })),
+    pngInput('noise.png', noisyPixels(48)),
+  ])
   return Promise.all(
-    [...fixtures, different].map(({ name, bytes }, index) => sourceFromBytes(name, bytes, index)),
+    (await inputs).map(({ name, bytes }, index) => sourceFromBytes(name, bytes, index)),
   )
 }
+
+/** The input files, fetched once per shard rather than once per pair. */
+let inputs: Promise<{ name: string; bytes: Uint8Array }[]> | undefined
 
 async function runCounts(pipeline: Pipeline) {
   const sources = await matrixSources()
@@ -105,7 +111,7 @@ async function runCounts(pipeline: Pipeline) {
     host: createInlineHost({
       registry,
       cache,
-      services: { codecs: jsquashCodecs },
+      services: { codecs: jsquashCodecs, segmenter },
       kinds: { image: imageKind, data: fileKind, document: fileKind },
     }),
     onEvent: (event) => events.push(event),

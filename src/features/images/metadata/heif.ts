@@ -1,10 +1,14 @@
 /**
- * AVIF metadata lives in items of the `meta` box, stored in the file or in the box's `idat`, in
- * one or more extents. We can read EXIF and XMP items and remove or shrink them in place, but not
- * add new ones.
+ * HEIF metadata, for AVIF and HEIC files. EXIF and XMP live in items of the `meta` box, stored in
+ * the file or in the box's `idat`, in one or more extents. We can read EXIF and XMP items and
+ * remove or shrink them in place, but not add new ones.
+ *
+ * The colour profile is a property of the primary image, next to its codec settings. It is read
+ * so other formats keep the colours, and left in place when the file is rewritten.
  */
 import { ascii, viewOf } from '#/features/images/metadata/bytes'
 import type { ImageMetadata, MetadataPart } from '#/features/images/metadata/types'
+import { childBoxes, itemProperties, metaChildren, primaryItemId, readSized } from '#/lib/isobmff'
 
 interface MetadataItem {
   part: 'exif' | 'xmp'
@@ -12,36 +16,10 @@ interface MetadataItem {
   ranges: { offset: number; length: number }[] | null
 }
 
-const CANNOT_EDIT = 'This AVIF file stores metadata in a way Hexlode cannot edit.'
-
-function childBoxes(bytes: Uint8Array, start: number, end: number) {
-  const view = viewOf(bytes)
-  const found: { type: string; start: number; end: number }[] = []
-  let offset = start
-  while (offset + 8 <= end) {
-    const size = view.getUint32(offset)
-    const type = ascii(bytes, offset + 4, 4)
-    const boxEnd = size === 0 ? end : offset + size
-    if (size !== 0 && size < 8) break
-    found.push({ type, start: offset + 8, end: boxEnd })
-    offset = boxEnd
-  }
-  return found
-}
-
-function readSized(view: DataView, at: number, size: number) {
-  if (size === 0) return 0
-  if (size === 4) return view.getUint32(at)
-  if (size === 8) return Number(view.getBigUint64(at))
-  if (size === 2) return view.getUint16(at)
-  throw new Error('Unsupported AVIF field size.')
-}
-
 function metadataItems(bytes: Uint8Array): MetadataItem[] {
   const view = viewOf(bytes)
-  const meta = childBoxes(bytes, 0, bytes.length).find(({ type }) => type === 'meta')
-  if (!meta) return []
-  const children = childBoxes(bytes, meta.start + 4, meta.end)
+  const children = metaChildren(bytes)
+  if (!children) return []
   const iinf = children.find(({ type }) => type === 'iinf')
   const iloc = children.find(({ type }) => type === 'iloc')
   const idat = children.find(({ type }) => type === 'idat')
@@ -115,6 +93,17 @@ function metadataItems(bytes: Uint8Array): MetadataItem[] {
   return items
 }
 
+/** The ICC profile in the primary image's `colr` property, when it has one. */
+function colourProfile(bytes: Uint8Array) {
+  const children = metaChildren(bytes)
+  const primary = children && primaryItemId(bytes, children)
+  if (!children || primary === null) return undefined
+  const colr = itemProperties(bytes, children, primary).find(
+    ({ type, start }) => type === 'colr' && ['prof', 'rICC'].includes(ascii(bytes, start, 4)),
+  )
+  return colr && colr.end - colr.start > 4 ? bytes.slice(colr.start + 4, colr.end) : undefined
+}
+
 function bytesOf(bytes: Uint8Array, ranges: NonNullable<MetadataItem['ranges']>) {
   const data = new Uint8Array(ranges.reduce((total, { length }) => total + length, 0))
   let at = 0
@@ -125,7 +114,7 @@ function bytesOf(bytes: Uint8Array, ranges: NonNullable<MetadataItem['ranges']>)
   return data
 }
 
-export function readAvifMetadata(bytes: Uint8Array): ImageMetadata {
+export function readHeifMetadata(bytes: Uint8Array): ImageMetadata {
   const metadata: ImageMetadata = {}
   for (const item of metadataItems(bytes)) {
     if (!item.ranges) continue
@@ -140,6 +129,8 @@ export function readAvifMetadata(bytes: Uint8Array): ImageMetadata {
       if (xmp) metadata.xmp = xmp
     }
   }
+  const icc = colourProfile(bytes)
+  if (icc) metadata.icc = icc
   return metadata
 }
 
@@ -159,12 +150,20 @@ function fillItem(
   }
 }
 
-export function writeAvifMetadata(bytes: Uint8Array, metadata: ImageMetadata) {
+function sameBytes(a: Uint8Array, b: Uint8Array) {
+  return a.length === b.length && a.every((value, index) => value === b[index])
+}
+
+/** `name` is the format's name for messages, such as AVIF or HEIC. */
+export function writeHeifMetadata(bytes: Uint8Array, metadata: ImageMetadata, name: string) {
   const output = bytes.slice()
   const items = metadataItems(output)
-  if (items.some(({ ranges }) => !ranges)) throw new Error(CANNOT_EDIT)
+  if (items.some(({ ranges }) => !ranges)) {
+    throw new Error(`This ${name} file stores metadata in a way Hexlode cannot edit.`)
+  }
   const dropped: MetadataPart[] = []
-  if (metadata.icc) dropped.push('icc')
+  const own = colourProfile(bytes)
+  if (metadata.icc && !(own && sameBytes(own, metadata.icc))) dropped.push('icc')
   for (const part of ['exif', 'xmp'] as const) {
     const existing = items.filter((item) => item.part === part)
     const value = metadata[part]

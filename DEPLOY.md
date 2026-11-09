@@ -47,10 +47,21 @@ runs with analytics and error reports off.
 | `VITE_SENTRY_DSN` | Sentry DSN. Turns on error reports, logs and tracing in the browser and on the server. |
 | `HEXLODE_ENVIRONMENT` | `staging` on the staging application. Leave it unset in production, which reports as `production`. |
 | `PORT` | The port the server listens on. Defaults to `3000`; change the domain's port to match. |
+| `HEXLODE_MODEL_DIR` | Where the server keeps on-device models it serves under `/models/`. Defaults to a folder in the system's temporary directory. |
 
 The `VITE_*` values are public: they reach every visitor's browser. Never put a secret in a
 variable that starts with `VITE_`. A change takes effect on the next deploy or restart. The image
 sets `HEXLODE_VERSION` itself; Sentry and PostHog label reports and events with it.
+
+The first request for the background removal model makes the server fetch it once (94 MB) from
+its pinned Hugging Face revision, so the container needs outbound HTTPS to `huggingface.co`. The
+server checks the file's SHA-256 before keeping and serving it, and browsers never contact Hugging
+Face (ADR 0017). The file lives in `HEXLODE_MODEL_DIR`, which a new container starts without; to
+skip the fetch after each deploy, mount a volume there in Dokploy (**Advanced → Volumes**), for
+example at `/models-cache`, and set `HEXLODE_MODEL_DIR=/models-cache`. The folder must belong to
+the user the container runs as (`nonroot`, uid 65532) and must not be writable by other users; the
+server refuses any other folder and answers model requests with an error, since it sends what is
+in the folder to every visitor. It also checks a kept file's SHA-256 once after each start.
 
 The Sentry organisation, project and auth token are not runtime settings. They are only needed
 where the image is built, to upload source maps; see [Readable Sentry stack traces](#readable-sentry-stack-traces).

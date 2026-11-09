@@ -10,24 +10,35 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppShellRouteImport } from './routes/app-shell'
 import { Route as CompressRouteImport } from './routes/compress'
 import { Route as ConvertRouteImport } from './routes/convert'
 import { Route as CropRouteImport } from './routes/crop'
 import { Route as ManifestDotwebmanifestRouteImport } from './routes/manifest[.]webmanifest'
+import { Route as OpenRouteImport } from './routes/open'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as RemoveBackgroundRouteImport } from './routes/remove-background'
 import { Route as ResizeRouteImport } from './routes/resize'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RotateRouteImport } from './routes/rotate'
+import { Route as ShareTargetRouteImport } from './routes/share-target'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StripMetadataRouteImport } from './routes/strip-metadata'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ModelsFileRouteImport } from './routes/models.$file'
 import { Route as ToolsPipelineIdRouteImport } from './routes/tools.$pipelineId'
+import { Route as ToolsSharedRouteImport } from './routes/tools.shared'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppShellRoute = AppShellRouteImport.update({
+  id: '/app-shell',
+  path: '/app-shell',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompressRoute = CompressRouteImport.update({
@@ -50,9 +61,19 @@ const ManifestDotwebmanifestRoute = ManifestDotwebmanifestRouteImport.update({
   path: '/manifest.webmanifest',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OpenRoute = OpenRouteImport.update({
+  id: '/open',
+  path: '/open',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RemoveBackgroundRoute = RemoveBackgroundRouteImport.update({
+  id: '/remove-background',
+  path: '/remove-background',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResizeRoute = ResizeRouteImport.update({
@@ -68,6 +89,11 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
 const RotateRoute = RotateRouteImport.update({
   id: '/rotate',
   path: '/rotate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShareTargetRoute = ShareTargetRouteImport.update({
+  id: '/share-target',
+  path: '/share-target',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -90,9 +116,19 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ModelsFileRoute = ModelsFileRouteImport.update({
+  id: '/models/$file',
+  path: '/models/$file',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ToolsPipelineIdRoute = ToolsPipelineIdRouteImport.update({
   id: '/tools/$pipelineId',
   path: '/tools/$pipelineId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolsSharedRoute = ToolsSharedRouteImport.update({
+  id: '/tools/shared',
+  path: '/tools/shared',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -103,125 +139,167 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/app-shell': typeof AppShellRoute
   '/compress': typeof CompressRoute
   '/convert': typeof ConvertRoute
   '/crop': typeof CropRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
+  '/open': typeof OpenRoute
   '/privacy': typeof PrivacyRoute
+  '/remove-background': typeof RemoveBackgroundRoute
   '/resize': typeof ResizeRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/rotate': typeof RotateRoute
+  '/share-target': typeof ShareTargetRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
   '/api/health': typeof ApiHealthRoute
+  '/models/$file': typeof ModelsFileRoute
   '/tools/$pipelineId': typeof ToolsPipelineIdRoute
+  '/tools/shared': typeof ToolsSharedRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/app-shell': typeof AppShellRoute
   '/compress': typeof CompressRoute
   '/convert': typeof ConvertRoute
   '/crop': typeof CropRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
+  '/open': typeof OpenRoute
   '/privacy': typeof PrivacyRoute
+  '/remove-background': typeof RemoveBackgroundRoute
   '/resize': typeof ResizeRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/rotate': typeof RotateRoute
+  '/share-target': typeof ShareTargetRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
   '/api/health': typeof ApiHealthRoute
+  '/models/$file': typeof ModelsFileRoute
   '/tools/$pipelineId': typeof ToolsPipelineIdRoute
+  '/tools/shared': typeof ToolsSharedRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/app-shell': typeof AppShellRoute
   '/compress': typeof CompressRoute
   '/convert': typeof ConvertRoute
   '/crop': typeof CropRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
+  '/open': typeof OpenRoute
   '/privacy': typeof PrivacyRoute
+  '/remove-background': typeof RemoveBackgroundRoute
   '/resize': typeof ResizeRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/rotate': typeof RotateRoute
+  '/share-target': typeof ShareTargetRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
   '/api/health': typeof ApiHealthRoute
+  '/models/$file': typeof ModelsFileRoute
   '/tools/$pipelineId': typeof ToolsPipelineIdRoute
+  '/tools/shared': typeof ToolsSharedRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/app-shell'
     | '/compress'
     | '/convert'
     | '/crop'
     | '/manifest.webmanifest'
+    | '/open'
     | '/privacy'
+    | '/remove-background'
     | '/resize'
     | '/robots.txt'
     | '/rotate'
+    | '/share-target'
     | '/sitemap.xml'
     | '/strip-metadata'
     | '/studio'
     | '/api/health'
+    | '/models/$file'
     | '/tools/$pipelineId'
+    | '/tools/shared'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/app-shell'
     | '/compress'
     | '/convert'
     | '/crop'
     | '/manifest.webmanifest'
+    | '/open'
     | '/privacy'
+    | '/remove-background'
     | '/resize'
     | '/robots.txt'
     | '/rotate'
+    | '/share-target'
     | '/sitemap.xml'
     | '/strip-metadata'
     | '/studio'
     | '/api/health'
+    | '/models/$file'
     | '/tools/$pipelineId'
+    | '/tools/shared'
     | '/api/auth/$'
   id:
     | '__root__'
     | '/'
+    | '/app-shell'
     | '/compress'
     | '/convert'
     | '/crop'
     | '/manifest.webmanifest'
+    | '/open'
     | '/privacy'
+    | '/remove-background'
     | '/resize'
     | '/robots.txt'
     | '/rotate'
+    | '/share-target'
     | '/sitemap.xml'
     | '/strip-metadata'
     | '/studio'
     | '/api/health'
+    | '/models/$file'
     | '/tools/$pipelineId'
+    | '/tools/shared'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppShellRoute: typeof AppShellRoute
   CompressRoute: typeof CompressRoute
   ConvertRoute: typeof ConvertRoute
   CropRoute: typeof CropRoute
   ManifestDotwebmanifestRoute: typeof ManifestDotwebmanifestRoute
+  OpenRoute: typeof OpenRoute
   PrivacyRoute: typeof PrivacyRoute
+  RemoveBackgroundRoute: typeof RemoveBackgroundRoute
   ResizeRoute: typeof ResizeRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   RotateRoute: typeof RotateRoute
+  ShareTargetRoute: typeof ShareTargetRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StripMetadataRoute: typeof StripMetadataRoute
   StudioRoute: typeof StudioRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ModelsFileRoute: typeof ModelsFileRoute
   ToolsPipelineIdRoute: typeof ToolsPipelineIdRoute
+  ToolsSharedRoute: typeof ToolsSharedRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -232,6 +310,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app-shell': {
+      id: '/app-shell'
+      path: '/app-shell'
+      fullPath: '/app-shell'
+      preLoaderRoute: typeof AppShellRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/compress': {
@@ -262,11 +347,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManifestDotwebmanifestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/open': {
+      id: '/open'
+      path: '/open'
+      fullPath: '/open'
+      preLoaderRoute: typeof OpenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/remove-background': {
+      id: '/remove-background'
+      path: '/remove-background'
+      fullPath: '/remove-background'
+      preLoaderRoute: typeof RemoveBackgroundRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/resize': {
@@ -288,6 +387,13 @@ declare module '@tanstack/react-router' {
       path: '/rotate'
       fullPath: '/rotate'
       preLoaderRoute: typeof RotateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/share-target': {
+      id: '/share-target'
+      path: '/share-target'
+      fullPath: '/share-target'
+      preLoaderRoute: typeof ShareTargetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -318,11 +424,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/models/$file': {
+      id: '/models/$file'
+      path: '/models/$file'
+      fullPath: '/models/$file'
+      preLoaderRoute: typeof ModelsFileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tools/$pipelineId': {
       id: '/tools/$pipelineId'
       path: '/tools/$pipelineId'
       fullPath: '/tools/$pipelineId'
       preLoaderRoute: typeof ToolsPipelineIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tools/shared': {
+      id: '/tools/shared'
+      path: '/tools/shared'
+      fullPath: '/tools/shared'
+      preLoaderRoute: typeof ToolsSharedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -337,19 +457,25 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppShellRoute: AppShellRoute,
   CompressRoute: CompressRoute,
   ConvertRoute: ConvertRoute,
   CropRoute: CropRoute,
   ManifestDotwebmanifestRoute: ManifestDotwebmanifestRoute,
+  OpenRoute: OpenRoute,
   PrivacyRoute: PrivacyRoute,
+  RemoveBackgroundRoute: RemoveBackgroundRoute,
   ResizeRoute: ResizeRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   RotateRoute: RotateRoute,
+  ShareTargetRoute: ShareTargetRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StripMetadataRoute: StripMetadataRoute,
   StudioRoute: StudioRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ModelsFileRoute: ModelsFileRoute,
   ToolsPipelineIdRoute: ToolsPipelineIdRoute,
+  ToolsSharedRoute: ToolsSharedRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

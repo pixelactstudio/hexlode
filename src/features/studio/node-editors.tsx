@@ -12,6 +12,7 @@ import { Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { type ReactNode, useEffect, useState } from 'react'
 
+import { RemoveBackgroundEditor } from '#/features/background-removal/model-status'
 import { MAX_LOGO_BYTES, MAX_RESIZE_DIMENSION } from '#/features/nodes/constants'
 import { CANDIDATE_FORMATS } from '#/features/nodes/definitions/best-format'
 import type { Logo } from '#/features/nodes/definitions/image-watermark'
@@ -198,6 +199,14 @@ const PadEditor: Editor = ({ settings, onChange, isDisabled }) => {
         onChange={(position) => onChange({ position })}
         isDisabled={isDisabled}
         hint="Photos are turned upright first."
+      />
+      <Percent
+        label="Margin"
+        description="Space on every side, in percent of the image's longer edge."
+        max={50}
+        value={settings.margin}
+        onChange={(margin) => onChange({ margin })}
+        isDisabled={isDisabled}
       />
     </VStack>
   )
@@ -669,8 +678,8 @@ const SetCopyrightEditor: Editor = ({ settings, onChange, isDisabled }) => (
       isDisabled={isDisabled}
     />
     <Text type="supporting">
-      Written into the EXIF fields without re-encoding. Empty fields leave what the file has. AVIF
-      and QOI cannot take new fields.
+      Written into the EXIF fields without re-encoding. Empty fields leave what the file has. AVIF,
+      HEIC and QOI cannot take new fields.
     </Text>
   </VStack>
 )
@@ -1105,4 +1114,5 @@ export const LATER_EDITORS: Record<string, Editor> = {
   palette: PaletteEditor,
   'contact-sheet': ContactSheetEditor,
   'images-to-pdf': ImagesToPdfEditor,
+  'remove-background': RemoveBackgroundEditor,
 }

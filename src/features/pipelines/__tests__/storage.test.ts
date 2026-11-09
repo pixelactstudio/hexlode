@@ -35,6 +35,23 @@ describe('saved pipelines', () => {
     expect(store.list()).toEqual([])
   })
 
+  it('counts the runs of a saved pipeline, across reloads and saves', () => {
+    const storage = memoryStorage()
+    const store = createPipelineStore(storage)
+    const saved = store.save({ name: 'Shop images', pipeline })
+    expect(store.recordRun(saved.id)).toBe(1)
+    expect(store.recordRun(saved.id)).toBe(2)
+    store.save({ id: saved.id, name: 'Shop', pipeline })
+    expect(createPipelineStore(storage).recordRun(saved.id)).toBe(3)
+  })
+
+  it('counts nothing for a pipeline that is not saved', () => {
+    const storage = memoryStorage()
+    const store = createPipelineStore(storage)
+    expect(store.recordRun('not-saved')).toBeUndefined()
+    expect(storage.values.size).toBe(0)
+  })
+
   it('refuses a save the browser has no room for and keeps the list as it was', () => {
     const storage = memoryStorage()
     const store = createPipelineStore(storage)

@@ -10,7 +10,7 @@ import { Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { Trash2 } from 'lucide-react'
 
-import type { AnyNodeDefinition } from '#/features/engine/types'
+import type { AnyNodeDefinition, ImageFormat } from '#/features/engine/types'
 import { canPickFolder } from '#/features/image-input/folder'
 import type { FilterRule } from '#/features/nodes/definitions/filter'
 import { RENAME_TOKENS } from '#/features/nodes/definitions/rename'
@@ -154,6 +154,12 @@ function ConvertEditor({ settings, onChange, isDisabled }: EditorProps) {
   )
 }
 
+/** Every format a rule can match: those Hexlode writes, and HEIC, which it only opens. */
+const FILTER_FORMATS: { value: ImageFormat; label: string }[] = [
+  ...FORMAT_OPTIONS,
+  { value: 'heic', label: 'HEIC' },
+]
+
 const RULE_FIELDS = [
   { value: 'format', label: 'Format' },
   { value: 'fileSize', label: 'File size' },
@@ -236,7 +242,7 @@ function RuleEditor({
             isDisabled={isDisabled}
           />
           <HStack gap={2} wrap="wrap">
-            {FORMAT_OPTIONS.map((option) => (
+            {FILTER_FORMATS.map((option) => (
               <Switch
                 key={option.value}
                 size="sm"
@@ -360,7 +366,7 @@ function CompressEditor({ settings, onChange, isDisabled }: EditorProps) {
       />
       <Selector
         label="Format"
-        description="Same as input works for JPEG, WebP, AVIF and JPEG XL. Other formats skip this node."
+        description="Same as input works for JPEG, WebP, AVIF and JPEG XL, and makes HEIC into JPEG. Other formats skip this node."
         value={String(settings.format)}
         onChange={(format) => onChange({ format })}
         options={[

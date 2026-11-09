@@ -2,7 +2,7 @@ import { createInlineHost } from '#/features/engine/inline-host'
 import { fileKey } from '#/features/engine/keys'
 import { runPipeline, type SourceItem } from '#/features/engine/runner'
 import type { StepCache } from '#/features/engine/step-cache'
-import type { Pipeline, RunEvent } from '#/features/engine/types'
+import type { EngineServices, Pipeline, RunEvent } from '#/features/engine/types'
 import { fileKind } from '#/features/file-items/file-item'
 import { inspectImageHeader } from '#/features/image-input/validators'
 import { jsquashCodecs } from '#/features/images/codecs'
@@ -24,6 +24,7 @@ export const ALL_FORMAT_FIXTURES = [
   'photo.avif',
   'photo.jxl',
   'photo.qoi',
+  'photo.heic',
 ]
 
 export async function sourceFromBytes(
@@ -65,7 +66,7 @@ export function chain(...nodes: NodeSpec[]): Pipeline {
 export async function run(
   pipeline: Pipeline,
   inputs: (string | { name: string; bytes: Uint8Array })[],
-  options: { cache?: StepCache } = {},
+  options: { cache?: StepCache; services?: EngineServices } = {},
 ) {
   const sources = await Promise.all(
     inputs.map(async (input, index) =>
@@ -76,7 +77,7 @@ export async function run(
   )
   const host = createInlineHost({
     registry: productRegistry,
-    services: { codecs: jsquashCodecs },
+    services: { codecs: jsquashCodecs, ...options.services },
     kinds: { image: imageKind, data: fileKind, document: fileKind },
     cache: options.cache,
   })

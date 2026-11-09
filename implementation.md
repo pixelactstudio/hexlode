@@ -1,16 +1,20 @@
 # Hexlode implementation plan
 
-> Updated: 2026-11-04
+> Updated: 2026-11-10
 > Product: [idea.md](./idea.md). Vocabulary: [CONTEXT.md](./CONTEXT.md). Decisions: [docs/adr/](./docs/adr/).
 
 ## Goal
 
-Version 1 is the complete local product: the home page, six quick tools, pipeline tools, and the
+Version 1 was the complete local product: the home page, six quick tools, pipeline tools, and the
 Studio with all 33 nodes from the catalogue in [idea.md](./idea.md). It ships in three phases. Phase 1
 builds the whole application and node batch 1. Phases 2 and 3 only add node batches 2 and 3. Each
 phase is deployable and passes its exit gate before the next phase starts.
 
-Active phase: **Phase 3**. Phases 2 and 3 are built and pass their exit gates.
+Version 2 adds phases 4 to 7 on top of version 1. They make the pipeline easy to share and find,
+keep the app working offline, and open the photos people actually have.
+
+Active phase: **Version 2, phases 4 to 7**, built together on one branch. Phases 1 to 3 are built
+and pass their exit gates.
 
 ## Phase 1: the application and node batch 1
 
@@ -106,6 +110,93 @@ an ICO file, which is a document ([ADR 0012](./docs/adr/0012-ico-files-are-docum
 each image's icons in a folder named after it. Live previews show the text of data items, such as
 a palette or a snippet, in the inspector.
 
+## Phase 4: pipelines people can share
+
+1. Pipeline links. The Studio and every pipeline tool page copy a link that carries the whole
+   pipeline after `#`, compressed. The part after `#` never reaches the server. Opening the link
+   shows the pipeline tool page with Save and Open in the Studio. A pipeline too large for a link
+   offers its `.hexlode` file instead.
+2. Built-in tools: pipeline tools that ship with Hexlode at `/tools/<slug>`, rendered on the
+   server, each with an entry in `SEO_PAGES`, a share card and a place in the sitemap. Only jobs
+   people search for by name and repeat; the list and the reason for each entry live in
+   `src/features/built-in-tools/`. A built-in tool can show the settings of a few chosen nodes.
+3. The run event carries how many times a saved pipeline has run.
+
+Exit gate: every template survives a pipeline link unchanged, a damaged link shows a clear message,
+every built-in tool runs end to end on real fixtures and is in the sitemap, and the run count rises
+by one per run of a saved pipeline.
+
+## Phase 5: offline and installable
+
+1. A service worker caches the built scripts, styles, fonts and codec WASM after the first visit,
+   with the main pages. A Vite plugin writes `/sw.js` from the client build, in production builds
+   only. Pages load from the network first and fall back to their cached copy offline, or to the
+   app shell, `/app-shell`, a route the server renders without its page. A badge shows when the app
+   is offline ([ADR 0015](./docs/adr/0015-service-worker-for-offline-use.md)).
+   ONNX Runtime's WebAssembly is kept the first time Remove background runs instead, so the first
+   visit does not download it.
+2. Installed on desktop Chromium, Hexlode opens images and `.hexlode` files from the file manager:
+   the manifest's file handlers open `/open`, which reads `window.launchQueue`, sends a `.hexlode`
+   file to the Studio and asks which tool takes the images. Installed on Android, photos shared to
+   Hexlode go to the manifest's share target, which the service worker answers; they open in Strip
+   metadata, set to remove location. Quick tool and pipeline tool pages take files handed to them
+   in memory (`src/features/handover/`).
+
+Exit gate: a browser test loads a quick tool and the Studio offline after one online visit, files
+from a share or a file launch land in the right page, and the privacy page explains the cache.
+
+## Phase 6: HEIC input
+
+HEIC and HEIF photos open wherever other images do, through a WASM decoder loaded on first use in
+the worker. Hexlode decodes HEIC but does not write it
+([ADR 0016](./docs/adr/0016-heic-decoder.md)).
+
+1. libheif with libde265, compiled to WebAssembly by `libheif-js`, decodes the primary image. Its
+   loader and `.wasm` are separate files Hexlode serves, credited on the codec licences page.
+2. libheif applies `irot`, `imir` and `clap`, so pixels come out upright and the header reader
+   reports the size after them. Reading HEIC metadata sets the EXIF orientation tag to 1, so
+   nothing turns the photo a second time.
+3. EXIF, XMP and the colour profile are read with the same HEIF code as AVIF, and edited in place.
+4. A HEIC image that must be written in its own format becomes JPEG, or PNG when it has
+   transparency, with a run warning.
+5. HEIC joins the formats in item types, the Files node, file intake, the file picker, the drop
+   area, the Filter node's format rule, the home page and the Convert copy.
+6. The list of added files draws previews of HEIC, JPEG XL and QOI files in a worker, since
+   browsers other than Safari cannot show them.
+
+Exit gate: iPhone-style photos (grid tiles, `irot` rotation with an EXIF orientation, GPS, a
+Display P3 profile, transparency) decode with the right dimensions, orientation and metadata, and
+the node pair matrix passes with HEIC fixtures.
+
+## Phase 7: remove background
+
+A Remove background node and quick tool cut the subject out onto transparency, on the device
+([ADR 0017](./docs/adr/0017-on-device-background-removal.md)).
+
+1. The model is BiRefNet_lite exported to ONNX at 512 × 512 in half precision (MIT, 94 MB), pinned
+   by revision and SHA-256 in `src/features/background-removal/constants.ts`. ONNX Runtime Web runs
+   it on WebGPU where the browser has an adapter and on one thread of WebAssembly otherwise; its
+   WebAssembly is served with the app, the smaller build without WebGPU where WebGPU is missing.
+2. The server serves the model at `/models/<file>`: the first request fetches the pinned file,
+   checks its size and hash, and keeps it in `HEXLODE_MODEL_DIR`. Browsers never contact a third
+   party. A page asks before the one-time download, says its size, shows its progress, checks the
+   hash again and keeps the model in Cache Storage.
+3. One inference worker per page holds the model. The run controller gives each engine worker,
+   and the Studio gives the preview worker, a MessagePort to it when the pipeline needs a model.
+   The node resizes the upright image to the model's input in its own worker, sends only that, and
+   scales the returned mask back to cut the subject out, estimating the colour of soft edges so no
+   fringe of the old background shows on white. JPEG cut-outs become PNG.
+4. The estimate times model runs one after another on the inference worker, adds the model's
+   start once and the download while it is missing, and uses measured times once the model ran.
+   Analytics record the download (size, time, error code) and each run's backend and timings.
+5. The quick tool at `/remove-background` saves PNG or WebP. The node has no settings; its
+   inspector shows whether the model is in the browser and offers the download for previews.
+
+Exit gate: masks on licensed fixtures match their reference within the minimums in the quality
+suite, the node pair matrix passes with the new node, the quick tool's output decodes with
+transparency where the background was, and the estimate covers the model download and devices
+without WebGPU.
+
 ## Engine design
 
 - A pipeline is a directed graph without cycles. Items flow through it one by one, so an item can
@@ -118,9 +209,11 @@ a palette or a snippet, in the inspector.
   pixels between them. Encoding happens at Convert, Compress to size and Optimize PNG, and at
   the nodes that make finished files: Best format, Responsive set, Favicon / App icons and Contact
   sheet. An image that reaches Output without an encoding node keeps its source format, and its
-  original bytes when nothing changed its pixels.
+  original bytes when nothing changed its pixels. HEIC is decoded but never encoded, so a HEIC
+  image whose pixels changed is saved as JPEG, or PNG when it has transparency, with a warning
+  ([ADR 0016](./docs/adr/0016-heic-decoder.md)).
 - Metadata is rewritten in the container without re-encoding for JPEG, PNG, WebP and JPEG XL.
-  AVIF metadata is read and can be removed in place but not added; QOI holds none. The run reports
+  AVIF and HEIC metadata is read and can be removed in place but not added; QOI holds none. The run reports
   a warning when a format cannot keep metadata.
 - Each source item travels through the whole pipeline inside one worker, so pixels never cross
   threads. The pool admits as many items as it has workers, which bounds memory by pool size, not
@@ -163,14 +256,24 @@ removed.
   `vitest.config.ts` sit a few points under current coverage; raise them as coverage grows.
 - Test-only node types with data and document items, one-to-many and many-to-one behaviour prove
   what batches 2 and 3 need. They join the node pair matrix but never the product registry.
+- `pnpm test:e2e` drives the production build in Chromium with Playwright, so run `pnpm build`
+  first. It loads the app offline after one visit, runs an image through a quick tool, and checks
+  shares and file launches. CI runs it after the build.
 - The batch of 500 images of 12 megapixels runs with `pnpm test:scale`. It takes minutes, so it is
   outside `pnpm validate`; run it before closing a phase.
+- Nodes that run an on-device model use a stand-in segmenter in node tests and the node pair
+  matrix. The inference worker, the worker pool and previews run ONNX Runtime on `threshold.onnx`,
+  a tiny model with the real model's input and output (`scripts/generate-model-fixture.mjs`).
+  `pnpm test:model` runs the real background removal model in Node on licensed photos with
+  reference masks and checks intersection over union and edge colour. It downloads 94 MB once and
+  needs about 2.5 GB of memory, so it is outside `pnpm validate`; run it when the model, ONNX
+  Runtime or the cut-out code changes.
 - `pnpm validate` passes before every commit.
 - CI (`.github/workflows/`) runs on every pull request: Biome, types, commit messages, the
   generated theme and route tree, actionlint and hadolint; unit tests on Linux, macOS and Windows;
-  browser tests in three engines; coverage; the build with a smoke test of the server; and the
-  Docker image with a smoke test of the container, its health check, runtime settings and an ARM
-  build. CodeQL, `pnpm audit`, dependency review and PR titles run in their own workflows. A push
+  browser tests in three engines; coverage; the build with a smoke test of the server and the
+  end-to-end tests; and the Docker image with a smoke test of the container, its health check,
+  runtime settings and an ARM build. CodeQL, `pnpm audit`, dependency review and PR titles run in their own workflows. A push
   to `main` only publishes the `main` image and deploys staging, since the pull request already
   ran the checks;
   CodeQL, the audit and the scale test also run on a schedule.

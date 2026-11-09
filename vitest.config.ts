@@ -51,7 +51,17 @@ function browserProvider() {
 
 export default defineConfig({
   resolve: { tsconfigPaths: true },
-  optimizeDeps: { exclude: JSQUASH_PACKAGES },
+  // libheif-js ships a CommonJS loader, which must be pre-bundled; ONNX Runtime is told where its
+  // WebAssembly is, so pre-bundling it is safe too. Listing them keeps a first run from finding them
+  // late and reloading the page while tests or the app are running.
+  optimizeDeps: {
+    exclude: JSQUASH_PACKAGES,
+    include: [
+      'libheif-js/libheif-wasm/libheif.js',
+      'onnxruntime-web/webgpu',
+      'onnxruntime-web/wasm',
+    ],
+  },
   worker: { format: 'es' },
   test: {
     coverage: {
@@ -74,7 +84,35 @@ export default defineConfig({
           name: 'unit',
           environment: 'node',
           include: ['src/**/__tests__/**/*.test.ts'],
-          exclude: ['src/**/__tests__/**/*.browser.test.ts', 'src/**/__tests__/**/*.scale.test.ts'],
+          exclude: [
+            'src/**/__tests__/**/*.browser.test.ts',
+            'src/**/__tests__/**/*.scale.test.ts',
+            'src/**/__tests__/**/*.e2e.test.ts',
+            'src/**/__tests__/**/*.model.test.ts',
+          ],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          // Drives the production build in Chromium through Playwright. Run `pnpm build` first.
+          name: 'e2e',
+          environment: 'node',
+          include: ['src/**/__tests__/**/*.e2e.test.ts'],
+          // Generous, so a busy machine slows the first visit's downloads without failing them.
+          testTimeout: 180_000,
+          hookTimeout: 300_000,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          // The real background removal model on licensed photos. Opt-in: it downloads 94 MB once
+          // and needs about 2.5 GB of memory (ADR 0017).
+          name: 'model',
+          environment: 'node',
+          include: ['src/**/__tests__/**/*.model.test.ts'],
+          testTimeout: 10 * 60_000,
         },
       },
       {

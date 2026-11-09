@@ -11,6 +11,7 @@ import {
 } from '#/features/app-shell/constants'
 import { FooterWordmark } from '#/features/app-shell/footer-wordmark'
 import { HexlodeMark } from '#/features/app-shell/hexlode-mark'
+import { BUILT_IN_TOOLS } from '#/features/built-in-tools/tools'
 import { QUICK_TOOL_GROUPS } from '#/features/quick-tools/tool-ui'
 import { QUICK_TOOL_DEFINITIONS } from '#/features/quick-tools/tools'
 import { RouterLink } from '#/lib/router-link'
@@ -24,6 +25,10 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     })),
   },
   {
+    title: 'Ready-made tools',
+    links: BUILT_IN_TOOLS.map((tool) => ({ label: tool.name, href: `/tools/${tool.slug}` })),
+  },
+  {
     title: 'Hexlode',
     links: [
       { label: 'Studio', href: '/studio' },
@@ -35,6 +40,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     links: [
       { label: 'GitHub', href: REPOSITORY_URL },
       { label: 'Codec licences', href: '/licenses/jsquash.txt' },
+      { label: 'Model licences', href: '/licenses/background-removal.txt' },
     ],
   },
   {
@@ -84,7 +90,7 @@ export function SiteFooter() {
     <footer className="overflow-hidden border-border border-t">
       <Center axis="horizontal">
         <VStack width="100%" maxWidth={PAGE_WIDTH + 48} paddingInline={6} gap={10}>
-          <span className="grid grid-cols-2 gap-x-6 gap-y-10 pt-14 md:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))]">
+          <span className="grid grid-cols-2 gap-x-6 gap-y-10 pt-14 md:grid-cols-[minmax(0,2fr)_repeat(5,minmax(0,1fr))]">
             <span className="col-span-2 md:col-span-1">
               <VStack gap={3}>
                 <HStack gap={2} vAlign="center">

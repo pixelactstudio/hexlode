@@ -1,6 +1,8 @@
 import type { ItemFormat, ItemKind, ItemType, ItemTypeSet } from '#/features/engine/types'
 
-export const IMAGE_FORMATS = ['jpeg', 'png', 'webp', 'avif', 'jxl', 'qoi'] as const
+export const IMAGE_FORMATS = ['jpeg', 'png', 'webp', 'avif', 'jxl', 'qoi', 'heic'] as const
+/** The image formats Hexlode writes. HEIC is decoded but never encoded. */
+export const ENCODABLE_FORMATS = ['jpeg', 'png', 'webp', 'avif', 'jxl', 'qoi'] as const
 export const DATA_FORMATS = ['json', 'text'] as const
 export const DOCUMENT_FORMATS = ['pdf', 'ico'] as const
 
@@ -11,6 +13,7 @@ export const FORMAT_LABELS: Record<ItemFormat, string> = {
   avif: 'AVIF',
   jxl: 'JPEG XL',
   qoi: 'QOI',
+  heic: 'HEIC',
   json: 'JSON',
   text: 'text',
   pdf: 'PDF',

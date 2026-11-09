@@ -36,7 +36,9 @@
     "test:coverage": "vitest run --project unit --project browser --coverage",
     "test:browser": "vitest run --project browser",
     "test:watch": "vitest",
-    "test:scale": "vitest run --project scale"
+    "test:scale": "vitest run --project scale",
+    "test:e2e": "vitest run --project e2e",
+    "test:model": "vitest run --project model"
   },
   "dependencies": {
     "@astryxdesign/core": "^0.2.0",
@@ -70,9 +72,11 @@
     "drizzle-kit": "^0.31.9",
     "drizzle-orm": "^0.45.1",
     "gsap": "^3.15.0",
+    "libheif-js": "1.23.5",
     "lucide-react": "^1.28.0",
     "motion": "^13.4.4",
     "nitro": "3.0.260610-beta",
+    "onnxruntime-web": "1.31.1",
     "pg": "^8.16.3",
     "posthog-js": "^1.444.4",
     "react": "^19.2.0",

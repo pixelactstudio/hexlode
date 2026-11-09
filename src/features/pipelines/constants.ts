@@ -16,3 +16,14 @@ export const STUDIO_RECOVERY_KEY = 'hexlode:studio-recovery'
 export const DRAFT_RECOVERY_MAX_AGE_MS = 24 * 60 * 60 * 1000
 /** Where earlier versions kept one draft for the whole browser, in local storage. */
 export const LEGACY_STUDIO_DRAFT_KEY = STUDIO_DRAFT_KEY
+/** Where a pipeline link opens: the shared pipeline tool page. */
+export const PIPELINE_LINK_PATH = '/tools/shared'
+/** How a pipeline link packs its file (compression and encoding), apart from the file's version. */
+export const PIPELINE_LINK_VERSION = 1
+/**
+ * The longest part after `#` a pipeline link may have. Chat apps, email and every browser keep
+ * links this long; a pipeline that needs more is shared as a file.
+ */
+export const MAX_PIPELINE_LINK_PAYLOAD = 7800
+/** A pipeline link never unpacks to more than this, so a crafted link cannot fill the memory. */
+export const MAX_PIPELINE_LINK_BYTES = 2 * 1024 * 1024

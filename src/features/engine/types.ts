@@ -4,7 +4,9 @@
 
 export type ItemKind = 'image' | 'data' | 'document'
 
-export type ImageFormat = 'jpeg' | 'png' | 'webp' | 'avif' | 'jxl' | 'qoi'
+export type ImageFormat = 'jpeg' | 'png' | 'webp' | 'avif' | 'jxl' | 'qoi' | 'heic'
+/** Image formats Hexlode can write. HEIC (HEIF with HEVC) is decoded but never encoded. */
+export type EncodableFormat = Exclude<ImageFormat, 'heic'>
 export type DataFormat = 'json' | 'text'
 /** Finished files Hexlode makes but does not edit further. */
 export type DocumentFormat = 'pdf' | 'ico'
@@ -109,6 +111,8 @@ export interface NodeContext {
 export interface EngineServices {
   codecs?: unknown
   output?: OutputSink
+  /** Finds the subject of an image with an on-device model, on the shared inference worker. */
+  segmenter?: unknown
 }
 
 export type NodeMode = 'each' | 'all'
@@ -144,6 +148,11 @@ export interface NodeDefinition<S extends Record<string, unknown> = Record<strin
   cost?(settings: S, meta: ItemMeta, state: { encoded: boolean }): NodeCost
   /** Settings that hold text the user typed. Never sent to analytics. */
   privateSettings?: string[]
+  /**
+   * On-device models the node runs, by ID. A page asks before downloading one, and a run that
+   * needs one connects its workers to the shared inference worker.
+   */
+  models?: readonly string[]
   /** Output nodes deliver the items they saved once no more items can arrive. */
   delivers?: boolean
   /** Per-item nodes return NodeOutput items; combining nodes may also pass inputs on. */
@@ -154,6 +163,12 @@ export interface NodeCost {
   ms: number
   encodes: number
   needsPixels: boolean
+  /**
+   * Runs of an on-device model per item. They happen one at a time on the shared inference
+   * worker, so the estimate times them from what the page knows about the model and this device,
+   * instead of sharing them across workers.
+   */
+  model?: { id: string; runs: number }
 }
 
 export type NodeInput =

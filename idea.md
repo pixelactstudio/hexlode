@@ -1,6 +1,6 @@
 # Hexlode product
 
-> Updated: 2026-11-04 (node batches 2 and 3)
+> Updated: 2026-11-10 (version 2: pipeline links, built-in tools, offline, HEIC, Remove background)
 > Delivery plan: [implementation.md](./implementation.md). Vocabulary: [CONTEXT.md](./CONTEXT.md).
 > Decisions and their reasons: [docs/adr/](./docs/adr/).
 
@@ -32,10 +32,10 @@ retake them when the Studio's look changes.
 
 Below the hero, in one bordered column:
 
-- The formats Hexlode opens and saves.
+- The formats Hexlode opens and saves, then HEIC, which it opens.
 - The Studio: moving pictures of chaining steps, previews that follow a setting, work spread over
   workers, the step cache and saving a pipeline as a tool, then the templates.
-- The six quick tools, each with a moving picture of its job, and the user's saved pipeline tools.
+- The seven quick tools, each with a moving picture of its job, and the user's saved pipeline tools.
 - How Hexlode works on the device: images flow into the browser tab and out as a ZIP or a folder,
   with three notes: no upload needed, modern formats and open source.
 - A closing call to open the Studio.
@@ -68,30 +68,68 @@ is kept in browser storage and applied before the page paints, so a light page n
 
 | Tool | Job |
 |---|---|
-| Convert | Change format: JPEG, PNG, WebP, AVIF, JPEG XL or QOI. |
+| Convert | Change format: JPEG, PNG, WebP, AVIF, JPEG XL or QOI, from those or HEIC. |
 | Compress | Reduce file size by quality setting or by target size. |
 | Resize | Change dimensions by width, height, percent or longest edge. |
 | Crop | Cut to an aspect ratio such as 1:1, 4:5 or 16:9, from the centre or an edge. |
 | Rotate | Turn photos upright, rotate by quarter turns or flip them. |
 | Strip metadata | Remove all metadata, only location data, or everything except copyright. |
+| Remove background | Cut the subject out onto transparency with a model that runs on the device, saved as PNG or WebP. |
+
+Every quick tool opens JPEG, PNG, WebP, AVIF, JPEG XL, QOI and HEIC images. HEIC, the iPhone
+default, is opened but never written: a HEIC photo whose pixels change comes out as JPEG, or PNG
+when it has transparency, and the results say so. Strip metadata keeps HEIC photos HEIC.
 
 Each quick tool is a fixed pipeline that runs on the same engine as the Studio. A quick tool page
-opens with a row of all six tools for switching, then the tool's name and one line, then two
-numbered panels, side by side on wide screens and stacked on phones. The first holds the
-drop area and the list of added images, with a thumbnail, a full-size preview and a remove button
-for each. The second holds the settings for that job and, under them, the run button, progress and
-the download button. The two panels are always the same height, and the drop area grows to fill
-its panel. A results list with before and after sizes follows the panels. Crop shows the chosen
-shape and position on a landscape and a portrait photo. The page renders on the server with the
-tool in place, so it never waits for scripts before showing the drop area and settings.
+opens with a row of all seven tools for switching, then the tool's name and one line, then two
+numbered panels, side by side on wide screens and stacked on phones. The first holds the drop area
+and the list of added images, with a thumbnail, a full-size preview and a remove button for each.
+Files the browser cannot show itself, such as HEIC, JPEG XL and QOI, get a preview drawn on the
+device. The second holds the settings for that job and, under them, the run button, progress and
+the download button. The two panels are always the same height, and the drop area grows to fill its
+panel. A results list with before and after sizes follows the panels. Crop shows the chosen shape
+and position on a landscape and a portrait photo. The page renders on the server with the tool in
+place, so it never waits for scripts before showing the drop area and settings.
 
 Settings keep their place when options change, and the panels keep their height: a setting that
 does not apply is shown disabled with the reason, not hidden, and text or fields that change with
 an option keep the room of the longest version. A single result downloads as the file itself; several download as a ZIP.
 Compress by quality never returns a file larger than the original.
 
+Remove background runs a segmentation model on the device. The first time a pipeline needs it,
+the page asks before downloading it, says its size and that it comes from Hexlode's own server,
+and shows the progress; the browser keeps it for later runs and live previews. Its estimate counts
+the download and how slowly the model runs without WebGPU.
+
 A pipeline tool is a saved Studio pipeline opened as a quick tool page. The user builds the
 pipeline once, then drops new images into the simple page whenever they need it.
+
+## Built-in tools
+
+A built-in tool is a pipeline tool that ships with Hexlode, on its own page at `/tools/<slug>`.
+It looks like a quick tool page: the drop area and images first, then the pipeline's steps and,
+for a tool that needs them, the settings of one or two of its nodes, such as the watermark text.
+Each page renders on the server, has its own title, description and share card, and offers Open in
+the Studio to change the pipeline.
+
+The list stays short on purpose. A job earns a page only when people search for it by name in large
+numbers, repeat it, and Hexlode does all of it on the device better than a single quick tool. No
+page exists only to catch a search. A tool that follows a platform's rules, such as a marketplace's
+photo requirements, names the guidance its numbers come from and the date they were checked. The
+list and the reason for each entry live in `src/features/built-in-tools/`.
+
+| Tool | Job |
+|---|---|
+| HEIC to JPG | Turns iPhone HEIC photos into JPEG, upright, keeping their date, camera and location. |
+| WebP to JPG | Turns WebP images saved from the web into JPEG, with transparency made white. |
+| JPG to PDF | Puts every image on its own page of one PDF, upright, on A4, Letter or the image size. |
+| Instagram without cropping | Fits each photo into a 4:5 or square post 1080 pixels wide, with a blurred or plain border. |
+| Product photos on white | Cuts each product out and centres it on a pure white square, filling about 85%, as a JPEG of up to 2000 pixels. |
+| Favicon generator | Makes an ICO file, PNG icons, a web app manifest and the HTML tags from one image. |
+| Watermark photos | Writes a text watermark on every photo, in a corner or tiled, keeping each format. |
+| Add logo to photos | Places a logo on every photo at the same corner, size and opacity. Runs once a logo is chosen. |
+
+The Tools menu, the home page and the footer list the built-in tools after the quick tools.
 
 ## Studio
 
@@ -179,14 +217,18 @@ browsers that allow it.
 
 ## Node catalogue
 
-Items are images, data (JSON or text) or documents (PDF). Batch numbers match the phases in
+Items are images, data (JSON or text) or documents (PDF). Images are JPEG, PNG, WebP, AVIF,
+JPEG XL, QOI or HEIC, and every node that takes images takes all of them. HEIC (with HEIF) is
+decoded but never encoded: where a node keeps an image's format, such as Convert set to keep each
+format or Output with an image whose pixels changed, HEIC becomes JPEG, or PNG when it has
+transparency, and the run warns. Batch numbers match the phases in
 [implementation.md](./implementation.md).
 
 ### Input and routing
 
 | Node | What it does | Batch |
 |---|---|---|
-| Files | Takes dropped files or a folder. Starts every pipeline. | 1 |
+| Files | Takes dropped files or a folder, including HEIC photos. Starts every pipeline. | 1 |
 | Filter | Routes items by rules on format, file size, dimensions, orientation or transparency. Each rule has its own output, plus an output for everything else. An item leaves by the first rule it matches. | 1 |
 | Inspect | Shows format, dimensions, size and metadata per item. Passes items through unchanged. | 1 |
 | Deduplicate | Drops exact duplicates (the same pixels), or near duplicates by image fingerprint. Waits for every image; duplicates leave by their own output. | 2 |
@@ -199,7 +241,7 @@ Items are images, data (JSON or text) or documents (PDF). Batch numbers match th
 | Crop | Crops to an aspect preset (1:1, 4:5, 16:9 and others), from the centre or a chosen position. Turns the image upright first. | 1 |
 | Rotate / Flip | Rotates and flips, including automatic rotation from the camera orientation tag. | 1 |
 | Auto-trim | Removes plain-colour or transparent borders. | 2 |
-| Pad / Extend | Adds space to reach an aspect ratio, filled with a colour or a blurred copy of the image. | 2 |
+| Pad / Extend | Adds space to reach an aspect ratio, with an optional margin on every side, filled with a colour or a blurred copy of the image. | 2 |
 | Pixel-art upscale | Enlarges pixel art 2x to 4x with sharp edges. | 2 |
 | Split / Tile | Cuts one image into a grid of images. | 2 |
 
@@ -211,6 +253,7 @@ Items are images, data (JSON or text) or documents (PDF). Batch numbers match th
 | Filters | Applies grayscale, sepia, duotone or invert. | 2 |
 | Sharpen / Blur | Sharpens, or blurs the whole image or a region. | 2 |
 | Background | Replaces transparency with a colour. | 2 |
+| Remove background | Cuts the subject out onto transparency with a model that runs on the device, on WebGPU or WebAssembly. Turns the image upright first; JPEG becomes PNG, since JPEG has no transparency. The model downloads once from Hexlode's server after the user agrees. | 7 |
 
 ### Overlays
 
@@ -224,15 +267,15 @@ Items are images, data (JSON or text) or documents (PDF). Batch numbers match th
 
 | Node | What it does | Batch |
 |---|---|---|
-| Strip metadata | Removes all metadata, only location data, or everything except copyright, without re-encoding. Keeps the colour profile unless told otherwise, and keeps a camera orientation tag so photos stay upright. | 1 |
+| Strip metadata | Removes all metadata, only location data, or everything except copyright, without re-encoding. Keeps the colour profile unless told otherwise, and keeps a camera orientation tag so photos stay upright. A HEIC photo keeps its colour profile, which belongs to the coded image. | 1 |
 | Set copyright / author | Writes author and copyright fields without re-encoding. Empty fields stay as they are. | 3 |
 
 ### Output and encoding
 
 | Node | What it does | Batch |
 |---|---|---|
-| Convert | Encodes to WebP, AVIF, JPEG, JPEG XL, PNG or QOI with the encoder's real settings, or keeps each item's format. | 1 |
-| Compress to size | Finds the highest quality that fits a target size such as 200 KB. | 1 |
+| Convert | Encodes to WebP, AVIF, JPEG, JPEG XL, PNG or QOI with the encoder's real settings, or keeps each item's format (HEIC becomes JPEG, or PNG with transparency). | 1 |
+| Compress to size | Finds the highest quality that fits a target size such as 200 KB. Kept at each format, it makes HEIC into JPEG. | 1 |
 | Optimize PNG | Makes PNG files smaller without changing pixels. | 1 |
 | Rename | Names files from a template such as `{name}-{width}w`. The extension follows the format. Output numbers duplicate names. | 1 |
 | Output | Saves items, passes them on, and delivers a ZIP or folder. | 1 |
@@ -252,6 +295,34 @@ Items are images, data (JSON or text) or documents (PDF). Batch numbers match th
 - Nothing is stored in the browser until the user clicks Save or starts a run.
 - A pipeline exports to and imports from a `.hexlode` file. The file is versioned JSON, and older
   versions are migrated on import.
+- Share copies a pipeline link: the pipeline file, compressed, after the `#` of a link to Hexlode.
+  The part after `#` never reaches the server, so the pipeline is not stored anywhere but the link.
+  Opening the link shows the pipeline as a pipeline tool page, with Save and Open in the Studio.
+  A pipeline too large for a link, such as one with a big watermark logo, offers its `.hexlode`
+  file instead. A damaged or unreadable link says so and opens nothing.
+- Each saved pipeline counts its runs in the browser, and the run event carries that count, so
+  Hexlode can see whether people come back to their pipelines.
+
+## Offline and installing
+
+- After one online visit, Hexlode works without a connection: the home page, the quick tools,
+  the built-in tools, pipeline tools and the Studio open and run, with every codec, including formats not used yet.
+  Pages load from the network when there is one, so a new version shows on the next online visit;
+  without one they open from the copy kept in the browser. A small Offline badge shows in the top
+  bar while there is no connection.
+- The copy holds Hexlode's own files, never images. Clearing the site's data removes it, as the
+  privacy page says.
+- Hexlode can be installed from the browser as an app.
+- Installed on desktop Chromium, Hexlode opens images and `.hexlode` files from the file manager.
+  A `.hexlode` file opens in the Studio. Images open on a page that asks what to do with them: a
+  quick tool, a built-in tool or a saved pipeline tool. The chosen page opens with the images already
+  added; they travel in the tab's memory.
+- Installed on Android, Hexlode is offered in the share sheet for photos. Shared photos open in
+  Strip metadata with the photos added and the setting on removing only the location, since shared
+  photos are usually about to be posted. The photos wait in browser storage only until the page
+  takes them.
+- Browsers on iPhone and iPad support neither, so there Hexlode is the offline app only. The
+  interface does not mention this.
 
 ## Analytics
 
@@ -267,9 +338,10 @@ A signed-in cloud mode may later run large jobs on a server, keep running after 
 and use a credit system. Local processing stays free and unlimited. The database and account code
 in the repository waits for this work.
 
-## Out of scope for version 1
+## Out of scope for now
 
 - Accounts, sign-in, cloud processing and billing.
-- HEIC input, animated images and colour-profile conversion.
+- A command-line runner and a GitHub Action for pipelines.
+- HEIC output, animated images and colour-profile conversion.
 - Dither and retro effects.
 - The Studio on phones.

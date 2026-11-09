@@ -62,7 +62,7 @@ describe('Convert', () => {
   ])('encodes every input format to %s', async (format, extension) => {
     const { files } = await run(chain(['convert', { format }]), ALL_FORMAT_FIXTURES)
     const delivered = files()
-    expect(delivered).toHaveLength(6)
+    expect(delivered).toHaveLength(ALL_FORMAT_FIXTURES.length)
     for (const file of delivered) {
       expect(file.name.endsWith(`.${extension}`)).toBe(true)
       const image = await decodeFile(file.bytes)

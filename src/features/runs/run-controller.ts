@@ -3,8 +3,14 @@
  * starting and cancelling runs, statistics and deliveries. Plain TypeScript; pages subscribe.
  */
 
+import { ON_DEVICE_MODELS } from '#/features/background-removal/constants'
+import { type ModelNeed, modelNeeds, modelTimings } from '#/features/background-removal/device'
+import { inferenceHost } from '#/features/background-removal/inference-host'
+import { downloadModel, ModelDownloadError } from '#/features/background-removal/model-files'
+import type { SegmentationModel } from '#/features/background-removal/types'
 import { filesAccepts } from '#/features/engine/compatibility'
 import { type Estimate, estimateRun } from '#/features/engine/estimate'
+import { modelsOf } from '#/features/engine/models'
 import type { FolderTarget } from '#/features/engine/opfs/run-stores'
 import { createWorkerPoolHost } from '#/features/engine/pool-host'
 import { choosePoolSize, deviceProfile } from '#/features/engine/pool-size'
@@ -14,12 +20,12 @@ import { recordRunSpeed, speedFactor } from '#/features/runs/calibration'
 import { createEngineWorker, engineRuntime } from '#/features/runs/engine-runtime'
 import { createRunStats, type RunSnapshot } from '#/features/runs/run-stats'
 import { type InputFile, prepareSources, type RefusedFile } from '#/features/runs/sources'
-import type { QUICK_TOOLS } from '#/features/usage/events'
+import type { QUICK_TOOLS, SURFACES } from '#/features/usage/events'
 import { pipelineShape } from '#/features/usage/pipeline-shape'
 import { track } from '#/features/usage/usage'
 import { downloadBlob } from '#/lib/download'
 
-type Surface = 'quick-tool' | 'pipeline-tool' | 'studio'
+export type Surface = (typeof SURFACES)[number]
 
 export interface RunControllerState {
   files: InputFile[]
@@ -32,11 +38,19 @@ export interface RunControllerState {
   running: boolean
   stats: RunSnapshot
   error: string | null
+  /** On-device models the pipeline runs. A run waits until every one is in this browser. */
+  models: ModelNeed[]
+  /** Progress of the model download the person agreed to, while it lasts. */
+  modelDownload: { received: number; total: number } | null
 }
+
+export type { ModelNeed }
 
 export interface StartOptions {
   folders?: Map<string, FolderTarget>
   singleFileAsIs?: boolean
+  /** For a saved pipeline, how many times it has run with this run, for the run event. */
+  pipelineRuns?: number
 }
 
 function filesNodeId(pipeline: Pipeline, registry: NodeRegistry) {
@@ -55,9 +69,14 @@ export function createRunController(options: {
   registry: NodeRegistry
   surface: Surface
   tool?: (typeof QUICK_TOOLS)[number]
+  /** The slug of the built-in tool that runs, for the run events. */
+  builtInTool?: string
   outputNodeId?: string
+  /** On-device models by ID. The pinned models unless a test describes a stand-in. */
+  models?: Record<string, SegmentationModel>
 }) {
-  const { registry, surface, tool } = options
+  const { registry, surface, tool, builtInTool } = options
+  const models = options.models ?? ON_DEVICE_MODELS
   const stats = createRunStats({ outputNodeId: options.outputNodeId })
   const listeners = new Set<() => void>()
   let pipeline: Pipeline | undefined
@@ -75,6 +94,8 @@ export function createRunController(options: {
     running: false,
     stats: stats.snapshot(),
     error: null,
+    models: [],
+    modelDownload: null,
   }
 
   const set = (changes: Partial<RunControllerState>) => {
@@ -99,6 +120,7 @@ export function createRunController(options: {
       )
       const workers = choosePoolSize(deviceProfile(largest))
       const { index } = await engineRuntime()
+      const needs = await modelNeeds(modelsOf(pipeline, registry), models)
       let estimate: Estimate | null = null
       try {
         estimate = estimateRun({
@@ -108,12 +130,13 @@ export function createRunController(options: {
           workers,
           lookup: index ? (key) => index.entry(key) : undefined,
           speedFactor: speedFactor(),
+          models: await modelTimings(needs),
         })
       } catch {
         estimate = null
       }
       if (current !== preparation) return
-      set({ sources, refused, workers, estimate, preparing: false, error: null })
+      set({ sources, refused, workers, estimate, models: needs, preparing: false, error: null })
     } catch (reason) {
       if (current !== preparation) return
       set({
@@ -157,8 +180,63 @@ export function createRunController(options: {
       set({ files: [], sources: [], refused: [], estimate: null, preparing: false })
       stats.reset()
     },
+    /**
+     * Downloads the models the pipeline needs and this browser does not have, once the person
+     * agreed. Throws when a download fails; the run keeps waiting for the model.
+     */
+    async downloadModels(downloadOptions: { signal?: AbortSignal } = {}) {
+      for (const need of state.models.filter((entry) => !entry.stored)) {
+        const model = models[need.id]
+        const started = performance.now()
+        set({ modelDownload: { received: 0, total: need.bytes } })
+        try {
+          await downloadModel(model, {
+            signal: downloadOptions.signal,
+            onProgress: (received, total) => set({ modelDownload: { received, total } }),
+          })
+          track('model_downloaded', {
+            surface,
+            model: need.id,
+            status: 'complete',
+            bytes: need.bytes,
+            durationMs: Math.round(performance.now() - started),
+          })
+        } catch (reason) {
+          const cancelled = downloadOptions.signal?.aborted === true
+          track('model_downloaded', {
+            surface,
+            model: need.id,
+            status: cancelled ? 'cancelled' : 'failed',
+            bytes: need.bytes,
+            durationMs: Math.round(performance.now() - started),
+            ...(cancelled
+              ? {}
+              : {
+                  errorCode: reason instanceof ModelDownloadError ? reason.code : 'network_error',
+                }),
+          })
+          throw reason
+        } finally {
+          set({ modelDownload: null })
+        }
+      }
+      await prepare()
+    },
+    /** The person chose not to download the models the pipeline needs. */
+    declineModels() {
+      for (const need of state.models.filter((entry) => !entry.stored)) {
+        track('model_downloaded', {
+          surface,
+          model: need.id,
+          status: 'declined',
+          bytes: need.bytes,
+          durationMs: 0,
+        })
+      }
+    },
     async start(startOptions: StartOptions = {}) {
       if (!pipeline || state.running || state.sources.length === 0) return undefined
+      if (state.models.some((need) => !need.stored)) return undefined
       set({ running: true, error: null })
       try {
         const result = await execute(pipeline, startOptions)
@@ -189,7 +267,11 @@ export function createRunController(options: {
     const { index } = await engineRuntime()
     controller = new AbortController()
     host?.dispose()
+    const modelIds = modelsOf(runPipelineNow, registry)
+    // Starts counting this run's model runs from zero.
+    if (modelIds.length > 0) inferenceHost().takeStats()
     host = createWorkerPoolHost({
+      connectInference: modelIds.length > 0 ? () => inferenceHost().connect() : undefined,
       size: state.workers,
       createWorker: createEngineWorker,
       index,
@@ -205,11 +287,13 @@ export function createRunController(options: {
     track('run_started', {
       surface,
       tool,
+      builtInTool,
       itemCount: state.sources.length,
       workers: state.workers,
       estimatedEncodes: estimate?.encodes ?? 0,
       estimatedSeconds: Math.round(estimate?.seconds ?? 0),
       pipeline: pipelineShape(runPipelineNow, registry),
+      ...(startOptions.pipelineRuns ? { pipelineRuns: startOptions.pipelineRuns } : {}),
     })
     const autoDownload = new Set(
       runPipelineNow.nodes
@@ -239,6 +323,7 @@ export function createRunController(options: {
     track('run_finished', {
       surface,
       tool,
+      builtInTool,
       status: result.status,
       itemCount: state.sources.length,
       processed: outputStats.reduce((sum, node) => sum + node.processed, 0),
@@ -251,6 +336,22 @@ export function createRunController(options: {
       failureCodes: result.error ? ['run_error'] : [],
       warningCodes: snapshot.warningCodes,
     })
+    if (modelIds.length > 0) {
+      const used = inferenceHost().takeStats()
+      for (const model of modelIds) {
+        track('model_ran', {
+          surface,
+          tool,
+          builtInTool,
+          model,
+          ...(used.backend ? { backend: used.backend } : {}),
+          runs: used.runs,
+          ...(used.startMs === null ? {} : { startMs: Math.round(used.startMs) }),
+          meanRunMs: used.runs > 0 ? Math.round(used.runMs / used.runs) : 0,
+          failureCodes: used.failureCodes,
+        })
+      }
+    }
     return result
   }
 

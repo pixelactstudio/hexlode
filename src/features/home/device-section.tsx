@@ -385,7 +385,7 @@ const NOTES: {
   {
     icon: Layers,
     title: 'Modern formats',
-    text: 'AVIF, WebP and JPEG XL as well as JPEG and PNG, with the settings each codec offers.',
+    text: 'Opens HEIC photos, and saves AVIF, WebP and JPEG XL as well as JPEG and PNG, with the settings each codec offers.',
   },
   {
     icon: GitHubMark,

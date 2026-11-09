@@ -38,6 +38,7 @@ async function decode(format: ImageFormat, data: Uint8Array): Promise<Pixels> {
 }
 
 async function decodeWith(format: ImageFormat, data: Uint8Array): Promise<Pixels> {
+  if (format === 'heic') return (await import('#/features/images/heic')).decodeHeic(data)
   const input = buffer(data)
   let image: ImageData | null
   switch (format) {

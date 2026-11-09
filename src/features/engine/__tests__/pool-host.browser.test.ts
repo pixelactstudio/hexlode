@@ -1,5 +1,15 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import {
+  brightDisc,
+  storeStandInModel,
+} from '#/features/background-removal/__tests__/stand-in-model'
+import { BACKGROUND_MODEL } from '#/features/background-removal/constants'
+import {
+  createInferenceHost,
+  createInferenceWorker,
+} from '#/features/background-removal/inference-host'
+import { deleteStoredModel } from '#/features/background-removal/model-files'
 import { estimateRun } from '#/features/engine/estimate'
 import { fileKey } from '#/features/engine/keys'
 import { appDirectory, directoryAt, listNames } from '#/features/engine/opfs/files'
@@ -8,6 +18,7 @@ import { createStepCacheIndex } from '#/features/engine/opfs/step-cache'
 import { createWorkerPoolHost } from '#/features/engine/pool-host'
 import { runPipeline, type SourceItem } from '#/features/engine/runner'
 import type { Pipeline, RunEvent } from '#/features/engine/types'
+import { jsquashCodecs } from '#/features/images/codecs'
 import { loadImageItem } from '#/features/images/image-item'
 import {
   ALL_FORMAT_FIXTURES,
@@ -87,6 +98,46 @@ describe('worker pool', () => {
   beforeEach(async () => {
     const root = await appDirectory()
     for (const name of await listNames(root)) await root.removeEntry(name, { recursive: true })
+  })
+
+  it('runs Remove background in every worker through one shared inference worker', async () => {
+    await storeStandInModel()
+    const inference = createInferenceHost(createInferenceWorker)
+    const host = createWorkerPoolHost({
+      size: 2,
+      createWorker,
+      index: null,
+      connectInference: () => inference.connect(),
+    })
+    const png = await jsquashCodecs.encode(
+      { format: 'png', options: { optimisationLevel: 0, interlace: false } },
+      brightDisc(),
+    )
+    const files = ['a.png', 'b.png'].map((name) => new File([png.slice()], name))
+    const result = await runPipeline({
+      pipeline: chain(['remove-background']),
+      registry: productRegistry,
+      sources: await Promise.all(
+        files.map(async (file, index) => ({
+          index,
+          key: fileKey(file),
+          meta: (await loadImageItem(png, file.name)).meta,
+          file,
+        })),
+      ),
+      host,
+    })
+    expect(result.status).toBe('complete')
+    const entries = await unzip(result.deliveries[0].archive as Blob)
+    for (const entry of entries) {
+      const image = await decodeFile(entry.bytes)
+      expect(image.pixels.data[3]).toBe(0)
+      expect(image.pixels.data[(24 * 64 + 32) * 4 + 3]).toBe(255)
+    }
+    expect(inference.stats()).toMatchObject({ runs: 2, backend: 'wasm' })
+    host.dispose()
+    inference.dispose()
+    await deleteStoredModel(BACKGROUND_MODEL)
   })
 
   it('passes the items Deduplicate keeps on from storage, and reuses them on the next run', async () => {
@@ -189,6 +240,7 @@ describe('worker pool', () => {
         'photo-4.png',
         'photo-5.png',
         'photo-6.png',
+        'photo-7.png',
       ].sort(),
     )
     for (const entry of entries) {
@@ -243,7 +295,7 @@ describe('worker pool', () => {
     host.dispose()
     expect(result.status).toBe('cancelled')
     expect(result.deliveries[0].files.length).toBeGreaterThanOrEqual(1)
-    expect(result.deliveries[0].files.length).toBeLessThan(6)
+    expect(result.deliveries[0].files.length).toBeLessThan(ALL_FORMAT_FIXTURES.length)
   })
 
   it('fails work with the reason when a worker cannot set up the run', async () => {
