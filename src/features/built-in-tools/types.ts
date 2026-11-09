@@ -9,6 +9,7 @@ export type BuiltInToolSlug =
   | 'favicon-generator'
   | 'watermark-photos'
   | 'add-logo-to-photos'
+  | 'product-photos-white-background'
 
 /** Where a tool's numbers come from, for a tool that follows a platform's rules. */
 export interface ToolGuidance {

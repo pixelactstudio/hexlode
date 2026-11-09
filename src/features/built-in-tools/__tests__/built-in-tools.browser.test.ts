@@ -3,7 +3,7 @@
  * job its page promises.
  */
 import { describe, expect, it } from 'vitest'
-
+import { redSubjectSegmenter } from '#/features/background-removal/__tests__/stand-in-segmenter'
 import {
   availableBuiltInTools,
   BUILT_IN_TOOLS,
@@ -11,6 +11,7 @@ import {
 } from '#/features/built-in-tools/tools'
 import type { BuiltInTool } from '#/features/built-in-tools/types'
 import type { Pipeline } from '#/features/engine/types'
+import { jsquashCodecs } from '#/features/images/codecs'
 import {
   decodeFile,
   fixtureBytes,
@@ -45,10 +46,11 @@ async function delivered(
   builtIn: BuiltInTool,
   inputs: Parameters<typeof run>[1],
   pipeline?: Pipeline,
+  options?: Parameters<typeof run>[2],
 ) {
   const output = builtIn.pipeline.nodes.find((node) => node.type === 'output')
   if (!output) throw new Error('No Output node')
-  const result = await run(pipeline ?? builtIn.pipeline, inputs)
+  const result = await run(pipeline ?? builtIn.pipeline, inputs, options)
   expect(result.result.status).toBe('complete')
   const failures = result.events.filter(
     (event) => event.type === 'node-item' && event.status === 'failed',
@@ -101,6 +103,51 @@ describe('built-in tools', () => {
     const oriented = await decodeFile(files[1].bytes)
     expect(oriented).toMatchObject({ format: 'jpeg', width: 32, height: 48 })
     expect(oriented.exif.orientation ?? 1).toBe(1)
+  })
+
+  it('Product photos on white cut the product out, centre it on a white square and fill about 85%', async () => {
+    // A red product off-centre on a grey table, as a JPEG.
+    const product = (x: number, y: number) =>
+      (x - 120) ** 2 + (y - 100) ** 2 < 50 ** 2 ? [220, 20, 20, 255] : [128, 128, 128, 255]
+    const bytes = await jsquashCodecs.encode(
+      { format: 'jpeg', options: { quality: 95, progressive: false, chromaSubsampling: '444' } },
+      solidPixels(400, 300, product),
+    )
+    const files = await delivered(
+      tool('product-photos-white-background'),
+      [{ name: 'mug.jpg', bytes }],
+      undefined,
+      { services: { segmenter: redSubjectSegmenter() } },
+    )
+    expect(files.map(({ name }) => name)).toEqual(['mug.jpg'])
+    const image = await decodeFile(files[0].bytes)
+    expect(image.format).toBe('jpeg')
+    expect(image.width).toBe(image.height)
+    for (const [x, y] of [
+      [1, 1],
+      [image.width - 2, 1],
+      [1, image.height - 2],
+      [image.width - 2, image.height - 2],
+    ]) {
+      expect(near(pixelAt(image, x, y), WHITE, 6)).toBe(true)
+    }
+    const middle = Math.floor(image.height / 2)
+    expect(near(pixelAt(image, middle, middle), [220, 20, 20, 255])).toBe(true)
+    const red = Array.from({ length: image.width }, (_, x) => pixelAt(image, x, middle)).filter(
+      ([r, g]) => r > 150 && g < 100,
+    ).length
+    expect(red / image.width).toBeGreaterThan(0.8)
+    expect(red / image.width).toBeLessThan(0.92)
+  })
+
+  it('Product photos on white stay within 2000 pixels', async () => {
+    const product = (x: number, y: number) =>
+      (x - 1100) ** 2 + (y - 1100) ** 2 < 1000 ** 2 ? [220, 20, 20, 255] : [128, 128, 128, 255]
+    const big = await pngInput('big.png', solidPixels(2200, 2200, product))
+    const files = await delivered(tool('product-photos-white-background'), [big], undefined, {
+      services: { segmenter: redSubjectSegmenter() },
+    })
+    expect(await decodeFile(files[0].bytes)).toMatchObject({ width: 2000, height: 2000 })
   })
 
   it('JPG to PDF puts every image on its own page of one PDF, upright', async () => {

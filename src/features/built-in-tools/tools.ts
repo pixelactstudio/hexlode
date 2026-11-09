@@ -77,6 +77,32 @@ export const BUILT_IN_TOOLS: BuiltInTool[] = [
     adjustable: ['pad'],
   },
   {
+    slug: 'product-photos-white-background',
+    name: 'Product photos on white',
+    heading: 'Product photos on a white background',
+    description:
+      'Cuts each product out, centres it on a pure white square so it fills about 85% of the frame, and saves a JPEG of up to 2000 pixels.',
+    reason:
+      'Amazon, eBay, Etsy and Shopify sellers need product shots on pure white, square and large enough to zoom, for every listing. Background removal sites charge per photo and upload each one; this does the cut-out, the white square and the size for a whole batch on the device.',
+    guidance: {
+      label: 'Amazon Seller Central: product image requirements',
+      url: 'https://sellercentral.amazon.com/help/hub/reference/external/G1881',
+      checked: '2026-11-10',
+    },
+    pipeline: line([
+      ['files', 'files'],
+      ['rotate', 'rotate', { auto: true }],
+      ['cutout', 'remove-background'],
+      ['trim', 'auto-trim'],
+      ['white', 'background', { colour: '#ffffff' }],
+      ['square', 'pad', { aspect: '1:1', colour: '#ffffff', margin: 8 }],
+      ['resize', 'resize', { mode: 'box', width: 2000, height: 2000, fit: 'fit' }],
+      ['convert', 'convert', { format: 'jpeg', jpeg: { quality: 92 } }],
+      ['output', 'output', { archiveName: 'product-photos' }],
+    ]),
+    adjustable: ['square'],
+  },
+  {
     slug: 'favicon-generator',
     name: 'Favicon generator',
     heading: 'Favicon generator',

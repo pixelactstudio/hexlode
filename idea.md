@@ -124,6 +124,7 @@ list and the reason for each entry live in `src/features/built-in-tools/`.
 | WebP to JPG | Turns WebP images saved from the web into JPEG, with transparency made white. |
 | JPG to PDF | Puts every image on its own page of one PDF, upright, on A4, Letter or the image size. |
 | Instagram without cropping | Fits each photo into a 4:5 or square post 1080 pixels wide, with a blurred or plain border. |
+| Product photos on white | Cuts each product out and centres it on a pure white square, filling about 85%, as a JPEG of up to 2000 pixels. |
 | Favicon generator | Makes an ICO file, PNG icons, a web app manifest and the HTML tags from one image. |
 | Watermark photos | Writes a text watermark on every photo, in a corner or tiled, keeping each format. |
 | Add logo to photos | Places a logo on every photo at the same corner, size and opacity. Runs once a logo is chosen. |

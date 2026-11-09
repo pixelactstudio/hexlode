@@ -4,6 +4,7 @@ import {
   ImageDown,
   ImagePlus,
   Proportions,
+  ShoppingBag,
   Smartphone,
   Stamp,
 } from 'lucide-react'
@@ -22,4 +23,5 @@ export const BUILT_IN_TOOL_ICONS: Record<
   'favicon-generator': AppWindow,
   'watermark-photos': Stamp,
   'add-logo-to-photos': ImagePlus,
+  'product-photos-white-background': ShoppingBag,
 }
