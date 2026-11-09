@@ -44,7 +44,7 @@ export const EVENTS = {
     description: 'A page was opened.',
     properties: z
       .object({
-        page: z.enum(['home', 'quick-tool', 'pipeline-tool', 'studio', 'privacy']),
+        page: z.enum(['home', 'quick-tool', 'pipeline-tool', 'studio', 'privacy', 'open']),
         tool: tool.optional(),
       })
       .strict(),
@@ -57,6 +57,13 @@ export const EVENTS = {
     description: 'Files were added: how many were accepted and refused, and why.',
     properties: z
       .object({ surface, accepted: count, refused: count, refusalCodes: z.array(code) })
+      .strict(),
+  },
+  files_opened: {
+    description:
+      'Files were opened in the installed app, from the file manager or a share: how many images and pipeline files.',
+    properties: z
+      .object({ source: z.enum(['file-handler', 'share']), images: count, pipelineFiles: count })
       .strict(),
   },
   run_started: {

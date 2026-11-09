@@ -15,10 +15,12 @@ import { Route as CompressRouteImport } from './routes/compress'
 import { Route as ConvertRouteImport } from './routes/convert'
 import { Route as CropRouteImport } from './routes/crop'
 import { Route as ManifestDotwebmanifestRouteImport } from './routes/manifest[.]webmanifest'
+import { Route as OpenRouteImport } from './routes/open'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResizeRouteImport } from './routes/resize'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RotateRouteImport } from './routes/rotate'
+import { Route as ShareTargetRouteImport } from './routes/share-target'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StripMetadataRouteImport } from './routes/strip-metadata'
 import { Route as StudioRouteImport } from './routes/studio'
@@ -56,6 +58,11 @@ const ManifestDotwebmanifestRoute = ManifestDotwebmanifestRouteImport.update({
   path: '/manifest.webmanifest',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OpenRoute = OpenRouteImport.update({
+  id: '/open',
+  path: '/open',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -74,6 +81,11 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
 const RotateRoute = RotateRouteImport.update({
   id: '/rotate',
   path: '/rotate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShareTargetRoute = ShareTargetRouteImport.update({
+  id: '/share-target',
+  path: '/share-target',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -114,10 +126,12 @@ export interface FileRoutesByFullPath {
   '/convert': typeof ConvertRoute
   '/crop': typeof CropRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
+  '/open': typeof OpenRoute
   '/privacy': typeof PrivacyRoute
   '/resize': typeof ResizeRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/rotate': typeof RotateRoute
+  '/share-target': typeof ShareTargetRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
@@ -132,10 +146,12 @@ export interface FileRoutesByTo {
   '/convert': typeof ConvertRoute
   '/crop': typeof CropRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
+  '/open': typeof OpenRoute
   '/privacy': typeof PrivacyRoute
   '/resize': typeof ResizeRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/rotate': typeof RotateRoute
+  '/share-target': typeof ShareTargetRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
@@ -151,10 +167,12 @@ export interface FileRoutesById {
   '/convert': typeof ConvertRoute
   '/crop': typeof CropRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
+  '/open': typeof OpenRoute
   '/privacy': typeof PrivacyRoute
   '/resize': typeof ResizeRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/rotate': typeof RotateRoute
+  '/share-target': typeof ShareTargetRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strip-metadata': typeof StripMetadataRoute
   '/studio': typeof StudioRoute
@@ -171,10 +189,12 @@ export interface FileRouteTypes {
     | '/convert'
     | '/crop'
     | '/manifest.webmanifest'
+    | '/open'
     | '/privacy'
     | '/resize'
     | '/robots.txt'
     | '/rotate'
+    | '/share-target'
     | '/sitemap.xml'
     | '/strip-metadata'
     | '/studio'
@@ -189,10 +209,12 @@ export interface FileRouteTypes {
     | '/convert'
     | '/crop'
     | '/manifest.webmanifest'
+    | '/open'
     | '/privacy'
     | '/resize'
     | '/robots.txt'
     | '/rotate'
+    | '/share-target'
     | '/sitemap.xml'
     | '/strip-metadata'
     | '/studio'
@@ -207,10 +229,12 @@ export interface FileRouteTypes {
     | '/convert'
     | '/crop'
     | '/manifest.webmanifest'
+    | '/open'
     | '/privacy'
     | '/resize'
     | '/robots.txt'
     | '/rotate'
+    | '/share-target'
     | '/sitemap.xml'
     | '/strip-metadata'
     | '/studio'
@@ -226,10 +250,12 @@ export interface RootRouteChildren {
   ConvertRoute: typeof ConvertRoute
   CropRoute: typeof CropRoute
   ManifestDotwebmanifestRoute: typeof ManifestDotwebmanifestRoute
+  OpenRoute: typeof OpenRoute
   PrivacyRoute: typeof PrivacyRoute
   ResizeRoute: typeof ResizeRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   RotateRoute: typeof RotateRoute
+  ShareTargetRoute: typeof ShareTargetRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StripMetadataRoute: typeof StripMetadataRoute
   StudioRoute: typeof StudioRoute
@@ -282,6 +308,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManifestDotwebmanifestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/open': {
+      id: '/open'
+      path: '/open'
+      fullPath: '/open'
+      preLoaderRoute: typeof OpenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
@@ -308,6 +341,13 @@ declare module '@tanstack/react-router' {
       path: '/rotate'
       fullPath: '/rotate'
       preLoaderRoute: typeof RotateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/share-target': {
+      id: '/share-target'
+      path: '/share-target'
+      fullPath: '/share-target'
+      preLoaderRoute: typeof ShareTargetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -362,10 +402,12 @@ const rootRouteChildren: RootRouteChildren = {
   ConvertRoute: ConvertRoute,
   CropRoute: CropRoute,
   ManifestDotwebmanifestRoute: ManifestDotwebmanifestRoute,
+  OpenRoute: OpenRoute,
   PrivacyRoute: PrivacyRoute,
   ResizeRoute: ResizeRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   RotateRoute: RotateRoute,
+  ShareTargetRoute: ShareTargetRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StripMetadataRoute: StripMetadataRoute,
   StudioRoute: StudioRoute,

@@ -54,3 +54,54 @@ describe('webManifest', () => {
     )
   })
 })
+
+describe('webManifest for the installed app', () => {
+  const manifest = webManifest()
+  const images = {
+    'image/jpeg': ['.jpg', '.jpeg'],
+    'image/png': ['.png'],
+    'image/webp': ['.webp'],
+    'image/avif': ['.avif'],
+    'image/jxl': ['.jxl'],
+    'image/qoi': ['.qoi'],
+  }
+
+  it('meets the install criteria', () => {
+    expect(manifest).toMatchObject({ id: '/', scope: '/', start_url: '/', display: 'standalone' })
+    expect(manifest.short_name.length).toBeLessThanOrEqual(12)
+    expect(manifest.icons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ sizes: '192x192', type: 'image/png' }),
+        expect.objectContaining({ sizes: '512x512', type: 'image/png' }),
+      ]),
+    )
+    expect(manifest).not.toHaveProperty('prefer_related_applications', true)
+  })
+
+  it('opens the images Hexlode reads and .hexlode files from the file manager', () => {
+    expect(manifest.file_handlers).toEqual([
+      {
+        action: '/open',
+        accept: { ...images, 'application/vnd.hexlode.pipeline+json': ['.hexlode'] },
+        launch_type: 'single-client',
+      },
+    ])
+  })
+
+  it('opens files in a new window, so no open work is replaced', () => {
+    expect(manifest.launch_handler).toEqual({ client_mode: 'navigate-new' })
+  })
+
+  it('receives photos shared on Android', () => {
+    expect(manifest.share_target).toEqual({
+      action: '/share-target',
+      method: 'POST',
+      enctype: 'multipart/form-data',
+      params: {
+        files: [
+          { name: 'photos', accept: [...Object.keys(images), ...Object.values(images).flat()] },
+        ],
+      },
+    })
+  })
+})

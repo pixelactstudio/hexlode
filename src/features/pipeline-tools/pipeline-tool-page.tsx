@@ -6,6 +6,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useState, useSyncExternalStore } from 'react'
 
 import { PageColumn } from '#/features/app-shell/page-column'
+import { useArrivingFiles } from '#/features/handover/use-arriving-files'
 import { productRegistry } from '#/features/nodes/registry'
 import { validatePipeline } from '#/features/pipelines/pipeline-file'
 import { pipelineStore } from '#/features/pipelines/storage'
@@ -35,6 +36,10 @@ function PipelineTool({ saved }: { saved: SavedPipeline }) {
   useEffect(() => {
     void controller.setPipeline(saved.pipeline)
   }, [controller, saved])
+  useArrivingFiles({
+    path: `/tools/${saved.id}`,
+    onFiles: (files) => void controller.addFiles(files),
+  })
   const count = state.sources.length
 
   if (outputs.length === 0) {

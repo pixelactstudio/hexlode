@@ -3,6 +3,8 @@
  * `/manifest.webmanifest`. Each is built from the page list in `constants.ts`, so a new page shows
  * up in all of them.
  */
+import { OPEN_PATH, SHARE_FILES_FIELD, SHARE_TARGET_PATH } from '#/features/handover/constants'
+import { openableFiles, openableImages } from '#/features/handover/file-types'
 import { ICON_SIZES, SEO_PAGES, SITE_NAME, SITE_URL, THEME_COLOUR } from '#/features/seo/constants'
 import { absoluteUrl } from '#/features/seo/head'
 
@@ -37,7 +39,12 @@ export function sitemapXml() {
   ].join('\n')
 }
 
+/**
+ * The web app manifest. Installed, Hexlode opens images and `.hexlode` files from the file manager
+ * on desktop Chromium and receives photos shared on Android.
+ */
 export function webManifest() {
+  const images = openableImages()
   return {
     name: SITE_NAME,
     short_name: SITE_NAME,
@@ -68,5 +75,21 @@ export function webManifest() {
       },
       { src: '/hexlode-mark.svg', sizes: 'any', type: 'image/svg+xml' },
     ],
+    // Opened files get a new window, so a launch never replaces work open in another.
+    launch_handler: { client_mode: 'navigate-new' },
+    file_handlers: [{ action: OPEN_PATH, accept: openableFiles(), launch_type: 'single-client' }],
+    share_target: {
+      action: SHARE_TARGET_PATH,
+      method: 'POST',
+      enctype: 'multipart/form-data',
+      params: {
+        files: [
+          {
+            name: SHARE_FILES_FIELD,
+            accept: [...Object.keys(images), ...Object.values(images).flat()],
+          },
+        ],
+      },
+    },
   }
 }

@@ -10,8 +10,8 @@ changes the worker's bytes and the browser installs the new worker on the next o
 
 On install the worker downloads every listed file into `hexlode-app-<version>`, codecs the visitor
 has not used included, and the main pages into `hexlode-pages-<version>`: the home page, the quick
-tools, the Studio, the privacy page and the app shell. It then takes over at once and deletes the
-two caches of earlier versions. It never deletes another cache, such as the on-device model's.
+tools, the Studio, the privacy page, the open page and the app shell. It then takes over at once
+and deletes the two caches of earlier versions. It never deletes another cache, such as the on-device model's.
 
 Page loads go to the network first, and the worker keeps a copy of each page that loads only this
 build's scripts. Offline it returns that copy, the same page with another query, or the app shell:
@@ -19,6 +19,9 @@ build's scripts. Offline it returns that copy, the same page with another query,
 and the router renders the requested page in the browser. Build files come from the cache. The
 worker answers nothing else, so `/api/` (health and auth), `/models/`, server functions, the Sentry
 tunnel, PostHog and every other origin reach the network untouched.
+
+The same worker receives photos shared to the installed app on Android at `/share-target`, keeps
+them in `hexlode-share` until Strip metadata takes them, and deletes them then.
 
 ## Considered options
 
@@ -46,4 +49,6 @@ tunnel, PostHog and every other origin reach the network untouched.
   in the worker's cache. Offline, the earlier copy opens instead.
 - A tab left open across a deploy can fail to load a part of the app it has not loaded yet, as it
   could without a worker, because the new worker deletes the old build's files.
+- If the worker is missing, as after the site's data was cleared, a share from Android reaches the
+  server. The server route answers with Strip metadata and reads none of the photos.
 - The privacy page says what the copy holds and how to remove it.

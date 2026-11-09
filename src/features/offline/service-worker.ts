@@ -1,8 +1,10 @@
 /// <reference lib="webworker" />
 /**
  * The service worker, served at `/sw.js` in production builds (ADR 0015). The build step bundles
- * this file into one classic script and writes the build's precache list into it.
+ * this file into one classic script and writes the build's precache list into it. It keeps the
+ * app working offline and receives photos shared to the installed app.
  */
+import { shareResponse } from '#/features/handover/share'
 import type { PrecacheManifest } from '#/features/offline/worker'
 import { createOfflineWorker } from '#/features/offline/worker'
 
@@ -26,6 +28,8 @@ scope.addEventListener('activate', (event) => {
 })
 
 scope.addEventListener('fetch', (event) => {
-  const response = offline.respond(event.request, (promise) => event.waitUntil(promise))
+  const response =
+    shareResponse(event.request, scope.caches) ??
+    offline.respond(event.request, (promise) => event.waitUntil(promise))
   if (response) event.respondWith(response)
 })

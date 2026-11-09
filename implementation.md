@@ -133,8 +133,12 @@ by one per run of a saved pipeline.
    only. Pages load from the network first and fall back to their cached copy offline, or to the
    app shell, `/app-shell`, a route the server renders without its page. A badge shows when the app
    is offline ([ADR 0015](./docs/adr/0015-service-worker-for-offline-use.md)).
-2. Installed on desktop Chromium, Hexlode opens images and `.hexlode` files from the file manager.
-   Installed on Android, photos shared to Hexlode open in Strip metadata, set to remove location.
+2. Installed on desktop Chromium, Hexlode opens images and `.hexlode` files from the file manager:
+   the manifest's file handlers open `/open`, which reads `window.launchQueue`, sends a `.hexlode`
+   file to the Studio and asks which tool takes the images. Installed on Android, photos shared to
+   Hexlode go to the manifest's share target, which the service worker answers; they open in Strip
+   metadata, set to remove location. Quick tool and pipeline tool pages take files handed to them
+   in memory (`src/features/handover/`).
 
 Exit gate: a browser test loads a quick tool and the Studio offline after one online visit, files
 from a share or a file launch land in the right page, and the privacy page explains the cache.
@@ -214,8 +218,8 @@ removed.
 - Test-only node types with data and document items, one-to-many and many-to-one behaviour prove
   what batches 2 and 3 need. They join the node pair matrix but never the product registry.
 - `pnpm test:e2e` drives the production build in Chromium with Playwright, so run `pnpm build`
-  first. It loads the app offline after one visit and runs an image through a quick tool. CI runs
-  it after the build.
+  first. It loads the app offline after one visit, runs an image through a quick tool, and checks
+  shares and file launches. CI runs it after the build.
 - The batch of 500 images of 12 megapixels runs with `pnpm test:scale`. It takes minutes, so it is
   outside `pnpm validate`; run it before closing a phase.
 - `pnpm validate` passes before every commit.

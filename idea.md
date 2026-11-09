@@ -284,6 +284,16 @@ Items are images, data (JSON or text) or documents (PDF). Batch numbers match th
 - The copy holds Hexlode's own files, never images. Clearing the site's data removes it, as the
   privacy page says.
 - Hexlode can be installed from the browser as an app.
+- Installed on desktop Chromium, Hexlode opens images and `.hexlode` files from the file manager.
+  A `.hexlode` file opens in the Studio. Images open on a page that asks what to do with them: one
+  of the six quick tools or a saved pipeline tool. The chosen page opens with the images already
+  added; they travel in the tab's memory.
+- Installed on Android, Hexlode is offered in the share sheet for photos. Shared photos open in
+  Strip metadata with the photos added and the setting on removing only the location, since shared
+  photos are usually about to be posted. The photos wait in browser storage only until the page
+  takes them.
+- Browsers on iPhone and iPad support neither, so there Hexlode is the offline app only. The
+  interface does not mention this.
 
 ## Analytics
 

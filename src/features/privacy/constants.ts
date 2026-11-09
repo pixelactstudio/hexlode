@@ -26,4 +26,9 @@ export const STORED_IN_BROWSER = [
     description:
       "Hexlode's own pages, scripts, styles, fonts and image codecs, saved after your first visit so the app opens and runs without a connection. Never your images. Each new version of Hexlode replaces it.",
   },
+  {
+    label: 'Photos shared to the app',
+    description:
+      'On Android, photos you share to the installed app wait here until Strip metadata opens them, then they are deleted.',
+  },
 ] as const
