@@ -114,6 +114,7 @@ list and the reason for each entry live in `src/features/built-in-tools/`.
 
 | Tool | Job |
 |---|---|
+| HEIC to JPG | Turns iPhone HEIC photos into JPEG, upright, keeping their date, camera and location. |
 | WebP to JPG | Turns WebP images saved from the web into JPEG, with transparency made white. |
 | JPG to PDF | Puts every image on its own page of one PDF, upright, on A4, Letter or the image size. |
 | Instagram without cropping | Fits each photo into a 4:5 or square post 1080 pixels wide, with a blurred or plain border. |

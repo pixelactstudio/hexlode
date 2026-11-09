@@ -92,6 +92,17 @@ describe('built-in tools', () => {
     expect(near(pixelAt(image, ...clear), WHITE, 12)).toBe(true)
   })
 
+  it('HEIC to JPG saves upright JPEG files and keeps their details', async () => {
+    const files = await delivered(tool('heic-to-jpg'), ['photo.heic', 'oriented.heic'])
+    expect(files.map(({ name }) => name)).toEqual(['photo.jpg', 'oriented.jpg'])
+    const photo = await decodeFile(files[0].bytes)
+    expect(photo).toMatchObject({ format: 'jpeg', width: 48, height: 32 })
+    expect(photo.exif).toMatchObject({ hasGps: true, artist: 'Ada Example' })
+    const oriented = await decodeFile(files[1].bytes)
+    expect(oriented).toMatchObject({ format: 'jpeg', width: 32, height: 48 })
+    expect(oriented.exif.orientation ?? 1).toBe(1)
+  })
+
   it('JPG to PDF puts every image on its own page of one PDF, upright', async () => {
     const files = await delivered(tool('jpg-to-pdf'), ['photo.jpg', 'oriented.jpg', 'photo.png'])
     expect(files).toHaveLength(1)

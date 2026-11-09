@@ -1,4 +1,12 @@
-import { AppWindow, FileText, ImageDown, ImagePlus, Proportions, Stamp } from 'lucide-react'
+import {
+  AppWindow,
+  FileText,
+  ImageDown,
+  ImagePlus,
+  Proportions,
+  Smartphone,
+  Stamp,
+} from 'lucide-react'
 import type { ComponentType, SVGProps } from 'react'
 
 import type { BuiltInToolSlug } from '#/features/built-in-tools/types'
@@ -7,6 +15,7 @@ export const BUILT_IN_TOOL_ICONS: Record<
   BuiltInToolSlug,
   ComponentType<SVGProps<SVGSVGElement>>
 > = {
+  'heic-to-jpg': Smartphone,
   'webp-to-jpg': ImageDown,
   'jpg-to-pdf': FileText,
   'instagram-no-crop': Proportions,

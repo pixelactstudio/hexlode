@@ -2,6 +2,7 @@ import type { Pipeline } from '#/features/engine/types'
 
 /** Every built-in tool's slug, as in `/tools/<slug>`. */
 export type BuiltInToolSlug =
+  | 'heic-to-jpg'
   | 'webp-to-jpg'
   | 'jpg-to-pdf'
   | 'instagram-no-crop'

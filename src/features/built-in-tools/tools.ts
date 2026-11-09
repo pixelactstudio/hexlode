@@ -9,6 +9,20 @@ import { line } from '#/features/pipelines/templates'
 
 export const BUILT_IN_TOOLS: BuiltInTool[] = [
   {
+    slug: 'heic-to-jpg',
+    name: 'HEIC to JPG',
+    heading: 'Convert HEIC to JPG',
+    description:
+      'Turns iPhone HEIC photos into JPEG files that every computer, website and form accepts, upright and with their date, camera and location kept.',
+    reason:
+      'iPhones save photos as HEIC, which Windows, many websites and upload forms still refuse, so HEIC to JPG is one of the most searched image conversions there is. Most converters upload the photos; here a whole batch converts on the device.',
+    pipeline: line([
+      ['files', 'files'],
+      ['convert', 'convert', { format: 'jpeg', jpeg: { quality: 90 } }],
+      ['output', 'output', { archiveName: 'jpg' }],
+    ]),
+  },
+  {
     slug: 'webp-to-jpg',
     name: 'WebP to JPG',
     heading: 'Convert WebP to JPG',
