@@ -11,34 +11,83 @@ import { useEffect, useMemo, useState } from 'react'
 
 import type { SourceItem } from '#/features/engine/runner'
 import { FORMAT_NAMES } from '#/features/images/image-item'
+import { createThumbnailer, type Thumbnailer } from '#/features/previews/thumbnailer'
+import { createThumbnailWorker } from '#/features/runs/engine-runtime'
 import type { RunController, RunControllerState } from '#/features/runs/run-controller'
 import { formatBytes, formatCount } from '#/lib/format'
 
 /** Rows shown before "Show all"; thumbnails decode the full image, so long lists stay short. */
 const VISIBLE_ROWS = 8
-/** Formats every current browser can show in an image element. */
+/** Formats every current browser can show in an image element. A worker draws the others. */
 const BROWSER_FORMATS = new Set(['jpeg', 'png', 'webp', 'avif'])
+/** Drawn previews kept while the page is open, so a list that changes does not draw again. */
+const MAX_DRAWN = 64
+
+let thumbnailer: Thumbnailer | undefined
+const drawn = new Map<string, Promise<Blob>>()
+
+/** A preview drawn by a worker, for a file the browser cannot show, such as HEIC. */
+function drawnPreview(key: string, file: Blob, name: string) {
+  let preview = drawn.get(key)
+  if (!preview) {
+    thumbnailer ??= createThumbnailer(createThumbnailWorker)
+    preview = thumbnailer.render(file, name)
+    drawn.set(key, preview)
+    const oldest = drawn.keys().next().value
+    if (drawn.size > MAX_DRAWN && oldest !== undefined) drawn.delete(oldest)
+  }
+  return preview
+}
 
 function formatName(format: string | undefined) {
   return FORMAT_NAMES[format as keyof typeof FORMAT_NAMES] ?? format ?? ''
 }
 
-/** Object URLs for the files shown, released when they leave the list. */
+/**
+ * Object URLs for the files shown, released when they leave the list: the file itself when the
+ * browser can show it, otherwise a drawn preview once it is ready. `null` means it cannot be drawn.
+ */
 function useObjectUrls(sources: SourceItem[]) {
-  const [urls, setUrls] = useState<Map<string, string>>(() => new Map())
+  const [urls, setUrls] = useState<Map<string, string | null>>(() => new Map())
   useEffect(() => {
-    const next = new Map<string, string>()
+    let current = true
+    const created: string[] = []
+    const next = new Map<string, string | null>()
     for (const source of sources) {
       if (source.file instanceof File && BROWSER_FORMATS.has(String(source.meta.format))) {
-        next.set(source.key, URL.createObjectURL(source.file))
+        const url = URL.createObjectURL(source.file)
+        created.push(url)
+        next.set(source.key, url)
       }
     }
     setUrls(next)
+    for (const source of sources) {
+      const { file, key, meta } = source
+      if (!(file instanceof Blob) || next.has(key)) continue
+      drawnPreview(key, file, meta.name).then(
+        (image) => {
+          if (!current) return
+          const url = URL.createObjectURL(image)
+          created.push(url)
+          setUrls((urls) => new Map(urls).set(key, url))
+        },
+        () => {
+          if (current) setUrls((urls) => new Map(urls).set(key, null))
+        },
+      )
+    }
     return () => {
-      for (const url of next.values()) URL.revokeObjectURL(url)
+      current = false
+      for (const url of created) URL.revokeObjectURL(url)
     }
   }, [sources])
   return urls
+}
+
+function thumbnailLabel(url: string | null | undefined, name: string, format: string | undefined) {
+  if (url) return `Preview ${name}`
+  if (url === undefined) return `Drawing a preview of ${name}`
+  return `${formatName(format)} has no preview here`
 }
 
 /**
@@ -61,7 +110,7 @@ export function SourceList({
     [sources, showAll],
   )
   const urls = useObjectUrls(visible)
-  const viewable = visible.filter((source) => urls.has(source.key))
+  const viewable = visible.filter((source) => urls.get(source.key))
   const bytes = sources.reduce((sum, source) => sum + (source.meta.size ?? 0), 0)
 
   if (total === 0) return null
@@ -103,9 +152,9 @@ export function SourceList({
                 .join(' · ')}
               startContent={
                 <Thumbnail
-                  src={url}
+                  src={url ?? undefined}
                   alt={url ? name : undefined}
-                  label={url ? `Preview ${name}` : `${formatName(format)} has no preview here`}
+                  label={thumbnailLabel(url, name, format)}
                   onClick={url ? () => setPreview(viewable.indexOf(source)) : undefined}
                 />
               }

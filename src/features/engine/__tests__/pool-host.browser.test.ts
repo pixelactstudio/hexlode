@@ -189,6 +189,7 @@ describe('worker pool', () => {
         'photo-4.png',
         'photo-5.png',
         'photo-6.png',
+        'photo-7.png',
       ].sort(),
     )
     for (const entry of entries) {
@@ -243,7 +244,7 @@ describe('worker pool', () => {
     host.dispose()
     expect(result.status).toBe('cancelled')
     expect(result.deliveries[0].files.length).toBeGreaterThanOrEqual(1)
-    expect(result.deliveries[0].files.length).toBeLessThan(6)
+    expect(result.deliveries[0].files.length).toBeLessThan(ALL_FORMAT_FIXTURES.length)
   })
 
   it('fails work with the reason when a worker cannot set up the run', async () => {

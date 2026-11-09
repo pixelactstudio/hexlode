@@ -146,10 +146,25 @@ from a share or a file launch land in the right page, and the privacy page expla
 ## Phase 6: HEIC input
 
 HEIC and HEIF photos open wherever other images do, through a WASM decoder loaded on first use in
-the worker. Hexlode decodes HEIC but does not write it.
+the worker. Hexlode decodes HEIC but does not write it
+([ADR 0016](./docs/adr/0016-heic-decoder.md)).
 
-Exit gate: real iPhone photos decode with the right dimensions, orientation and metadata, and the
-node pair matrix passes with HEIC fixtures.
+1. libheif with libde265, compiled to WebAssembly by `libheif-js`, decodes the primary image. Its
+   loader and `.wasm` are separate files Hexlode serves, credited on the codec licences page.
+2. libheif applies `irot`, `imir` and `clap`, so pixels come out upright and the header reader
+   reports the size after them. Reading HEIC metadata sets the EXIF orientation tag to 1, so
+   nothing turns the photo a second time.
+3. EXIF, XMP and the colour profile are read with the same HEIF code as AVIF, and edited in place.
+4. A HEIC image that must be written in its own format becomes JPEG, or PNG when it has
+   transparency, with a run warning.
+5. HEIC joins the formats in item types, the Files node, file intake, the file picker, the drop
+   area, the Filter node's format rule, the home page and the Convert copy.
+6. The list of added files draws previews of HEIC, JPEG XL and QOI files in a worker, since
+   browsers other than Safari cannot show them.
+
+Exit gate: iPhone-style photos (grid tiles, `irot` rotation with an EXIF orientation, GPS, a
+Display P3 profile, transparency) decode with the right dimensions, orientation and metadata, and
+the node pair matrix passes with HEIC fixtures.
 
 ## Phase 7: remove background
 
@@ -172,9 +187,11 @@ with the new node, and the estimate covers the model download and slow devices.
   pixels between them. Encoding happens at Convert, Compress to size and Optimize PNG, and at
   the nodes that make finished files: Best format, Responsive set, Favicon / App icons and Contact
   sheet. An image that reaches Output without an encoding node keeps its source format, and its
-  original bytes when nothing changed its pixels.
+  original bytes when nothing changed its pixels. HEIC is decoded but never encoded, so a HEIC
+  image whose pixels changed is saved as JPEG, or PNG when it has transparency, with a warning
+  ([ADR 0016](./docs/adr/0016-heic-decoder.md)).
 - Metadata is rewritten in the container without re-encoding for JPEG, PNG, WebP and JPEG XL.
-  AVIF metadata is read and can be removed in place but not added; QOI holds none. The run reports
+  AVIF and HEIC metadata is read and can be removed in place but not added; QOI holds none. The run reports
   a warning when a format cannot keep metadata.
 - Each source item travels through the whole pipeline inside one worker, so pixels never cross
   threads. The pool admits as many items as it has workers, which bounds memory by pool size, not

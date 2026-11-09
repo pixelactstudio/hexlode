@@ -64,6 +64,7 @@ describe('webManifest for the installed app', () => {
     'image/avif': ['.avif'],
     'image/jxl': ['.jxl'],
     'image/qoi': ['.qoi'],
+    'image/heic': ['.heic', '.heif'],
   }
 
   it('meets the install criteria', () => {

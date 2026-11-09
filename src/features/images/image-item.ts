@@ -1,4 +1,14 @@
-import type { ImageFormat, ItemKindHandler, ItemMeta, NodeContext } from '#/features/engine/types'
+import { itemType } from '#/features/engine/item-types'
+import type {
+  EncodableFormat,
+  ImageFormat,
+  ItemKindHandler,
+  ItemMeta,
+  ItemType,
+  ItemTypeSet,
+  NodeContext,
+  NodeWarning,
+} from '#/features/engine/types'
 import { HEADER_READ_BYTES } from '#/features/image-input/constants'
 import {
   IMAGE_EXTENSIONS,
@@ -9,7 +19,7 @@ import { readMetadata, writeMetadata } from '#/features/images/metadata/containe
 import { parseExif, setExifOrientation } from '#/features/images/metadata/exif'
 import { isEmptyMetadata } from '#/features/images/metadata/strip'
 import type { ImageMetadata, MetadataPart } from '#/features/images/metadata/types'
-import { applyOrientation } from '#/features/images/pixel-ops'
+import { applyOrientation, hasTransparency } from '#/features/images/pixel-ops'
 import type {
   Codecs,
   EncodeOptions,
@@ -25,10 +35,11 @@ export const FORMAT_NAMES: Record<ImageFormat, string> = {
   avif: 'AVIF',
   jxl: 'JPEG XL',
   qoi: 'QOI',
+  heic: 'HEIC',
 }
 
 /** Settings used when an image must be encoded without an encoding node, in its own format. */
-export const DEFAULT_ENCODE: Record<ImageFormat, EncodeOptions> = {
+export const DEFAULT_ENCODE: Record<EncodableFormat, EncodeOptions> = {
   jpeg: { format: 'jpeg', options: { quality: 90, progressive: true, chromaSubsampling: '420' } },
   webp: {
     format: 'webp',
@@ -43,8 +54,40 @@ export const DEFAULT_ENCODE: Record<ImageFormat, EncodeOptions> = {
   qoi: { format: 'qoi', options: {} },
 }
 
+/**
+ * The format an image is written in when it keeps its own. Hexlode decodes HEIC but does not
+ * write it, so a HEIC image becomes JPEG, or PNG when its pixels show it has transparency.
+ */
+export function keptFormat(format: ImageFormat, pixels?: Pixels): EncodableFormat {
+  if (format !== 'heic') return format
+  return pixels && hasTransparency(pixels) ? 'png' : 'jpeg'
+}
+
+/** What keeping each format produces: HEIC images may come out as JPEG or PNG. */
+export function keptTypes(types: ItemTypeSet): ItemTypeSet {
+  const heic = itemType('image', 'heic')
+  if (!types.has(heic)) return types
+  const kept = new Set<ItemType>([...types].filter((type) => type !== heic))
+  kept.add(itemType('image', 'jpeg'))
+  kept.add(itemType('image', 'png'))
+  return kept
+}
+
+/** The warning for a HEIC image written in another format. */
+export function keptFormatWarning(format: EncodableFormat): NodeWarning {
+  return format === 'png'
+    ? {
+        code: 'heic_saved_as_png',
+        message: 'Hexlode does not write HEIC, so it saved a PNG instead, to keep transparency.',
+      }
+    : {
+        code: 'heic_saved_as_jpeg',
+        message: 'Hexlode does not write HEIC, so it saved a JPEG instead.',
+      }
+}
+
 /** Default settings for a format, with the given quality for the formats that take one. */
-export function encodeWithQuality(format: ImageFormat, quality: number): EncodeOptions {
+export function encodeWithQuality(format: EncodableFormat, quality: number): EncodeOptions {
   const base = DEFAULT_ENCODE[format]
   if (format === 'png' || format === 'qoi') return base
   return { ...base, options: { ...base.options, quality } } as EncodeOptions
@@ -179,24 +222,35 @@ export async function encodeImage(
   }
 }
 
-/** The bytes to save for an item: its encoded file with current metadata, encoding if needed. */
-export async function fileBytesOf(
+/**
+ * The item as the file to save: its encoded bytes with current metadata, encoding in its own
+ * format if needed. Returns the item itself when its bytes are already that file.
+ */
+export async function fileOf(
   item: ImageItem,
   codecs: Codecs,
   warn?: NodeContext['warn'],
-): Promise<Uint8Array> {
+): Promise<ImageItem> {
   const format = item.meta.format as ImageFormat
   const { encoded, metadata, metadataChanged } = item.payload
-  if (encoded && !metadataChanged) return encoded
+  if (encoded && !metadataChanged) return item
   if (encoded) {
     const written = await writeMetadata(format, encoded, metadata)
     if (written.dropped.length > 0) warn?.(dropWarning(format, written.dropped))
-    return written.bytes
+    return {
+      meta: { ...item.meta, size: written.bytes.byteLength },
+      payload: { ...item.payload, encoded: written.bytes, metadataChanged: false },
+    }
   }
-  const settings =
-    item.payload.encode?.format === format ? item.payload.encode : DEFAULT_ENCODE[format]
-  const result = await encodeImage(item, settings, codecs, warn)
-  return result.payload.encoded as Uint8Array
+  const kept = keptFormat(format, await pixelsOf(item, codecs))
+  if (kept !== format) warn?.(keptFormatWarning(kept))
+  const settings = item.payload.encode?.format === kept ? item.payload.encode : DEFAULT_ENCODE[kept]
+  const file = await encodeImage(item, settings, codecs, warn)
+  // The item keeps its name and pixels; a HEIC image takes the name of the format it became.
+  return {
+    meta: kept === format ? { ...item.meta, size: file.meta.size } : file.meta,
+    payload: { ...item.payload, encoded: file.payload.encoded, metadataChanged: false },
+  }
 }
 
 /** Reads format and dimensions, reading past the first part only when the header needs it. */

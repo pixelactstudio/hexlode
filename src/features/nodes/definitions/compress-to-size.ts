@@ -1,11 +1,12 @@
 import { z } from 'zod'
-import { intersect, itemType } from '#/features/engine/item-types'
-import type { ImageFormat } from '#/features/engine/types'
+import { intersect, itemType, union } from '#/features/engine/item-types'
+import type { EncodableFormat, ImageFormat, ItemType } from '#/features/engine/types'
 import {
   asImage,
   codecsOf,
   DEFAULT_ENCODE,
   encodeImage,
+  keptFormatWarning,
   pixelsOf,
   replaceExtension,
 } from '#/features/images/image-item'
@@ -27,9 +28,18 @@ const schema = z.object({
   format: z.enum(['original', 'jpeg', 'webp', 'avif', 'jxl']).default('original'),
 })
 
-function withQuality(format: ImageFormat, quality: number): EncodeOptions {
+function withQuality(format: EncodableFormat, quality: number): EncodeOptions {
   const base = DEFAULT_ENCODE[format]
   return { ...base, options: { ...base.options, quality } } as EncodeOptions
+}
+
+const HEIC = new Set<ItemType>(['image:heic'])
+/** With Original, the lossy formats keep theirs. HEIC is lossy too, and becomes JPEG. */
+const ORIGINAL_ACCEPTS = union([LOSSY_IMAGE_TYPES, HEIC])
+
+/** The lossy format an image is compressed in when it keeps its own. */
+function sizedFormat(format: ImageFormat) {
+  return format === 'heic' ? 'jpeg' : (format as EncodableFormat)
 }
 
 export const compressToSizeNode = defineNode({
@@ -39,21 +49,23 @@ export const compressToSizeNode = defineNode({
   description: 'Finds the highest quality that fits a target size such as 200 KB.',
   schema,
   ports: () => OUTPUT_PORT,
-  accepts: (settings) => (settings.format === 'original' ? LOSSY_IMAGE_TYPES : ALL_IMAGE_TYPES),
-  produces: (settings, input) =>
-    settings.format === 'original'
-      ? intersect(input, LOSSY_IMAGE_TYPES)
-      : new Set([itemType('image', settings.format)]),
+  accepts: (settings) => (settings.format === 'original' ? ORIGINAL_ACCEPTS : ALL_IMAGE_TYPES),
+  produces: (settings, input) => {
+    if (settings.format !== 'original') return new Set([itemType('image', settings.format)])
+    const lossy = intersect(input, LOSSY_IMAGE_TYPES)
+    return input.has('image:heic') ? union([lossy, new Set(['image:jpeg' as const])]) : lossy
+  },
   simulate: (settings, meta) => {
-    const format = settings.format === 'original' ? meta.format : settings.format
+    const format =
+      settings.format === 'original' ? sizedFormat(meta.format as ImageFormat) : settings.format
     return [
       {
         port: 'out',
         meta: {
           ...meta,
           format,
-          name: replaceExtension(meta.name, format as ImageFormat),
-          size: predictedSize(meta, format as ImageFormat),
+          name: replaceExtension(meta.name, format),
+          size: predictedSize(meta, format),
         },
       },
     ]
@@ -61,7 +73,7 @@ export const compressToSizeNode = defineNode({
   cost: (settings, meta) => {
     const single = encodeCost(
       meta,
-      settings.format === 'original' ? (meta.format as ImageFormat) : settings.format,
+      settings.format === 'original' ? sizedFormat(meta.format as ImageFormat) : settings.format,
     )
     return {
       ...single,
@@ -73,8 +85,9 @@ export const compressToSizeNode = defineNode({
     if (input.mode !== 'each') throw new Error('Compress to size runs per item.')
     const item = asImage(input.item)
     const codecs = codecsOf(context)
-    const format =
-      settings.format === 'original' ? (item.meta.format as ImageFormat) : settings.format
+    const own = item.meta.format as ImageFormat
+    const format = settings.format === 'original' ? sizedFormat(own) : settings.format
+    if (settings.format === 'original' && format !== own) context.warn(keptFormatWarning(format))
     const target = settings.targetKilobytes * 1024
     await pixelsOf(item, codecs)
 

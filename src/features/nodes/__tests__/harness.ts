@@ -24,6 +24,7 @@ export const ALL_FORMAT_FIXTURES = [
   'photo.avif',
   'photo.jxl',
   'photo.qoi',
+  'photo.heic',
 ]
 
 export async function sourceFromBytes(

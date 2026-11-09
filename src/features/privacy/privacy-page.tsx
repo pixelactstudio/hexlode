@@ -177,8 +177,8 @@ export function PrivacyPage() {
         <Section title="Open source">
           <Paragraph>
             Hexlode is open source under the Apache License 2.0, so you can read exactly what it
-            does. Images are encoded and decoded with the jSquash codecs, whose licences ship with
-            the app.
+            does. Images are encoded and decoded with the jSquash codecs, and HEIC photos are
+            decoded with libheif. Their licences ship with the app.
           </Paragraph>
           <VStack gap={2}>
             <Link href={REPOSITORY_URL} isExternalLink isStandalone>

@@ -4,7 +4,9 @@
 
 export type ItemKind = 'image' | 'data' | 'document'
 
-export type ImageFormat = 'jpeg' | 'png' | 'webp' | 'avif' | 'jxl' | 'qoi'
+export type ImageFormat = 'jpeg' | 'png' | 'webp' | 'avif' | 'jxl' | 'qoi' | 'heic'
+/** Image formats Hexlode can write. HEIC (HEIF with HEVC) is decoded but never encoded. */
+export type EncodableFormat = Exclude<ImageFormat, 'heic'>
 export type DataFormat = 'json' | 'text'
 /** Finished files Hexlode makes but does not edit further. */
 export type DocumentFormat = 'pdf' | 'ico'

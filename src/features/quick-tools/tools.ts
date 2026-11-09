@@ -81,8 +81,8 @@ export const QUICK_TOOL_DEFINITIONS: {
   convert: {
     title: 'Convert',
     heading: 'Convert images',
-    description: 'Change format: JPEG, PNG, WebP, AVIF, JPEG XL or QOI.',
-    summary: 'Switch between JPEG, PNG, WebP, AVIF, JPEG XL and QOI.',
+    description: 'Change format: JPEG, PNG, WebP, AVIF, JPEG XL or QOI, from those or HEIC.',
+    summary: 'Switch between JPEG, PNG, WebP, AVIF, JPEG XL and QOI, or from HEIC.',
     path: '/convert',
     defaults: { format: 'webp', quality: 82, lossless: false },
   },

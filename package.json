@@ -71,6 +71,7 @@
     "drizzle-kit": "^0.31.9",
     "drizzle-orm": "^0.45.1",
     "gsap": "^3.15.0",
+    "libheif-js": "1.23.5",
     "lucide-react": "^1.28.0",
     "motion": "^13.4.4",
     "nitro": "3.0.260610-beta",

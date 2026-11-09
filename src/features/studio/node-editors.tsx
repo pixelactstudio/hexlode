@@ -677,8 +677,8 @@ const SetCopyrightEditor: Editor = ({ settings, onChange, isDisabled }) => (
       isDisabled={isDisabled}
     />
     <Text type="supporting">
-      Written into the EXIF fields without re-encoding. Empty fields leave what the file has. AVIF
-      and QOI cannot take new fields.
+      Written into the EXIF fields without re-encoding. Empty fields leave what the file has. AVIF,
+      HEIC and QOI cannot take new fields.
     </Text>
   </VStack>
 )

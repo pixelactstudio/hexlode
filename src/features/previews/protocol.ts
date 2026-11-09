@@ -61,3 +61,22 @@ export const previewResponseSchema = z.discriminatedUnion('type', [
 ])
 
 export type PreviewResponse = z.infer<typeof previewResponseSchema>
+
+/** A preview of one file, for files the browser cannot show itself. */
+export const thumbnailRequestSchema = z.object({
+  id: z.number().int(),
+  file: blob,
+  name: z.string(),
+  edge: z.number().int().positive(),
+})
+
+export type ThumbnailRequest = z.infer<typeof thumbnailRequestSchema>
+
+export const thumbnailResponseSchema = z.object({
+  id: z.number().int(),
+  /** A PNG of the image, upright and no larger than the edge. */
+  image: blob.optional(),
+  error: z.string().optional(),
+})
+
+export type ThumbnailResponse = z.infer<typeof thumbnailResponseSchema>

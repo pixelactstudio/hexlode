@@ -9,6 +9,7 @@ import { PIPELINE_FILE_EXTENSION } from '#/features/pipelines/constants'
 /** Extensions people also use for a format, besides the one Hexlode writes. */
 const OTHER_EXTENSIONS: Partial<Record<keyof typeof IMAGE_EXTENSIONS, string[]>> = {
   jpeg: ['jpeg'],
+  heic: ['heif'],
 }
 
 /** Each image type Hexlode reads, with its file extensions. */

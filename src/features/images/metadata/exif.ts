@@ -225,6 +225,26 @@ export function setExifOrientation(bytes: Uint8Array, orientation: number) {
   return writeExifBlock({ ...block, ifd0 })
 }
 
+/**
+ * Returns a copy whose orientation tag says the pixels are upright, changing only that value, so
+ * the maker note and thumbnail survive. For pixels a decoder has already turned upright.
+ */
+export function withUprightOrientation(bytes: Uint8Array) {
+  if (parseExif(bytes).orientation === 1) return bytes
+  const copy = bytes.slice()
+  const data = view(copy)
+  const littleEndian = copy[0] === 0x49
+  const ifd0 = data.getUint32(4, littleEndian)
+  const count = data.getUint16(ifd0, littleEndian)
+  for (let index = 0; index < count; index += 1) {
+    const at = ifd0 + 2 + index * 12
+    if (data.getUint16(at, littleEndian) === TAGS.orientation) {
+      data.setUint16(at + 8, 1, littleEndian)
+    }
+  }
+  return copy
+}
+
 /** EXIF text is ASCII by the standard; readers commonly take Latin-1, so © survives. */
 function textValue(text: string) {
   const latin1 = [...text].every((character) => (character.codePointAt(0) ?? 0) <= 0xff)

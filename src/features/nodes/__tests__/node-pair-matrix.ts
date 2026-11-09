@@ -86,14 +86,17 @@ function pairPipeline(source: string, target: string, port: string) {
  * content, such as Deduplicate, then send several formats down each of their outputs.
  */
 async function matrixSources() {
-  const fixtures = await Promise.all(
-    ALL_FORMAT_FIXTURES.map(async (name) => ({ name, bytes: await fixtureBytes(name) })),
-  )
-  const different = await pngInput('noise.png', noisyPixels(48))
+  inputs ??= Promise.all([
+    ...ALL_FORMAT_FIXTURES.map(async (name) => ({ name, bytes: await fixtureBytes(name) })),
+    pngInput('noise.png', noisyPixels(48)),
+  ])
   return Promise.all(
-    [...fixtures, different].map(({ name, bytes }, index) => sourceFromBytes(name, bytes, index)),
+    (await inputs).map(({ name, bytes }, index) => sourceFromBytes(name, bytes, index)),
   )
 }
+
+/** The input files, fetched once per shard rather than once per pair. */
+let inputs: Promise<{ name: string; bytes: Uint8Array }[]> | undefined
 
 async function runCounts(pipeline: Pipeline) {
   const sources = await matrixSources()

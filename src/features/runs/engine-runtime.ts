@@ -56,3 +56,9 @@ export function createEngineWorker() {
 export function createPreviewWorker() {
   return new Worker(new URL('../previews/preview.worker.ts', import.meta.url), { type: 'module' })
 }
+
+export function createThumbnailWorker() {
+  return new Worker(new URL('../previews/thumbnail.worker.ts', import.meta.url), {
+    type: 'module',
+  })
+}

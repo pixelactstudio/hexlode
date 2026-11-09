@@ -19,13 +19,18 @@ const AREA = {
   fill: 'flex min-h-48 flex-1 flex-col lg:min-h-72 [&>*]:flex-1 [&_.astryx-field>div]:flex-1 [&_.astryx-file-input.dropzone]:flex-1',
 }
 
-export const IMAGE_ACCEPT = 'image/*,.jpg,.jpeg,.png,.webp,.avif,.jxl,.qoi'
+/**
+ * HEIC is listed by type as well as extension: iPhones hand a page its HEIC photos unconverted
+ * only when it names the type.
+ */
+export const IMAGE_ACCEPT =
+  'image/*,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.avif,.jxl,.qoi,.heic,.heif'
 
 /** A drop area for images plus a folder picker. Files are handed on, never kept here. */
 export function FileDrop({
   onFiles,
   isDisabled,
-  description = 'JPEG, PNG, WebP, AVIF, JPEG XL or QOI',
+  description = 'JPEG, PNG, WebP, AVIF, JPEG XL, QOI or HEIC',
   size = 'lg',
 }: {
   onFiles: (files: LocalInputFile[]) => void
