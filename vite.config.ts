@@ -8,6 +8,9 @@ import viteReact, { reactCompilerPreset } from '@vitejs/plugin-react'
 import { nitro } from 'nitro/vite'
 import { defineConfig, type Plugin } from 'vite'
 
+import { serviceWorker } from '#/features/offline/build-plugin'
+import { OFFLINE_PAGES } from '#/features/offline/pages'
+
 /** jSquash loads its WebAssembly with `new URL(..., import.meta.url)`, which pre-bundling breaks. */
 const JSQUASH_PACKAGES = [
   '@jsquash/avif',
@@ -58,6 +61,8 @@ const config = defineConfig({
     viteReact(),
     babel({ presets: [reactCompilerPreset()] }),
     codecLicences(),
+    // Writes /sw.js with every build file listed, so the app works offline after one visit.
+    serviceWorker({ entry: 'src/features/offline/service-worker.ts', pages: OFFLINE_PAGES }),
     // Last, as Sentry's guide asks. Uploads source maps when SENTRY_AUTH_TOKEN, SENTRY_ORG and
     // SENTRY_PROJECT are set at build time, then deletes them from the output. The tunnel sends
     // browser reports through this server, at a path generated per build, past content blockers.

@@ -1,0 +1,1 @@
+globalThis.lazy = true

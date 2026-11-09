@@ -1,6 +1,6 @@
 # Hexlode product
 
-> Updated: 2026-11-04 (node batches 2 and 3)
+> Updated: 2026-11-10 (offline and installing)
 > Delivery plan: [implementation.md](./implementation.md). Vocabulary: [CONTEXT.md](./CONTEXT.md).
 > Decisions and their reasons: [docs/adr/](./docs/adr/).
 
@@ -273,6 +273,17 @@ Items are images, data (JSON or text) or documents (PDF). Batch numbers match th
   file instead. A damaged or unreadable link says so and opens nothing.
 - Each saved pipeline counts its runs in the browser, and the run event carries that count, so
   Hexlode can see whether people come back to their pipelines.
+
+## Offline and installing
+
+- After one online visit, Hexlode works without a connection: the home page, the six quick tools,
+  pipeline tools and the Studio open and run, with every codec, including formats not used yet.
+  Pages load from the network when there is one, so a new version shows on the next online visit;
+  without one they open from the copy kept in the browser. A small Offline badge shows in the top
+  bar while there is no connection.
+- The copy holds Hexlode's own files, never images. Clearing the site's data removes it, as the
+  privacy page says.
+- Hexlode can be installed from the browser as an app.
 
 ## Analytics
 

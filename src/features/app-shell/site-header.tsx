@@ -8,6 +8,7 @@ import { GitHubMark } from '#/features/app-shell/github-mark'
 import { HexlodeMark } from '#/features/app-shell/hexlode-mark'
 import type { FramePage } from '#/features/app-shell/pages'
 import { MobileMenu, ToolsMenu } from '#/features/app-shell/tools-menu'
+import { OfflineBadge } from '#/features/offline/offline-badge'
 import { ColourModeMenu } from '#/features/theme/colour-mode-menu'
 
 /** True once the window has scrolled further than `offset`, checked at most once a frame. */
@@ -49,9 +50,9 @@ const SHAPES = {
 }
 
 /**
- * The top bar: the name, the Tools menu and the Studio, then GitHub and the colour mode. It stays
- * mounted while pages change, so going to the Studio widens it smoothly. The bar is opaque, so the
- * page never shows through it.
+ * The top bar: the name, the Tools menu and the Studio, then a badge while offline, GitHub and the
+ * colour mode. It stays mounted while pages change, so going to the Studio widens it smoothly. The
+ * bar is opaque, so the page never shows through it.
  */
 export function SiteHeader({ page }: { page: FramePage }) {
   const isStudio = page === 'studio'
@@ -73,6 +74,7 @@ export function SiteHeader({ page }: { page: FramePage }) {
           }
           endContent={
             <HStack gap={1} vAlign="center">
+              <OfflineBadge />
               <TopNavItem
                 label="Hexlode on GitHub"
                 href={REPOSITORY_URL}

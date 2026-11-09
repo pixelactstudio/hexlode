@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppShellRouteImport } from './routes/app-shell'
 import { Route as CompressRouteImport } from './routes/compress'
 import { Route as ConvertRouteImport } from './routes/convert'
 import { Route as CropRouteImport } from './routes/crop'
@@ -28,6 +29,11 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppShellRoute = AppShellRouteImport.update({
+  id: '/app-shell',
+  path: '/app-shell',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompressRoute = CompressRouteImport.update({
@@ -103,6 +109,7 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/app-shell': typeof AppShellRoute
   '/compress': typeof CompressRoute
   '/convert': typeof ConvertRoute
   '/crop': typeof CropRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/app-shell': typeof AppShellRoute
   '/compress': typeof CompressRoute
   '/convert': typeof ConvertRoute
   '/crop': typeof CropRoute
@@ -138,6 +146,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/app-shell': typeof AppShellRoute
   '/compress': typeof CompressRoute
   '/convert': typeof ConvertRoute
   '/crop': typeof CropRoute
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/app-shell'
     | '/compress'
     | '/convert'
     | '/crop'
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/app-shell'
     | '/compress'
     | '/convert'
     | '/crop'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/app-shell'
     | '/compress'
     | '/convert'
     | '/crop'
@@ -209,6 +221,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppShellRoute: typeof AppShellRoute
   CompressRoute: typeof CompressRoute
   ConvertRoute: typeof ConvertRoute
   CropRoute: typeof CropRoute
@@ -232,6 +245,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app-shell': {
+      id: '/app-shell'
+      path: '/app-shell'
+      fullPath: '/app-shell'
+      preLoaderRoute: typeof AppShellRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/compress': {
@@ -337,6 +357,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppShellRoute: AppShellRoute,
   CompressRoute: CompressRoute,
   ConvertRoute: ConvertRoute,
   CropRoute: CropRoute,

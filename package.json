@@ -36,7 +36,8 @@
     "test:coverage": "vitest run --project unit --project browser --coverage",
     "test:browser": "vitest run --project browser",
     "test:watch": "vitest",
-    "test:scale": "vitest run --project scale"
+    "test:scale": "vitest run --project scale",
+    "test:e2e": "vitest run --project e2e"
   },
   "dependencies": {
     "@astryxdesign/core": "^0.2.0",
