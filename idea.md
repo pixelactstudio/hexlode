@@ -32,7 +32,7 @@ retake them when the Studio's look changes.
 
 Below the hero, in one bordered column:
 
-- The formats Hexlode opens and saves.
+- The formats Hexlode opens and saves, then HEIC, which it opens.
 - The Studio: moving pictures of chaining steps, previews that follow a setting, work spread over
   workers, the step cache and saving a pipeline as a tool, then the templates.
 - The six quick tools, each with a moving picture of its job, and the user's saved pipeline tools.
@@ -68,12 +68,16 @@ is kept in browser storage and applied before the page paints, so a light page n
 
 | Tool | Job |
 |---|---|
-| Convert | Change format: JPEG, PNG, WebP, AVIF, JPEG XL or QOI. |
+| Convert | Change format: JPEG, PNG, WebP, AVIF, JPEG XL or QOI, from those or HEIC. |
 | Compress | Reduce file size by quality setting or by target size. |
 | Resize | Change dimensions by width, height, percent or longest edge. |
 | Crop | Cut to an aspect ratio such as 1:1, 4:5 or 16:9, from the centre or an edge. |
 | Rotate | Turn photos upright, rotate by quarter turns or flip them. |
 | Strip metadata | Remove all metadata, only location data, or everything except copyright. |
+
+Every quick tool opens JPEG, PNG, WebP, AVIF, JPEG XL, QOI and HEIC images. HEIC, the iPhone
+default, is opened but never written: a HEIC photo whose pixels change comes out as JPEG, or PNG
+when it has transparency, and the results say so. Strip metadata keeps HEIC photos HEIC.
 
 Each quick tool is a fixed pipeline that runs on the same engine as the Studio. A quick tool page
 opens with a row of all six tools for switching, then the tool's name and one line, then two
@@ -193,14 +197,18 @@ browsers that allow it.
 
 ## Node catalogue
 
-Items are images, data (JSON or text) or documents (PDF). Batch numbers match the phases in
+Items are images, data (JSON or text) or documents (PDF). Images are JPEG, PNG, WebP, AVIF,
+JPEG XL, QOI or HEIC, and every node that takes images takes all of them. HEIC (with HEIF) is
+decoded but never encoded: where a node keeps an image's format, such as Convert set to keep each
+format or Output with an image whose pixels changed, HEIC becomes JPEG, or PNG when it has
+transparency, and the run warns. Batch numbers match the phases in
 [implementation.md](./implementation.md).
 
 ### Input and routing
 
 | Node | What it does | Batch |
 |---|---|---|
-| Files | Takes dropped files or a folder. Starts every pipeline. | 1 |
+| Files | Takes dropped files or a folder, including HEIC photos. Starts every pipeline. | 1 |
 | Filter | Routes items by rules on format, file size, dimensions, orientation or transparency. Each rule has its own output, plus an output for everything else. An item leaves by the first rule it matches. | 1 |
 | Inspect | Shows format, dimensions, size and metadata per item. Passes items through unchanged. | 1 |
 | Deduplicate | Drops exact duplicates (the same pixels), or near duplicates by image fingerprint. Waits for every image; duplicates leave by their own output. | 2 |
@@ -238,15 +246,15 @@ Items are images, data (JSON or text) or documents (PDF). Batch numbers match th
 
 | Node | What it does | Batch |
 |---|---|---|
-| Strip metadata | Removes all metadata, only location data, or everything except copyright, without re-encoding. Keeps the colour profile unless told otherwise, and keeps a camera orientation tag so photos stay upright. | 1 |
+| Strip metadata | Removes all metadata, only location data, or everything except copyright, without re-encoding. Keeps the colour profile unless told otherwise, and keeps a camera orientation tag so photos stay upright. A HEIC photo keeps its colour profile, which belongs to the coded image. | 1 |
 | Set copyright / author | Writes author and copyright fields without re-encoding. Empty fields stay as they are. | 3 |
 
 ### Output and encoding
 
 | Node | What it does | Batch |
 |---|---|---|
-| Convert | Encodes to WebP, AVIF, JPEG, JPEG XL, PNG or QOI with the encoder's real settings, or keeps each item's format. | 1 |
-| Compress to size | Finds the highest quality that fits a target size such as 200 KB. | 1 |
+| Convert | Encodes to WebP, AVIF, JPEG, JPEG XL, PNG or QOI with the encoder's real settings, or keeps each item's format (HEIC becomes JPEG, or PNG with transparency). | 1 |
+| Compress to size | Finds the highest quality that fits a target size such as 200 KB. Kept at each format, it makes HEIC into JPEG. | 1 |
 | Optimize PNG | Makes PNG files smaller without changing pixels. | 1 |
 | Rename | Names files from a template such as `{name}-{width}w`. The extension follows the format. Output numbers duplicate names. | 1 |
 | Output | Saves items, passes them on, and delivers a ZIP or folder. | 1 |

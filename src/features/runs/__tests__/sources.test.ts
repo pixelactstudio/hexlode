@@ -32,6 +32,26 @@ describe('prepareSources', () => {
     expect(again.sources[0].key).toBe(sources[0].key)
   })
 
+  it('reads HEIC photos at the size they show, already upright', async () => {
+    const { sources, refused } = await prepareSources(
+      [file('oriented.heic', 'IMG_0001.HEIC'), file('grid.heic')],
+      ALL_IMAGE_TYPES,
+    )
+    expect(refused).toEqual([])
+    expect(
+      sources.map(({ meta }) => [
+        meta.name,
+        meta.format,
+        meta.width,
+        meta.height,
+        meta.orientation,
+      ]),
+    ).toEqual([
+      ['IMG_0001.HEIC', 'heic', 32, 48, 1],
+      ['grid.heic', 'heic', 64, 96, 1],
+    ])
+  })
+
   it('refuses files no branch accepts and says what the pipeline accepts', async () => {
     const { sources, refused } = await prepareSources(
       [file('photo.jpg'), file('photo.png')],
@@ -54,7 +74,7 @@ describe('prepareSources', () => {
       {
         name: 'notes.txt',
         code: 'unsupported_format',
-        reason: 'Choose a JPEG, PNG, WebP, AVIF, JPEG XL or QOI image.',
+        reason: 'Choose a JPEG, PNG, WebP, AVIF, JPEG XL, QOI or HEIC image.',
       },
     ])
   })

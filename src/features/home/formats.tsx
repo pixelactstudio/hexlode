@@ -9,9 +9,11 @@ const FORMATS = [
   { name: 'AVIF', note: 'The smallest files' },
   { name: 'JPEG XL', note: 'Small and sharp' },
   { name: 'QOI', note: 'Fast and lossless' },
+  // Opened only. It fills the last row, so the grid stays even at two and three columns.
+  { name: 'HEIC', note: 'Opens iPhone photos', wide: true },
 ]
 
-/** Every format Hexlode opens and saves, in a grid of cells. */
+/** Every format Hexlode opens and saves, in a grid of cells, then HEIC, which it only opens. */
 export function Formats() {
   return (
     <Section>
@@ -28,7 +30,7 @@ export function Formats() {
           {FORMATS.map((format) => (
             <li
               key={format.name}
-              className="group flex flex-col items-center justify-center gap-1 bg-surface px-4 py-9 transition-colors hover:bg-muted"
+              className={`group flex flex-col items-center justify-center gap-1 bg-surface px-4 py-9 transition-colors hover:bg-muted ${format.wide ? 'col-span-2 sm:col-span-3' : ''}`}
             >
               <span className="font-semibold text-[1.75rem] text-secondary tracking-[-0.03em] transition-colors group-hover:text-primary">
                 {format.name}

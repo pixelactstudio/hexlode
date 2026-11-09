@@ -51,7 +51,9 @@ function browserProvider() {
 
 export default defineConfig({
   resolve: { tsconfigPaths: true },
-  optimizeDeps: { exclude: JSQUASH_PACKAGES },
+  // libheif-js ships a CommonJS loader, which must be pre-bundled. Listing it keeps a first run from
+  // finding it late and reloading the page while tests or the app are running.
+  optimizeDeps: { exclude: JSQUASH_PACKAGES, include: ['libheif-js/libheif-wasm/libheif.js'] },
   worker: { format: 'es' },
   test: {
     coverage: {

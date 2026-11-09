@@ -20,25 +20,55 @@ const JSQUASH_PACKAGES = [
   '@jsquash/webp',
 ]
 
-/** Ships every codec's licence with the app, as ADR 0002 requires, at /licenses/jsquash.txt. */
+/**
+ * Where the HEIC decoder's source is, as the LGPL asks (ADR 0016). libheif-js packs the build of
+ * libheif-emscripten with the same version, which runs libheif's own build-emscripten.sh; that
+ * script names the libde265 version it compiles in.
+ */
+function libheifNotice() {
+  const { version } = JSON.parse(readFileSync('node_modules/libheif-js/package.json', 'utf8'))
+  return [
+    `Hexlode decodes HEIC and HEIF photos with libheif and its libde265 HEVC decoder, both under`,
+    `the GNU Lesser General Public License 3.0, compiled to WebAssembly by libheif-js ${version}.`,
+    'They are served as separate files (libheif.js and libheif.wasm) and loaded only when a HEIC',
+    'image is opened, so they can be replaced with another build of the same library.',
+    '',
+    'Source code:',
+    `  libheif-js         https://github.com/catdad-experiments/libheif-js/tree/${version}`,
+    `  libheif build      https://github.com/catdad-experiments/libheif-emscripten/tree/v${version}`,
+    `  libheif            https://github.com/strukturag/libheif/tree/v${version}`,
+    `  libde265 version   https://github.com/strukturag/libheif/blob/v${version}/build-emscripten.sh`,
+    '  libde265           https://github.com/strukturag/libde265',
+  ].join('\n')
+}
+
+/**
+ * Ships every codec's licence with the app, as ADRs 0002 and 0016 require, at
+ * /licenses/jsquash.txt: the jSquash codecs, then libheif.
+ */
 function codecLicences(): Plugin {
   return {
     name: 'hexlode:codec-licences',
     apply: 'build',
     generateBundle() {
       if (this.environment?.name !== 'client') return
-      const sections = JSQUASH_PACKAGES.flatMap((name) =>
+      const section = (path: string) =>
+        `==> ${path.replace('node_modules/', '')} <==\n\n${readFileSync(path, 'utf8')}`
+      const jsquash = JSQUASH_PACKAGES.flatMap((name) =>
         [`node_modules/${name}/LICENSE`, `node_modules/${name}/codec/LICENSE.codec.md`]
           .filter((path) => existsSync(path))
-          .map(
-            (path) =>
-              `==> ${path.replace('node_modules/', '')} <==\n\n${readFileSync(path, 'utf8')}`,
-          ),
+          .map(section),
       )
+      const libheif = section('node_modules/libheif-js/libheif-wasm/LICENSE')
       this.emitFile({
         type: 'asset',
         fileName: 'licenses/jsquash.txt',
-        source: `Hexlode encodes and decodes images with jSquash codecs.\n\n${sections.join('\n\n')}`,
+        source: [
+          'Hexlode encodes and decodes images with jSquash codecs, and decodes HEIC with libheif.',
+          ...jsquash,
+          libheifNotice(),
+          libheif,
+        ].join('\n\n'),
       })
     },
   }
@@ -46,7 +76,9 @@ function codecLicences(): Plugin {
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
-  optimizeDeps: { exclude: JSQUASH_PACKAGES },
+  // libheif-js ships a CommonJS loader, which must be pre-bundled. Listing it keeps a first run from
+  // finding it late and reloading the page while tests or the app are running.
+  optimizeDeps: { exclude: JSQUASH_PACKAGES, include: ['libheif-js/libheif-wasm/libheif.js'] },
   worker: { format: 'es' },
   // The dev server is also opened from other devices on the tailnet, such as the T3 Code preview.
   server: { allowedHosts: ['.ts.net'] },

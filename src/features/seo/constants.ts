@@ -90,7 +90,7 @@ export const SEO_PAGES: Record<SeoPage, SeoPageDefinition> = {
     path: '/convert',
     title: 'Convert images to WebP, AVIF, JPEG XL or PNG',
     description:
-      "Convert JPEG, PNG, WebP, AVIF, JPEG XL and QOI images in bulk, with each encoder's real quality settings. Free, in your browser, with no upload needed.",
+      "Convert JPEG, PNG, WebP, AVIF, JPEG XL, QOI and HEIC images in bulk, with each encoder's real quality settings. Free, in your browser, with no upload needed.",
     card: {
       eyebrow: 'Quick tool',
       title: 'Convert images',

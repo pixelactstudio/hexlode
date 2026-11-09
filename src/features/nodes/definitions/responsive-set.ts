@@ -8,6 +8,9 @@ import {
   codecsOf,
   encodeImage,
   encodeWithQuality,
+  keptFormat,
+  keptFormatWarning,
+  keptTypes,
   nameWithSuffix,
   uprightPixelsOf,
   withUprightPixels,
@@ -81,11 +84,14 @@ export const responsiveSetNode = defineNode({
   accepts: () => ALL_IMAGE_TYPES,
   produces: (settings, input): ItemTypeSet =>
     union([
-      settings.format === 'original' ? input : new Set([itemType('image', settings.format)]),
+      settings.format === 'original'
+        ? keptTypes(input)
+        : new Set([itemType('image', settings.format)]),
       TEXT_TYPES,
     ]),
   cost: (settings, meta) => {
-    const format = settings.format === 'original' ? (meta.format as ImageFormat) : settings.format
+    const format =
+      settings.format === 'original' ? keptFormat(meta.format as ImageFormat) : settings.format
     const count = planWidths(settings, displaySize(meta).width).length
     const encode = encodeCost(meta, format)
     return {
@@ -100,9 +106,10 @@ export const responsiveSetNode = defineNode({
     if (input.mode !== 'each') throw new Error('Responsive set runs per item.')
     const item = asImage(input.item)
     const codecs = codecsOf(context)
-    const format =
-      settings.format === 'original' ? (item.meta.format as ImageFormat) : settings.format
     const pixels = await uprightPixelsOf(item, codecs)
+    const own = item.meta.format as ImageFormat
+    const format = settings.format === 'original' ? keptFormat(own, pixels) : settings.format
+    if (settings.format === 'original' && format !== own) context.warn(keptFormatWarning(format))
     const outputs = []
     for (const width of planWidths(settings, pixels.width)) {
       const height = Math.max(1, Math.round((pixels.height * width) / pixels.width))

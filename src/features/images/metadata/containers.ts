@@ -1,5 +1,6 @@
 import type { ImageFormat } from '#/features/engine/types'
-import { readAvifMetadata, writeAvifMetadata } from '#/features/images/metadata/avif'
+import { withUprightOrientation } from '#/features/images/metadata/exif'
+import { readHeifMetadata, writeHeifMetadata } from '#/features/images/metadata/heif'
 import { readJpegMetadata, writeJpegMetadata } from '#/features/images/metadata/jpeg'
 import { readJxlMetadata, writeJxlMetadata } from '#/features/images/metadata/jxl'
 import { readPngMetadata, writePngMetadata } from '#/features/images/metadata/png'
@@ -17,7 +18,13 @@ export async function readMetadata(format: ImageFormat, bytes: Uint8Array): Prom
     case 'jxl':
       return readJxlMetadata(bytes)
     case 'avif':
-      return readAvifMetadata(bytes)
+      return readHeifMetadata(bytes)
+    case 'heic': {
+      // HEIC rotation lives in `irot` and `imir`, which decoding applies. Phones also write the
+      // EXIF tag, which must not turn the pixels a second time.
+      const metadata = readHeifMetadata(bytes)
+      return metadata.exif ? { ...metadata, exif: withUprightOrientation(metadata.exif) } : metadata
+    }
     case 'qoi':
       return {}
   }
@@ -45,7 +52,9 @@ export async function writeMetadata(
     case 'jxl':
       return writeJxlMetadata(bytes, metadata)
     case 'avif':
-      return writeAvifMetadata(bytes, metadata)
+      return writeHeifMetadata(bytes, metadata, 'AVIF')
+    case 'heic':
+      return writeHeifMetadata(bytes, metadata, 'HEIC')
     case 'qoi': {
       const dropped = (['exif', 'xmp', 'icc'] as const).filter((part) => metadata[part])
       return { bytes, dropped }
